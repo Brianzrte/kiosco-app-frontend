@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
-import { Product } from "@/lib/types";
+import { Product, ProductList } from "@/lib/types";
 
 type CartLine = { product: Product; quantity: number };
 
@@ -23,10 +23,28 @@ export function PosView() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [unknownState, setUnknownState] = useState(false);
   const [pending, setPending] = useState(false);
+  // flash: product id + a nonce so repeated scans retrigger the animation
+  const [flash, setFlash] = useState<{ id: string; nonce: number } | null>(
+    null,
+  );
+  const [confirmedTotal, setConfirmedTotal] = useState<string | null>(null);
+  // manual search: lazy-loaded catalog, filtered client-side (no search endpoint yet)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [catalog, setCatalog] = useState<Product[] | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const catalogRequested = useRef(false);
+
+  useEffect(() => {
+    if (!confirmedTotal) return;
+    const t = setTimeout(() => setConfirmedTotal(null), 1500);
+    return () => clearTimeout(t);
+  }, [confirmedTotal]);
 
   function refocus() {
     setBarcode("");
-    scanRef.current?.focus();
+    // defer so the focus lands after React re-renders and after the browser's
+    // default focus handling on the clicked element
+    requestAnimationFrame(() => scanRef.current?.focus());
   }
 
   async function scan(event: FormEvent) {
@@ -39,28 +57,69 @@ export function PosView() {
         `/products/barcode/${encodeURIComponent(code)}`,
       );
       if (!product.active) {
-        setScanError(`“${product.name}” está inactivo y no se puede vender.`);
+        setScanError(
+          `“${product.name}” está inactivo y no se puede vender. Activalo en Productos si corresponde.`,
+        );
         return;
       }
-      setCart((lines) => {
-        const existing = lines.find((l) => l.product.id === product.id);
-        if (existing) {
-          return lines.map((l) =>
-            l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l,
-          );
-        }
-        return [...lines, { product, quantity: 1 }];
-      });
+      addToCart(product);
     } catch (e) {
       const err = e as ApiError;
       setScanError(
         err.status === 404
-          ? `No hay ningún producto con el código ${code}.`
+          ? `No hay ningún producto con el código ${code}. Verificá el código o cargalo en Productos.`
           : err.message,
       );
     } finally {
       refocus();
     }
+  }
+
+  function addToCart(product: Product) {
+    setCart((lines) => {
+      const existing = lines.find((l) => l.product.id === product.id);
+      if (existing) {
+        return lines.map((l) =>
+          l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l,
+        );
+      }
+      return [...lines, { product, quantity: 1 }];
+    });
+    setFlash((f) => ({ id: product.id, nonce: (f?.nonce ?? 0) + 1 }));
+  }
+
+  async function loadCatalog() {
+    if (catalogRequested.current) return;
+    catalogRequested.current = true;
+    setCatalogError(null);
+    try {
+      const list = await api<ProductList>("/products");
+      setCatalog(list.products);
+    } catch (e) {
+      catalogRequested.current = false;
+      setCatalogError((e as ApiError).message);
+    }
+  }
+
+  const searchResults = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term || !catalog) return [];
+    return catalog
+      .filter(
+        (p) => p.active && `${p.name} ${p.sku}`.toLowerCase().includes(term),
+      )
+      .slice(0, 8);
+  }, [catalog, searchTerm]);
+
+  function pickSearchResult(product: Product) {
+    addToCart(product);
+    setSearchTerm("");
+    refocus();
+  }
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    if (searchResults.length > 0) pickSearchResult(searchResults[0]);
   }
 
   function setQuantity(productId: string, quantity: number) {
@@ -84,20 +143,22 @@ export function PosView() {
     setConfirmError(null);
     setUnknownState(false);
     setPending(true);
+    const total = formatMoney(fromCents(totalCents));
     try {
-      const sale = await api<{ id: string }>("/sales", {
-        method: "POST",
-        body: {
-          payment_method: payment,
-          items: cart.map((line) => ({
-            product_id: line.product.id,
-            quantity: line.quantity,
-            unit_price: line.product.price,
-          })),
-        },
+      const sale = await api<{ id: string }>("/sales", { method: "POST" });
+      for (const line of cart) {
+        await api(`/sales/${sale.id}/items`, {
+          method: "POST",
+          body: { product_id: line.product.id, quantity: line.quantity },
+        });
+      }
+      await api(`/sales/${sale.id}/payment`, {
+        method: "PUT",
+        body: { payment_method: payment.toUpperCase() },
       });
       await api(`/sales/${sale.id}/confirm`, { method: "POST" });
       toast("success", "Venta confirmada");
+      setConfirmedTotal(total);
       setCart([]);
       setPayment(null);
     } catch (e) {
@@ -115,7 +176,7 @@ export function PosView() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_20rem]">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         <form onSubmit={scan}>
           <label htmlFor="scan" className="mb-1.5 block text-sm font-medium">
             Escaneá o ingresá un código de barras
@@ -130,8 +191,94 @@ export function PosView() {
             placeholder="Código de barras"
             className="data w-full rounded-app border-2 border-border bg-surface px-5 py-4 text-lg shadow-soft placeholder:font-sans placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
           />
-          {scanError && <p className="mt-2 text-sm text-error">{scanError}</p>}
         </form>
+
+        <div>
+          <form onSubmit={submitSearch}>
+            <label
+              htmlFor="pos-search"
+              className="mb-1.5 block text-sm font-medium"
+            >
+              ¿Sin código? Buscá el producto por nombre
+            </label>
+            <input
+              id="pos-search"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (e.target.value.trim()) void loadCatalog();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSearchTerm("");
+              }}
+              autoComplete="off"
+              placeholder="Nombre o SKU del producto"
+              role="combobox"
+              aria-expanded={searchResults.length > 0}
+              aria-controls="pos-search-results"
+              className="w-full rounded-app border border-border bg-surface px-4 py-2.5 shadow-soft placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
+            />
+          </form>
+
+          {catalogError && searchTerm.trim() && (
+            <p className="mt-2 text-sm text-error">
+              No se pudo cargar el catálogo: {catalogError}. Escribí de nuevo
+              para reintentar.
+            </p>
+          )}
+
+          {searchTerm.trim() && !catalogError && (
+            <ul
+              id="pos-search-results"
+              className="mt-2 overflow-hidden rounded-app border border-border bg-surface shadow-soft"
+            >
+              {catalog === null ? (
+                <li className="px-4 py-3 text-sm text-text-secondary">
+                  Buscando productos…
+                </li>
+              ) : searchResults.length === 0 ? (
+                <li className="px-4 py-3 text-sm text-text-secondary">
+                  Ningún producto activo coincide con “{searchTerm.trim()}”.
+                </li>
+              ) : (
+                searchResults.map((p) => (
+                  <li
+                    key={p.id}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => pickSearchResult(p)}
+                      className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">
+                          {p.name}
+                        </span>
+                        <span className="data block text-xs text-text-secondary">
+                          {p.sku}
+                        </span>
+                      </span>
+                      <span className="num font-semibold">
+                        {formatMoney(p.price)}
+                      </span>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+
+        {scanError && (
+          <div
+            role="alert"
+            className="rounded-app border border-error/40 bg-error/10 px-4 py-3 text-sm font-medium text-error"
+          >
+            {scanError}
+          </div>
+        )}
 
         {cart.length === 0 ? (
           <EmptyState message="El carrito está vacío. Escaneá un producto para empezar la venta." />
@@ -140,12 +287,18 @@ export function PosView() {
             <ul>
               {cart.map((line) => (
                 <li
-                  key={line.product.id}
-                  className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-b-0"
+                  key={
+                    flash?.id === line.product.id
+                      ? `${line.product.id}-${flash.nonce}`
+                      : line.product.id
+                  }
+                  className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 last:border-b-0 md:px-5 ${
+                    flash?.id === line.product.id ? "flash" : ""
+                  }`}
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate font-medium">{line.product.name}</p>
-                    <p className="data text-sm text-text-secondary">
+                    <p className="num text-sm text-text-secondary">
                       {formatMoney(line.product.price)} c/u
                     </p>
                   </div>
@@ -153,18 +306,20 @@ export function PosView() {
                     <Button
                       variant="secondary"
                       aria-label={`Restar uno a ${line.product.name}`}
-                      className="size-9 !p-0"
+                      className="size-11 !p-0 md:size-9"
                       onClick={() =>
                         setQuantity(line.product.id, line.quantity - 1)
                       }
                     >
                       −
                     </Button>
-                    <span className="data w-10 text-center">{line.quantity}</span>
+                    <span className="num w-10 text-center">
+                      {line.quantity}
+                    </span>
                     <Button
                       variant="secondary"
                       aria-label={`Sumar uno a ${line.product.name}`}
-                      className="size-9 !p-0"
+                      className="size-11 !p-0 md:size-9"
                       onClick={() =>
                         setQuantity(line.product.id, line.quantity + 1)
                       }
@@ -172,7 +327,7 @@ export function PosView() {
                       +
                     </Button>
                   </div>
-                  <p className="data w-24 text-right font-medium">
+                  <p className="num w-24 text-right font-semibold">
                     {formatMoney(
                       fromCents(toCents(line.product.price) * line.quantity),
                     )}
@@ -193,8 +348,8 @@ export function PosView() {
       </div>
 
       <Card className="h-fit lg:sticky lg:top-6">
-        <h2 className="mb-4 text-sm font-medium text-text-secondary">Total</h2>
-        <p className="data mb-6 text-4xl font-semibold">
+        <h2 className="mb-2 text-sm font-medium text-text-secondary">Total</h2>
+        <p className="num mb-6 text-5xl font-bold tracking-tight">
           {formatMoney(fromCents(totalCents))}
         </p>
 
@@ -247,6 +402,23 @@ export function PosView() {
           {pending ? "Confirmando…" : "Confirmar venta"}
         </Button>
       </Card>
+
+      {confirmedTotal && (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-text-primary/20"
+        >
+          <div className="pop-in flex flex-col items-center gap-3 rounded-app bg-surface px-10 py-8 shadow-soft-lg">
+            <span className="flex size-14 items-center justify-center rounded-full bg-success/15 text-3xl text-success">
+              ✓
+            </span>
+            <p className="text-sm font-medium text-text-secondary">
+              Venta confirmada
+            </p>
+            <p className="num text-3xl font-bold">{confirmedTotal}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

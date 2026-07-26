@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <Nav role={session.role} />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 md:px-6 md:py-8 md:pb-8">
         {children}
       </main>
     </ToastProvider>

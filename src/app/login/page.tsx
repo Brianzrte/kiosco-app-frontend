@@ -11,7 +11,7 @@ export default async function LoginPage() {
     <div className="flex flex-1 items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-center text-2xl font-semibold text-primary">
-          Kiosco
+          Mini Moni
         </h1>
         <p className="mb-8 text-center text-sm text-text-secondary">
           Iniciá sesión para operar

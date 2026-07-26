@@ -1,19 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  /* Base */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #dbeafe;
-  --color-secondary: #4f46e5;
-  --color-secondary-hover: #4338ca;
+  /* Base — Mini Moni mauve/rose palette.
+     Interactive darks (#9c566c / #85485c) are derived from #c08497 to keep
+     white-on-primary text at WCAG AA; #c08497 itself is the visible accent. */
+  --color-primary: #9c566c;
+  --color-primary-hover: #85485c;
+  --color-primary-light: #f0d9e3;
+  --color-secondary: #c08497;
+  --color-secondary-hover: #9c566c;
 
   /* Pastels — categories, badges, cards, decorative only */
-  --color-pastel-pink: #ffb3ba;
+  --color-pastel-pink: #dfb2c4;
   --color-pastel-peach: #ffdfba;
   --color-pastel-yellow: #ffffba;
   --color-pastel-green: #baffc9;
   --color-pastel-blue: #bae1ff;
+
+  /* Rose ramp — Mini Moni brand accents */
+  --color-rose-light: #f8edf1;
+  --color-rose: #e8c5d5;
+  --color-rose-strong: #85485c;
 
   /* State */
   --color-success: #22c55e;
@@ -22,9 +29,9 @@
   --color-info: #0ea5e9;
 
   /* Backgrounds */
-  --color-background: #f8fafc;
+  --color-background: #f8edf1;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f5f9;
+  --color-surface-2: #f0d9e3;
 
   /* Text */
   --color-text-primary: #1f2937;
@@ -33,8 +40,8 @@
   --color-text-inverse: #ffffff;
 
   /* Borders */
-  --color-border: #e5e7eb;
-  --color-border-hover: #cbd5e1;
+  --color-border: #e8c5d5;
+  --color-border-hover: #dfb2c4;
 
   /* Shape */
   --radius-app: 12px;
@@ -57,6 +64,40 @@ body {
 .data {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Money and counts: body face with lining tabular figures */
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.01em;
+}
+
+/* One-shot highlight when a cart line is added or incremented */
+@keyframes line-flash {
+  0% {
+    background-color: var(--color-primary-light);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.flash {
+  animation: line-flash 0.6s ease-out;
+}
+
+/* Post-sale confirmation splash */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pop-in {
+  animation: pop-in 0.18s ease-out;
 }
 
 :focus-visible {

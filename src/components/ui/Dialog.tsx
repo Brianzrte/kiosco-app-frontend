@@ -27,10 +27,15 @@ export function Dialog({
       ref={ref}
       onClose={onClose}
       onCancel={onClose}
-      className="m-auto w-full max-w-md rounded-app border border-border bg-surface p-6 shadow-soft-lg backdrop:bg-text-primary/40"
+      onClick={(e) => {
+        if (e.target === ref.current) onClose();
+      }}
+      className="m-auto w-full max-w-md rounded-app border border-border bg-surface p-0 shadow-soft-lg backdrop:bg-text-primary/40"
     >
-      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
-      {children}
+      <div className="p-6">
+        <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+        {children}
+      </div>
     </dialog>
   );
 }

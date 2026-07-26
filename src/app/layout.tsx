@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kiosco",
+  title: "Mini Moni",
   description: "Punto de venta e inventario para kioscos",
 };
 

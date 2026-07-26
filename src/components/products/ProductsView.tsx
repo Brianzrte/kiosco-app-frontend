@@ -6,8 +6,8 @@ import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { Table, Td, Th } from "@/components/ui/Table";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
-import { api } from "@/lib/api"
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
 import { Category, ProductList } from "@/lib/types";
@@ -93,7 +93,7 @@ export function ProductsView() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : products === null ? (
-        <LoadingState />
+        <ListSkeleton />
       ) : filtered.length === 0 ? (
         <EmptyState
           message={
@@ -110,47 +110,87 @@ export function ProductsView() {
           }
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Nombre</Th>
-              <Th>SKU</Th>
-              <Th>Código de barras</Th>
-              <Th>Categoría</Th>
-              <Th className="text-right">Precio</Th>
-              <Th>Estado</Th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          {/* Mobile: one card per product */}
+          <ul className="flex flex-col gap-3 md:hidden">
             {filtered.map((p) => (
-              <tr key={p.id} className="hover:bg-surface-2">
-                <Td>
-                  <Link
-                    href={`/products/${p.id}`}
-                    className="font-medium text-primary hover:text-primary-hover"
-                  >
-                    {p.name}
-                  </Link>
-                </Td>
-                <Td className="data">{p.sku}</Td>
-                <Td className="data">{p.barcode ?? "—"}</Td>
-                <Td>
-                  <Badge tone={pastelFor(p.category_id)}>
-                    {categoryName.get(p.category_id) ?? p.category_id}
-                  </Badge>
-                </Td>
-                <Td className="data text-right">{formatMoney(p.price)}</Td>
-                <Td>
-                  {p.active ? (
-                    <Badge tone="success">Activo</Badge>
-                  ) : (
-                    <Badge tone="neutral">Inactivo</Badge>
+              <li key={p.id}>
+                <Link
+                  href={`/products/${p.id}`}
+                  className="block rounded-app border border-border bg-surface p-4 shadow-soft transition-colors hover:border-border-hover"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 flex-1 font-medium text-text-primary">
+                      {p.name}
+                    </p>
+                    <Badge tone={pastelFor(p.category_id)}>
+                      {categoryName.get(p.category_id) ?? p.category_id}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <p className="data min-w-0 truncate text-xs text-text-secondary">
+                      {p.sku}
+                      {p.barcode ? ` · ${p.barcode}` : ""}
+                    </p>
+                    <p className="num text-lg font-semibold">
+                      {formatMoney(p.price)}
+                    </p>
+                  </div>
+                  {!p.active && (
+                    <Badge tone="neutral" className="mt-2">
+                      Inactivo
+                    </Badge>
                   )}
-                </Td>
-              </tr>
+                </Link>
+              </li>
             ))}
-          </tbody>
-        </Table>
+          </ul>
+
+          {/* Desktop: table */}
+          <div className="hidden md:block">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Nombre</Th>
+                  <Th>SKU</Th>
+                  <Th>Código de barras</Th>
+                  <Th>Categoría</Th>
+                  <Th className="text-right">Precio</Th>
+                  <Th>Estado</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.id} className="hover:bg-surface-2">
+                    <Td>
+                      <Link
+                        href={`/products/${p.id}`}
+                        className="font-medium text-primary hover:text-primary-hover"
+                      >
+                        {p.name}
+                      </Link>
+                    </Td>
+                    <Td className="data">{p.sku}</Td>
+                    <Td className="data">{p.barcode ?? "—"}</Td>
+                    <Td>
+                      <Badge tone={pastelFor(p.category_id)}>
+                        {categoryName.get(p.category_id) ?? p.category_id}
+                      </Badge>
+                    </Td>
+                    <Td className="num text-right">{formatMoney(p.price)}</Td>
+                    <Td>
+                      {p.active ? (
+                        <Badge tone="success">Activo</Badge>
+                      ) : (
+                        <Badge tone="neutral">Inactivo</Badge>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

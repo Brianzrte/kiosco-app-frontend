@@ -1,50 +1,180 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { ErrorState, LoadingState } from "@/components/ui/states";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { ProductList, Stock } from "@/lib/types";
+import { Stock } from "@/lib/types";
+
+type StockListItem = {
+  product_id: string;
+  sku: string;
+  name: string;
+  barcode: string | null;
+  active: boolean;
+  initialized: boolean;
+  quantity: number;
+  minimum_quantity: number;
+  updated_at: string | null;
+};
+
+type StockList = { items: StockListItem[]; total: number };
+
+const PAGE_SIZE = 20;
 
 export function InventoryView() {
   const [selectedId, setSelectedId] = useState("");
+  const [search, setSearch] = useState("");
+  const [term, setTerm] = useState("");
+  const [offset, setOffset] = useState(0);
+
+  // Debounce: the backend does the filtering, so wait for the user to stop typing.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setTerm(search.trim());
+      setOffset(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const fetcher = useCallback(
-    () => api<ProductList>("/products").then((list) => list.products),
-    [],
+    () =>
+      api<StockList>(
+        `/inventory/stock?search=${encodeURIComponent(term)}&limit=${PAGE_SIZE}&offset=${offset}`,
+      ),
+    [term, offset],
   );
-  const { data: products, error, reload } = useLoad(fetcher);
-
-  if (error) return <ErrorState message={error} onRetry={reload} />;
-  if (products === null) return <LoadingState />;
+  const { data, error, reload } = useLoad(fetcher);
+  const rows = data?.items ?? null;
+  const total = data?.total ?? 0;
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">Inventario</h1>
-      <Select
-        label="Producto"
-        value={selectedId}
-        onChange={(e) => setSelectedId(e.target.value)}
+
+      <Input
+        placeholder="Buscar por nombre, SKU o código de barras"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
         className="max-w-xl"
+        aria-label="Buscar producto"
+      />
+
+      {error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : rows === null ? (
+        <ListSkeleton />
+      ) : rows.length === 0 ? (
+        <EmptyState
+          message={
+            term === ""
+              ? "Todavía no hay productos. Crealos en Productos para gestionar su stock."
+              : "Ningún producto coincide con la búsqueda."
+          }
+        />
+      ) : (
+        <>
+          <ul className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+            {rows.map((item) => {
+              const low =
+                item.initialized && item.quantity <= item.minimum_quantity;
+              return (
+                <li
+                  key={item.product_id}
+                  className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-3 last:border-b-0 ${
+                    selectedId === item.product_id ? "bg-primary-light/40" : ""
+                  }`}
+                >
+                  <div className="min-w-0 flex-1 basis-40">
+                    <p className="truncate font-medium">{item.name}</p>
+                    <p className="data text-xs text-text-secondary">
+                      {item.sku}
+                    </p>
+                  </div>
+                  {!item.initialized ? (
+                    <Badge tone="neutral">Sin stock inicial</Badge>
+                  ) : (
+                    <>
+                      {low && <Badge tone="warning">Stock bajo</Badge>}
+                      <p
+                        className={`num w-16 text-right text-lg font-semibold ${
+                          low ? "text-warning" : ""
+                        }`}
+                      >
+                        {item.quantity}
+                      </p>
+                    </>
+                  )}
+                  <Button
+                    variant="secondary"
+                    className="min-h-11 md:min-h-9"
+                    onClick={() => setSelectedId(item.product_id)}
+                  >
+                    {item.initialized ? "Ajustar" : "Inicializar"}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-text-secondary">
+                Mostrando {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de{" "}
+                {total} productos
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  disabled={offset === 0}
+                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={offset + PAGE_SIZE >= total}
+                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog
+        open={!!selectedId}
+        title="Gestionar stock"
+        onClose={() => setSelectedId("")}
       >
-        <option value="">Elegí un producto</option>
-        {products.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.sku})
-          </option>
-        ))}
-      </Select>
-      {selectedId && <StockPanel key={selectedId} productId={selectedId} />}
+        {selectedId && (
+          <StockPanel
+            key={selectedId}
+            productId={selectedId}
+            onChanged={reload}
+            onClose={() => setSelectedId("")}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
 
-function StockPanel({ productId }: { productId: string }) {
+function StockPanel({
+  productId,
+  onChanged,
+  onClose,
+}: {
+  productId: string;
+  onChanged: () => void;
+  onClose: () => void;
+}) {
   // stock: null inside the wrapper means "not initialized" (backend 404)
   const fetcher = useCallback(
     () =>
@@ -58,39 +188,50 @@ function StockPanel({ productId }: { productId: string }) {
   );
   const { data, error, reload } = useLoad(fetcher);
 
+  function refreshAll() {
+    reload();
+    onChanged();
+  }
+
   if (error) return <ErrorState message={error} onRetry={reload} />;
-  if (!data) return <LoadingState />;
+  if (!data) return <ListSkeleton rows={2} />;
   if (!data.stock)
-    return <InitializeStockForm productId={productId} onDone={reload} />;
+    return (
+      <InitializeStockForm
+        productId={productId}
+        onDone={() => {
+          refreshAll();
+          onClose();
+        }}
+      />
+    );
   const stock = data.stock;
 
   const low = stock.quantity <= stock.minimum_quantity;
 
   return (
-    <div className="grid max-w-3xl grid-cols-1 gap-6 md:grid-cols-2">
-      <Card>
-        <h2 className="mb-4 text-sm font-medium text-text-secondary">
-          Stock actual
-        </h2>
-        <p
-          className={`data text-4xl font-semibold ${low ? "text-warning" : ""}`}
-        >
-          {stock.quantity}
-          {low && (
-            <Badge tone="warning" className="ml-3 align-middle">
-              Stock bajo
-            </Badge>
-          )}
-        </p>
-        <p className="mt-4 text-sm text-text-secondary">
-          Mínimo: <span className="data">{stock.minimum_quantity}</span>
-        </p>
-        <p className="mt-1 text-sm text-text-secondary">
-          Última actualización:{" "}
-          {new Date(stock.updated_at).toLocaleString("es-AR")}
-        </p>
-      </Card>
-      <AdjustStockForm productId={productId} onDone={reload} />
+    <div className="flex flex-col gap-6">
+      <div className="flex items-baseline justify-between rounded-app bg-surface-2 px-4 py-3">
+        <div>
+          <p className="text-sm text-text-secondary">Stock actual</p>
+          <p
+            className={`num text-2xl font-semibold ${low ? "text-warning" : ""}`}
+          >
+            {stock.quantity}
+            <span className="ml-2 text-sm font-normal text-text-secondary">
+              mín. {stock.minimum_quantity}
+            </span>
+          </p>
+        </div>
+        {low && <Badge tone="warning">Stock bajo</Badge>}
+      </div>
+      <AdjustStockForm
+        productId={productId}
+        onDone={() => {
+          refreshAll();
+          onClose();
+        }}
+      />
     </div>
   );
 }
@@ -131,12 +272,10 @@ function InitializeStockForm({
   }
 
   return (
-    <Card className="max-w-xl">
-      <h2 className="mb-1 text-sm font-medium">
-        Este producto aún no tiene stock
-      </h2>
+    <div>
       <p className="mb-4 text-sm text-text-secondary">
-        Inicializá el stock para empezar a registrar movimientos.
+        Este producto aún no tiene stock. Inicializalo para empezar a registrar
+        movimientos.
       </p>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
@@ -159,7 +298,7 @@ function InitializeStockForm({
           {pending ? "Inicializando…" : "Inicializar stock"}
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }
 
@@ -203,10 +342,7 @@ function AdjustStockForm({
   }
 
   return (
-    <Card>
-      <h2 className="mb-4 text-sm font-medium text-text-secondary">
-        Ajustar stock
-      </h2>
+    <div>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-4">
           <Select
@@ -238,6 +374,6 @@ function AdjustStockForm({
           {pending ? "Registrando…" : "Registrar ajuste"}
         </Button>
       </form>
-    </Card>
+    </div>
   );
 }

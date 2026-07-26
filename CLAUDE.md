@@ -73,15 +73,16 @@ Minimalist, modern, clean. Lots of white space, 12px rounded corners, soft shado
 ### Tokens
 
 ```
-/* Base */
---primary:        #2563EB;   /* main buttons, links, important actions */
---primary-hover:  #1D4ED8;
---primary-light:  #DBEAFE;
---secondary:      #4F46E5;
---secondary-hover:#4338CA;
+/* Base — Mini Moni mauve/rose brand palette (#C08497 #DFB2C4 #E8C5D5 #F0D9E3 #F8EDF1).
+   Interactive darks are derived from #C08497 to keep white-on-primary text at WCAG AA. */
+--primary:        #9C566C;   /* main buttons, links, important actions */
+--primary-hover:  #85485C;
+--primary-light:  #F0D9E3;
+--secondary:      #C08497;   /* visible brand accent */
+--secondary-hover:#9C566C;
 
 /* Pastels — categories, badges, cards, decorative only */
---pastel-pink:    #FFB3BA;
+--pastel-pink:    #DFB2C4;
 --pastel-peach:   #FFDFBA;
 --pastel-yellow:  #FFFFBA;
 --pastel-green:   #BAFFC9;
@@ -94,9 +95,9 @@ Minimalist, modern, clean. Lots of white space, 12px rounded corners, soft shado
 --info:           #0EA5E9;
 
 /* Backgrounds */
---background:     #F8FAFC;
---surface:        #FFFFFF;
---surface-2:      #F1F5F9;
+--background:     #F8EDF1;   /* soft rose page background */
+--surface:        #FFFFFF;   /* cards stay white for readability */
+--surface-2:      #F0D9E3;
 
 /* Text */
 --text-primary:   #1F2937;
@@ -105,8 +106,13 @@ Minimalist, modern, clean. Lots of white space, 12px rounded corners, soft shado
 --text-inverse:   #FFFFFF;
 
 /* Borders */
---border:         #E5E7EB;
---border-hover:   #CBD5E1;
+--border:         #E8C5D5;
+--border-hover:   #DFB2C4;
+
+/* Rose ramp — Mini Moni brand accents (decorative surfaces, e.g. sale receipt modal) */
+--rose-light:     #F8EDF1;
+--rose:           #E8C5D5;
+--rose-strong:    #85485C;
 ```
 
 ### Usage rules
@@ -137,9 +143,10 @@ Base URL: `NEXT_PUBLIC_API_URL` (backend default `http://localhost:8080`), prefi
 | `POST /auth/login` · `POST /auth/logout` | Session |
 | `GET /products` | List `{ products: [], total }` |
 | `GET /products/{id}` · `GET /products/barcode/{barcode}` | Lookup |
-| `POST /products` · `PUT /products/{id}` · `POST /products/{id}/deactivate` | CRUD (no hard delete) |
+| `POST /products` · `PUT /products/{id}` · `POST /products/{id}/deactivate` · `POST /products/{id}/activate` | CRUD (no hard delete) |
 | `GET /categories` · `POST /categories` | Categories |
 | `GET /inventory/stock/{product_id}` | Stock `{ product_id, quantity, minimum_quantity, updated_at }` |
+| `GET /inventory/stock?search=&limit=&offset=` | Paginated product+stock list `{ items: [{ product_id, sku, name, barcode, active, initialized, quantity, minimum_quantity, updated_at }], total }` |
 | `POST /inventory/stock` | Initialize stock `{ product_id, quantity, reason }` |
 | `POST /inventory/stock/{product_id}/adjust` | Adjust `{ quantity_delta, reason }` — reason is mandatory |
 | `POST /sales` · `POST /sales/{id}/confirm` | Sale draft + atomic confirm ⚠️ **currently 501 Not Implemented in backend** |

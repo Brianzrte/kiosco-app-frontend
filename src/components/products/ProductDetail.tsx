@@ -36,6 +36,19 @@ export function ProductDetail({ id }: { id: string }) {
     }
   }
 
+  async function activate() {
+    setPending(true);
+    try {
+      await api(`/products/${id}/activate`, { method: "POST" });
+      toast("success", "Producto activado");
+      reload();
+    } catch (e) {
+      toast("error", (e as ApiError).message);
+    } finally {
+      setPending(false);
+    }
+  }
+
   if (error) return <ErrorState message={error} onRetry={reload} />;
   if (!product) return <LoadingState />;
 
@@ -50,9 +63,13 @@ export function ProductDetail({ id }: { id: string }) {
             <Badge tone="neutral">Inactivo</Badge>
           )}
         </div>
-        {product.active && (
-          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+        {product.active ? (
+          <Button variant="secondary" onClick={() => setConfirmOpen(true)}>
             Desactivar producto
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={activate} disabled={pending}>
+            {pending ? "Activando…" : "Activar producto"}
           </Button>
         )}
       </div>
@@ -76,7 +93,7 @@ export function ProductDetail({ id }: { id: string }) {
           >
             Cancelar
           </Button>
-          <Button variant="danger" onClick={deactivate} disabled={pending}>
+          <Button variant="primary" onClick={deactivate} disabled={pending}>
             {pending ? "Desactivando…" : "Desactivar"}
           </Button>
         </div>

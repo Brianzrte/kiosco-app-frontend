@@ -1,15 +1,23 @@
 "use client";
 
 import { FormEvent, useCallback, useState } from "react";
-import { Badge, pastelFor } from "@/components/ui/Badge";
+import { pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { Category } from "@/lib/types";
+import { Category, ProductList } from "@/lib/types";
+
+const swatches: Record<string, string> = {
+  "pastel-pink": "bg-pastel-pink",
+  "pastel-peach": "bg-pastel-peach",
+  "pastel-yellow": "bg-pastel-yellow",
+  "pastel-green": "bg-pastel-green",
+  "pastel-blue": "bg-pastel-blue",
+};
 
 export function CategoriesView() {
   const toast = useToast();
@@ -18,10 +26,19 @@ export function CategoriesView() {
   const [pending, setPending] = useState(false);
 
   const fetcher = useCallback(
-    () => api<Category[]>("/categories").then((cats) => cats ?? []),
+    () =>
+      Promise.all([
+        api<Category[]>("/categories").then((cats) => cats ?? []),
+        api<ProductList>("/products").then((list) => list.products),
+      ]),
     [],
   );
-  const { data: categories, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher);
+  const categories = data?.[0] ?? null;
+  const productCount = new Map<string, number>();
+  for (const p of data?.[1] ?? []) {
+    productCount.set(p.category_id, (productCount.get(p.category_id) ?? 0) + 1);
+  }
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -63,21 +80,30 @@ export function CategoriesView() {
       {error ? (
         <ErrorState message={error} onRetry={reload} />
       ) : categories === null ? (
-        <LoadingState />
+        <ListSkeleton rows={4} />
       ) : categories.length === 0 ? (
         <EmptyState message="Todavía no hay categorías. Creá la primera para organizar los productos." />
       ) : (
-        <div className="flex max-w-xl flex-wrap gap-2">
+        <ul className="max-w-xl overflow-hidden rounded-app border border-border bg-surface shadow-soft">
           {categories.map((c) => (
-            <Badge
+            <li
               key={c.id}
-              tone={pastelFor(c.id)}
-              className="px-3 py-1 text-sm"
+              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
             >
-              {c.name}
-            </Badge>
+              <span
+                aria-hidden
+                className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
+              />
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {c.name}
+              </span>
+              <span className="num text-sm text-text-secondary">
+                {productCount.get(c.id) ?? 0}{" "}
+                {(productCount.get(c.id) ?? 0) === 1 ? "producto" : "productos"}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
