@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import { Category, Product } from "@/lib/types";
+import { Category, CategoryList, Product } from "@/lib/types";
 
 export function ProductForm({ product }: { product?: Product }) {
   const router = useRouter();
@@ -26,8 +26,10 @@ export function ProductForm({ product }: { product?: Product }) {
   });
 
   useEffect(() => {
-    api<Category[]>("/categories")
-      .then((cats) => setCategories(cats ?? []))
+    // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
+    // en este selector (add-frontend-users, sección 7.2).
+    api<CategoryList>("/categories?limit=100")
+      .then((res) => setCategories(res.categories))
       .catch((e: ApiError) => setError(e.message));
   }, []);
 

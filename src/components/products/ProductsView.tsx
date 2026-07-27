@@ -10,18 +10,22 @@ import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
-import { Category, ProductList } from "@/lib/types";
+import { CategoryList, ProductList } from "@/lib/types";
 
 export function ProductsView() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [activeFilter, setActiveFilter] = useState("");
 
+  // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
+  // en el selector de categorías (add-frontend-users, sección 7.2).
   const fetcher = useCallback(
     () =>
       Promise.all([
         api<ProductList>("/products"),
-        api<Category[]>("/categories"),
+        api<CategoryList>("/categories?limit=100").then(
+          (res) => res.categories,
+        ),
       ]),
     [],
   );

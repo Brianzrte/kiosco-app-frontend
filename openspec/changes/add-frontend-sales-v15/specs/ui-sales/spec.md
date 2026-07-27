@@ -1,0 +1,102 @@
+# ui-sales
+
+## ADDED Requirements
+
+### Requirement: Operational sales list
+The frontend SHALL show the operational sales list from `GET /api/v1/sales`. Role `admin` SHALL see every sale and SHALL have a cashier filter; role `inventory` SHALL be redirected away without a request being issued. Role `cashier` access is governed by the own-sales requirement below. The list SHALL default to confirmed sales and SHALL support filtering by status, date range, and cashier, with pagination. Draft and confirmed sales SHALL be visually distinguished by a labelled badge, never by colour alone, and no aggregate total displayed over the list SHALL include drafts.
+
+#### Scenario: Admin lists sales
+- **WHEN** an Admin opens the sales section
+- **THEN** confirmed sales are listed newest first, paginated
+
+#### Scenario: Drafts are visible and unmistakable
+- **WHEN** the status filter includes drafts
+- **THEN** each draft is marked with a labelled badge, shows no sale number, and its total is presented distinctly from a closed sale's
+
+#### Scenario: Drafts never inflate totals
+- **WHEN** the list displays any aggregate figure and drafts are present
+- **THEN** that figure excludes drafts
+
+#### Scenario: Inventory Manager cannot reach the section
+- **WHEN** a user with role `inventory` navigates directly to the sales URL
+- **THEN** they are redirected away and no request to `/api/v1/sales` is issued
+
+#### Scenario: Date column states its meaning
+- **WHEN** drafts and confirmed sales appear together
+- **THEN** creation and confirmation dates are shown as separately labelled values rather than a single ambiguous date column
+
+### Requirement: Cashier sees only their own sales, defaulting to today
+The frontend SHALL offer the sales list to role `cashier` restricted to that cashier's own sales, including their own drafts. The restriction SHALL be enforced by the backend scoping the response to the authenticated user; the frontend SHALL NOT request an unrestricted list and filter it client-side under any circumstance. For a cashier the cashier filter SHALL be omitted entirely rather than rendered disabled. The date range SHALL default to the current day for a cashier — the primary use case is finding a sale from the shift in progress — while remaining adjustable so the cashier can page back to an earlier own sale if needed. This requirement depends on the backend admitting role `cashier` on the sales list endpoint; until it does, the cashier-facing view SHALL NOT be built.
+
+#### Scenario: Cashier sees their own sales
+- **WHEN** a cashier opens the sales section
+- **THEN** only sales they registered are listed, including their own drafts
+
+#### Scenario: Cashier's list defaults to today
+- **WHEN** a cashier opens the sales section without changing filters
+- **THEN** the date range shown is today
+
+#### Scenario: Cashier can still look further back
+- **WHEN** a cashier widens the date range
+- **THEN** their own sales from earlier days are listed, still scoped to themselves by the backend
+
+#### Scenario: Scope is never enforced in the client
+- **WHEN** the cashier-facing list is requested
+- **THEN** the frontend does not receive other cashiers' sales and performs no client-side ownership filtering
+
+#### Scenario: Cashier filter is absent, not disabled
+- **WHEN** a cashier views the list
+- **THEN** no cashier filter control is rendered
+
+#### Scenario: Cashier finds their unfinished sale
+- **WHEN** a cashier filters their list by draft status
+- **THEN** their own unconfirmed sales are listed, newest first
+
+### Requirement: Find a sale by number
+The frontend SHALL provide an exact-match search by sale number, presented separately from the range filters. Activating it SHALL clear the other filters so an exact lookup cannot be silently narrowed by an unrelated date range. A search matching nothing SHALL render an empty state, not an error.
+
+#### Scenario: Sale found by number
+- **WHEN** an Admin searches an existing sale number
+- **THEN** that sale is shown
+
+#### Scenario: Search clears competing filters
+- **WHEN** an Admin searches by number while a date range is applied
+- **THEN** the date range is cleared before the search runs
+
+#### Scenario: No match
+- **WHEN** the searched number matches no sale
+- **THEN** an empty state explains that no sale has that number
+
+### Requirement: Sale detail view
+The frontend SHALL provide a dedicated detail view for a single sale, reached by activating its row in the operational list. The view SHALL show every item (product name, quantity, unit price, subtotal) and every payment (method and amount) from `GET /api/v1/sales/{id}`, plus its status, sale number (or dash), and the relevant date. Access is scoped exactly like the list: an Admin may open any sale; a cashier may open only their own. The detail view SHALL be read-only regarding the sale itself — no control on this screen edits items, quantities, or payments of a confirmed sale.
+
+#### Scenario: Admin opens a sale's detail
+- **WHEN** an Admin activates a row in the sales list
+- **THEN** the detail view shows that sale's items, payments, status, and number
+
+#### Scenario: Cashier opens their own sale's detail
+- **WHEN** a cashier activates a row in their own sales list
+- **THEN** the detail view loads normally
+
+#### Scenario: Direct navigation respects the same scope as the list
+- **WHEN** a cashier navigates directly to the detail URL of a sale that is not theirs
+- **THEN** the backend rejects the request and the frontend shows the resulting error, never a client-side ownership check that only hides the row
+
+#### Scenario: Detail view never mutates the sale
+- **WHEN** viewing a confirmed sale's detail
+- **THEN** no control on the screen changes its items, quantities, or payments
+
+### Requirement: Sale numbers are optional and non-contiguous
+The frontend SHALL treat `sale_number` as optional. A sale without a number SHALL display a dash, never a zero, an empty cell, or an error. The interface SHALL NOT present the numbering as contiguous, and SHALL NOT display any counter implying sales are sequential without gaps. When sorting by number, sales without one SHALL be ordered last in both directions.
+
+#### Scenario: Historic sale without a number
+- **WHEN** a sale confirmed before numbering existed is listed
+- **THEN** its number column shows a dash
+
+#### Scenario: Gaps are not presented as loss
+- **WHEN** the listed sale numbers skip values
+- **THEN** no message, counter, or indicator suggests missing or lost sales
+
+#### Scenario: Unnumbered sales sort last
+- **WHEN** the list is sorted by sale number in either direction
+- **THEN** sales without a number appear at the end

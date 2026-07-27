@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -9,7 +16,7 @@ import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { Category, ProductList } from "@/lib/types";
+import { Category, CategoryList, ProductList } from "@/lib/types";
 
 const swatches: Record<string, string> = {
   "pastel-pink": "bg-pastel-pink",
@@ -24,11 +31,20 @@ export function CategoriesView() {
   const [name, setName] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editPending, setEditPending] = useState(false);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
+  // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
+  // en esta pantalla (add-frontend-users, sección 7.2).
   const fetcher = useCallback(
     () =>
       Promise.all([
-        api<Category[]>("/categories").then((cats) => cats ?? []),
+        api<CategoryList>("/categories?limit=100").then(
+          (res) => res.categories,
+        ),
         api<ProductList>("/products").then((list) => list.products),
       ]),
     [],
@@ -39,6 +55,15 @@ export function CategoriesView() {
   for (const p of data?.[1] ?? []) {
     productCount.set(p.category_id, (productCount.get(p.category_id) ?? 0) + 1);
   }
+
+  useEffect(() => {
+    if (!editingId) return;
+    const frame = requestAnimationFrame(() => {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [editingId]);
 
   async function create(event: FormEvent) {
     event.preventDefault();
@@ -53,6 +78,53 @@ export function CategoriesView() {
       setFormError((e as ApiError).message);
     } finally {
       setPending(false);
+    }
+  }
+
+  function startEditing(category: Category) {
+    setEditingId(category.id);
+    setEditingName(category.name);
+    setEditError(null);
+  }
+
+  function cancelEditing() {
+    if (editPending) return;
+    setEditingId(null);
+    setEditingName("");
+    setEditError(null);
+  }
+
+  async function saveEditing(categoryId: string) {
+    setEditError(null);
+    setEditPending(true);
+    try {
+      await api<Category>(`/categories/${categoryId}`, {
+        method: "PUT",
+        body: { name: editingName.trim() },
+      });
+      toast("success", "Categoría actualizada");
+      setEditingId(null);
+      setEditingName("");
+      reload();
+    } catch (error) {
+      setEditError((error as ApiError).message);
+      editInputRef.current?.focus();
+    } finally {
+      setEditPending(false);
+    }
+  }
+
+  function handleEditKeyDown(
+    event: KeyboardEvent<HTMLInputElement>,
+    categoryId: string,
+  ) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (!editPending) saveEditing(categoryId);
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEditing();
     }
   }
 
@@ -88,19 +160,58 @@ export function CategoriesView() {
           {categories.map((c) => (
             <li
               key={c.id}
-              className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0"
+              className="border-b border-border px-4 py-3 last:border-b-0"
             >
-              <span
-                aria-hidden
-                className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
-              />
-              <span className="min-w-0 flex-1 truncate font-medium">
-                {c.name}
-              </span>
-              <span className="num text-sm text-text-secondary">
-                {productCount.get(c.id) ?? 0}{" "}
-                {(productCount.get(c.id) ?? 0) === 1 ? "producto" : "productos"}
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
+                />
+                {editingId === c.id ? (
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      ref={editInputRef}
+                      aria-label={`Renombrar ${c.name}`}
+                      value={editingName}
+                      onChange={(event) => setEditingName(event.target.value)}
+                      onKeyDown={(event) => handleEditKeyDown(event, c.id)}
+                      error={editError ?? undefined}
+                      disabled={editPending}
+                    />
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {c.name}
+                  </span>
+                )}
+                <span className="num shrink-0 text-sm text-text-secondary">
+                  {productCount.get(c.id) ?? 0}{" "}
+                  {(productCount.get(c.id) ?? 0) === 1
+                    ? "producto"
+                    : "productos"}
+                </span>
+                {editingId === c.id ? (
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={cancelEditing}
+                      disabled={editPending}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={() => saveEditing(c.id)}
+                      pending={editPending}
+                    >
+                      {editPending ? "Guardando…" : "Guardar"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="ghost" onClick={() => startEditing(c)}>
+                    Renombrar
+                  </Button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

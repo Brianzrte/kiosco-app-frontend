@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BACKEND_URL, ROLE_COOKIE, TOKEN_COOKIE } from "@/lib/session";
+import {
+  BACKEND_URL,
+  ROLE_COOKIE,
+  TOKEN_COOKIE,
+  USERNAME_COOKIE,
+} from "@/lib/session";
 
 const cookieBase = {
   httpOnly: true,
@@ -37,6 +42,10 @@ export async function POST(request: NextRequest) {
   const response = NextResponse.json({ role: body.role });
   response.cookies.set(TOKEN_COOKIE, body.token, { ...cookieBase, expires });
   response.cookies.set(ROLE_COOKIE, body.role, { ...cookieBase, expires });
+  response.cookies.set(USERNAME_COOKIE, credentials.username, {
+    ...cookieBase,
+    expires,
+  });
   return response;
 }
 
@@ -52,5 +61,6 @@ export async function DELETE(request: NextRequest) {
   const response = NextResponse.json({ ok: true });
   response.cookies.delete(TOKEN_COOKIE);
   response.cookies.delete(ROLE_COOKIE);
+  response.cookies.delete(USERNAME_COOKIE);
   return response;
 }

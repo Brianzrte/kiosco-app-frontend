@@ -3,13 +3,12 @@
 import { useCallback, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
-import { Input, Select } from "@/components/ui/Input";
+import { Input } from "@/components/ui/Input";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
-import { ProductList } from "@/lib/types";
 
 type SalesSummary = { total_sales: number; total_amount: string };
 
@@ -45,14 +44,6 @@ type SaleDetail = {
   items: SaleDetailItem[];
 };
 
-type StockMovement = {
-  product_id: string;
-  type: string;
-  quantity_delta: number;
-  reason: string;
-  created_at: string;
-};
-
 function firstOfMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -61,13 +52,6 @@ function firstOfMonth(): string {
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
-
-const movementLabels: Record<string, string> = {
-  in: "Entrada",
-  out: "Salida",
-  adjustment: "Ajuste",
-  sale: "Venta",
-};
 
 export function ReportsView() {
   const [from, setFrom] = useState(firstOfMonth());
@@ -96,7 +80,6 @@ export function ReportsView() {
       <SalesSummarySection key={`s-${from}-${to}`} from={from} to={to} />
       <SalesListSection key={`l-${from}-${to}`} from={from} to={to} />
       <TopProductsSection key={`t-${from}-${to}`} from={from} to={to} />
-      <StockHistorySection />
     </div>
   );
 }
@@ -325,94 +308,5 @@ function TopProductsSection({ from, to }: { from: string; to: string }) {
         </Table>
       )}
     </section>
-  );
-}
-
-function StockHistorySection() {
-  const [productId, setProductId] = useState("");
-
-  const productsFetcher = useCallback(
-    () => api<ProductList>("/products").then((list) => list.products),
-    [],
-  );
-  const { data: products } = useLoad(productsFetcher);
-
-  return (
-    <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">
-        Historial de movimientos de stock
-      </h2>
-      <Select
-        value={productId}
-        onChange={(e) => setProductId(e.target.value)}
-        className="mb-4 max-w-md"
-        aria-label="Producto del historial"
-      >
-        <option value="">Elegí un producto</option>
-        {(products ?? []).map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name} ({p.sku})
-          </option>
-        ))}
-      </Select>
-      {!productId ? (
-        <EmptyState message="Elegí un producto para ver sus movimientos." />
-      ) : (
-        <StockHistoryTable key={productId} productId={productId} />
-      )}
-    </section>
-  );
-}
-
-function StockHistoryTable({ productId }: { productId: string }) {
-  const fetcher = useCallback(
-    () =>
-      api<StockMovement[]>(
-        `/reports/stock/history?product_id=${productId}`,
-      ).then((data) => data ?? []),
-    [productId],
-  );
-  const { data: rows, error, reload } = useLoad(fetcher);
-
-  return (
-    <>
-      {error ? (
-        <ErrorState error={error} onRetry={reload} />
-      ) : rows === null ? (
-        <ListSkeleton rows={3} />
-      ) : rows.length === 0 ? (
-        <EmptyState message="Este producto no tiene movimientos registrados." />
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Fecha</Th>
-              <Th>Tipo</Th>
-              <Th className="text-right">Cantidad</Th>
-              <Th>Motivo</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={index}>
-                <Td className="data">
-                  {new Date(row.created_at).toLocaleString("es-AR")}
-                </Td>
-                <Td>{movementLabels[row.type] ?? row.type}</Td>
-                <Td
-                  className={`data text-right ${
-                    row.quantity_delta < 0 ? "text-error" : "text-success"
-                  }`}
-                >
-                  {row.quantity_delta > 0 ? "+" : ""}
-                  {row.quantity_delta}
-                </Td>
-                <Td className="text-text-secondary">{row.reason}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
-    </>
   );
 }

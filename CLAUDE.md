@@ -36,7 +36,7 @@ Each user has exactly **one** role. The UI shows only what the role can do.
 
 | Role | Screens | Notes |
 |---|---|---|
-| **Cashier** | POS (new sale), sales history | Primary daily user; speed is everything |
+| **Cashier** | POS (new sale), own sales history (defaults to today), returns on their own confirmed sales the same day | Primary daily user; speed is everything |
 | **Inventory Manager** | Products, stock, movements | Every adjustment requires a reason |
 | **Admin** | Everything + categories + users | Low-frequency, high-trust operations |
 
@@ -54,7 +54,7 @@ Each user has exactly **one** role. The UI shows only what the role can do.
 | `/categories` | Category management | Admin |
 | `/reports` | Sales summary by date range, top products, stock history | Admin (Owner role is future) |
 
-Out of scope for MVP (do not build): returns/refunds, discounts, multi-payment, customers, suppliers, CSV export, notifications, offline mode, dark mode.
+Out of scope for MVP (do not build): discounts, multi-payment, customers, suppliers, CSV export, notifications, offline mode, dark mode. Returns are in scope as of `add-frontend-sales-returns` (see §5) — registered against a confirmed sale, never as a standalone refund flow.
 
 ### POS flow (critical path)
 
@@ -149,12 +149,19 @@ Base URL: `NEXT_PUBLIC_API_URL` (backend default `http://localhost:8080`), prefi
 | `GET /inventory/stock?search=&limit=&offset=` | Paginated product+stock list `{ items: [{ product_id, sku, name, barcode, active, initialized, quantity, minimum_quantity, updated_at }], total }` |
 | `POST /inventory/stock` | Initialize stock `{ product_id, quantity, reason }` |
 | `POST /inventory/stock/{product_id}/adjust` | Adjust `{ quantity_delta, reason }` — reason is mandatory |
-| `POST /sales` · `POST /sales/{id}/confirm` | Sale draft + atomic confirm ⚠️ **currently 501 Not Implemented in backend** |
+| `POST /sales` · `GET /sales/{id}` | Draft lifecycle — create, read. `GET /sales/{id}` scopes `cashier` to sales they confirmed (any date, no day limit) |
+| `POST /sales/{id}/items` · `PUT /sales/{id}/items/{item_id}` · `DELETE /sales/{id}/items/{item_id}` | Draft items — add, change quantity, remove |
+| `PUT /sales/{id}/payment` · `POST /sales/{id}/confirm` | Payment method + atomic confirm |
+| `GET /sales` | Operational listing `{ items: [], page, limit, total }`. `admin` unrestricted; `cashier` forced server-side to their own `cashier_id`, ignoring any `cashier_id` sent in the query |
+| `POST /sales/{id}/returns` · `GET /sales/{id}/returns` · `GET /returns/{id}` | Partial return by item, mandatory reason, automatic stock reintegration. `admin` on any confirmed sale; `cashier` only on sales they confirmed themselves the same calendar day (server-enforced, `403` otherwise) |
+| `GET /reports/sales` · `GET /reports/sales/{id}` | Sale history `{ sales: [] }` + detail with items |
 | `GET /reports/sales/summary` · `GET /reports/products/top` · `GET /reports/stock/history` | Reporting (read-only) |
 
 Product shape: `{ id, sku, barcode (nullable), name, category_id, price, cost, active, created_at, updated_at }`.
 
-⚠️ There are not yet endpoints for: sales list/detail (history), low-stock list, category update/delete, user management. When a screen needs one, check the backend first — if missing, flag it instead of mocking silently.
+**Every `/reports/*` endpoint is Admin-only** (enforced in the backend router) — this did not change. Cashiers now have access to `GET /sales` (their own sales only) and to returns (their own, same-day sales only); they still have no access to any `/reports/*` listing.
+
+⚠️ There are not yet endpoints for: user management (`/users`), low-stock list (`/inventory/stock/low`), setting minimum quantity (`PUT /inventory/stock/{product_id}/minimum`), category update/delete (`PUT /categories/{id}`), or the Admin sales-list endpoint (`GET /sales`, distinct from `/reports/sales`). These are specified for V1.5 in `../backend/docs/specs/backend/` but not implemented. When a screen needs one, check the backend first — if missing, flag it instead of mocking silently.
 
 ---
 

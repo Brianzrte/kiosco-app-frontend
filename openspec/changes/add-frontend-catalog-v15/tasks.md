@@ -13,15 +13,15 @@
 - [x] 2.1 Auditar cómo se deriva hoy el pastel de la categoría — ya se deriva del `id` (`pastelFor(id)` en `components/ui/Badge.tsx`, hash sobre `id`), no del nombre. No es un defecto, no requiere cambio
 - [x] 2.2 Verificar que el color sea idéntico en todas las pantallas donde aparece la categoría — `CategoriesView` y `ProductsView` llaman `pastelFor(category_id)` en ambos casos
 
-## 3. Renombrado de categoría — BLOQUEADO
+## 3. Renombrado de categoría
 
-- [ ] 3.1 Modo de edición en la fila del listado, con el nombre seleccionado al entrar
-- [ ] 3.2 `Enter` confirma, `Escape` cancela y restaura el nombre previo sin disparar request
-- [ ] 3.3 `PUT /api/v1/categories/{id}` con el nombre recortado; deshabilitar el envío mientras está pendiente
-- [ ] 3.4 Mapear el `409` bajo el campo, conservando el modo edición, el texto escrito y el foco
-- [ ] 3.5 Guardar sin cambios sale del modo edición sin error
+- [x] 3.1 Modo de edición en la fila del listado, con el nombre seleccionado al entrar
+- [x] 3.2 `Enter` confirma, `Escape` cancela y restaura el nombre previo sin disparar request
+- [x] 3.3 `PUT /api/v1/categories/{id}` con el nombre recortado; deshabilitar el envío mientras está pendiente
+- [x] 3.4 Mapear el `409` bajo el campo, conservando el modo edición, el texto escrito y el foco
+- [x] 3.5 Guardar sin cambios sale del modo edición sin error
 
-> Bloqueado: `PUT /api/v1/categories/{id}` devuelve `404` en el backend de desarrollo (verificado 2026-07-27, incluso tras reiniciar Docker). No se mockea — retomar cuando `add-catalog-v15` despliegue el endpoint.
+> El backend reconstruido registra `PUT /api/v1/categories/{id}` y responde como endpoint protegido. Falta probar el recorrido autenticado contra datos reales.
 
 ## 4. Verificación
 

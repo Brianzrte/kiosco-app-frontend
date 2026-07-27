@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
-import { Product, ProductList } from "@/lib/types";
+import { Product, ProductList, Sale } from "@/lib/types";
 
 type CartLine = { product: Product; quantity: number };
 
@@ -27,19 +27,16 @@ export function PosView() {
   const [flash, setFlash] = useState<{ id: string; nonce: number } | null>(
     null,
   );
-  const [confirmedTotal, setConfirmedTotal] = useState<string | null>(null);
+  const [confirmedSale, setConfirmedSale] = useState<{
+    total: string;
+    saleNumber: number | null;
+  } | null>(null);
   const [totalFlash, setTotalFlash] = useState(0);
   // manual search: lazy-loaded catalog, filtered client-side (no search endpoint yet)
   const [searchTerm, setSearchTerm] = useState("");
   const [catalog, setCatalog] = useState<Product[] | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const catalogRequested = useRef(false);
-
-  useEffect(() => {
-    if (!confirmedTotal) return;
-    const t = setTimeout(() => setConfirmedTotal(null), 1500);
-    return () => clearTimeout(t);
-  }, [confirmedTotal]);
 
   function refocus() {
     setBarcode("");
@@ -77,6 +74,7 @@ export function PosView() {
   }
 
   function addToCart(product: Product) {
+    setConfirmedSale(null);
     setCart((lines) => {
       const existing = lines.find((l) => l.product.id === product.id);
       if (existing) {
@@ -157,11 +155,17 @@ export function PosView() {
       }
       await api(`/sales/${sale.id}/payment`, {
         method: "PUT",
-        body: { payment_method: payment.toUpperCase() },
+        body: {
+          payments: [
+            { method: payment.toUpperCase(), amount: fromCents(totalCents) },
+          ],
+        },
       });
-      await api(`/sales/${sale.id}/confirm`, { method: "POST" });
+      const confirmed = await api<Sale>(`/sales/${sale.id}/confirm`, {
+        method: "POST",
+      });
       toast("success", "Venta confirmada");
-      setConfirmedTotal(total);
+      setConfirmedSale({ total, saleNumber: confirmed.sale_number ?? null });
       setCart([]);
       setPayment(null);
     } catch (e) {
@@ -413,19 +417,21 @@ export function PosView() {
         </Button>
       </Card>
 
-      {confirmedTotal && (
+      {confirmedSale && (
         <div
-          aria-hidden
-          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-text-primary/20"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 max-w-xs rounded-app border border-border bg-surface px-6 py-5 shadow-soft-lg"
         >
-          <div className="pop-in flex flex-col items-center gap-3 rounded-app bg-surface px-10 py-8 shadow-soft-lg">
-            <span className="flex size-14 items-center justify-center rounded-full bg-success/15 text-3xl text-success">
-              ✓
-            </span>
+          <div className="pop-in flex flex-col gap-1">
             <p className="text-sm font-medium text-text-secondary">
               Venta confirmada
             </p>
-            <p className="num text-3xl font-bold">{confirmedTotal}</p>
+            {confirmedSale.saleNumber !== null && (
+              <p className="num select-text text-3xl font-bold text-primary">
+                #{confirmedSale.saleNumber}
+              </p>
+            )}
+            <p className="num text-lg font-semibold">{confirmedSale.total}</p>
           </div>
         </div>
       )}

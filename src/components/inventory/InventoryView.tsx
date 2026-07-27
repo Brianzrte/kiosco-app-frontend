@@ -5,65 +5,166 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
+import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { Stock } from "@/lib/types";
+import {
+  buildMovementsQuery,
+  buildStockQuery,
+  computeTotalPages,
+  INVENTORY_PAGE_SIZE,
+  isRowLow,
+  MOVEMENT_TYPE_LABELS,
+} from "@/lib/inventory";
+import {
+  CategoryList,
+  MovementList,
+  Stock,
+  StockList,
+  StockListItem,
+} from "@/lib/types";
 
-type StockListItem = {
-  product_id: string;
-  sku: string;
-  name: string;
-  barcode: string | null;
-  active: boolean;
-  initialized: boolean;
-  quantity: number;
-  minimum_quantity: number;
-  updated_at: string | null;
-};
-
-type StockList = { items: StockListItem[]; total: number };
-
-const PAGE_SIZE = 20;
+const PAGE_SIZE = INVENTORY_PAGE_SIZE;
 
 export function InventoryView() {
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedItem, setSelectedItem] = useState<StockListItem | null>(null);
+  const [historyRequest, setHistoryRequest] = useState<{
+    productId: string;
+    nonce: number;
+  } | null>(null);
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
-  const [offset, setOffset] = useState(0);
+  const [categoryId, setCategoryId] = useState("");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
 
   // Debounce: the backend does the filtering, so wait for the user to stop typing.
   useEffect(() => {
     const t = setTimeout(() => {
       setTerm(search.trim());
-      setOffset(0);
+      setPage(1);
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
 
+  function selectCategory(value: string) {
+    setCategoryId(value);
+    setPage(1);
+  }
+
+  function selectLowStockOnly(value: boolean) {
+    setLowStockOnly(value);
+    setPage(1);
+  }
+
+  // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
+  // en este selector (add-frontend-users, sección 7.2).
+  const categoriesFetcher = useCallback(
+    () =>
+      api<CategoryList>("/categories?limit=100").then((res) => res.categories),
+    [],
+  );
+  const { data: categories } = useLoad(categoriesFetcher);
+
   const fetcher = useCallback(
     () =>
       api<StockList>(
-        `/inventory/stock?search=${encodeURIComponent(term)}&limit=${PAGE_SIZE}&offset=${offset}`,
+        `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly, page, limit: PAGE_SIZE })}`,
       ),
-    [term, offset],
+    [term, categoryId, lowStockOnly, page],
   );
   const { data, error, reload } = useLoad(fetcher);
   const rows = data?.items ?? null;
   const total = data?.total ?? 0;
 
+  // El backend decide qué es stock bajo (minimum_quantity > 0 AND quantity <
+  // minimum_quantity); acá nunca se recalcula. En la vista "Todos" se pide
+  // aparte el conjunto de IDs bajo mínimo (mismo filtro, sin paginar hasta
+  // 100) para marcar la fila sin reimplementar la regla.
+  const lowStockIdsFetcher = useCallback(() => {
+    if (lowStockOnly)
+      return Promise.resolve<StockList>({ items: [], total: 0 });
+    return api<StockList>(
+      `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly: true, page: 1, limit: 100 })}`,
+    );
+  }, [term, categoryId, lowStockOnly]);
+  const { data: lowStockData } = useLoad(lowStockIdsFetcher);
+  const lowStockIds = new Set(
+    (lowStockData?.items ?? []).map((item) => item.product_id),
+  );
+
+  function isLow(item: StockListItem) {
+    return isRowLow(
+      item.initialized,
+      lowStockOnly,
+      lowStockIds.has(item.product_id),
+    );
+  }
+
+  const totalPages = computeTotalPages(total, PAGE_SIZE);
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Inventario</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-xl font-semibold">Inventario</h1>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            setHistoryRequest({ productId: "", nonce: Date.now() })
+          }
+        >
+          Historial de movimientos
+        </Button>
+      </div>
 
-      <Input
-        placeholder="Buscar por nombre, SKU o código de barras"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-xl"
-        aria-label="Buscar producto"
-      />
+      <div className="flex flex-wrap items-end gap-3">
+        <Input
+          placeholder="Buscar por nombre, SKU o código de barras"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xl flex-1"
+          aria-label="Buscar producto"
+        />
+        <Select
+          value={categoryId}
+          onChange={(e) => selectCategory(e.target.value)}
+          className="w-full max-w-56"
+          aria-label="Filtrar por categoría"
+        >
+          <option value="">Todas las categorías</option>
+          {(categories ?? []).map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+        <div className="flex overflow-hidden rounded-app border border-border">
+          <button
+            type="button"
+            onClick={() => selectLowStockOnly(false)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+              !lowStockOnly
+                ? "bg-primary text-text-inverse"
+                : "bg-surface text-text-primary hover:bg-surface-2"
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => selectLowStockOnly(true)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+              lowStockOnly
+                ? "bg-primary text-text-inverse"
+                : "bg-surface text-text-primary hover:bg-surface-2"
+            }`}
+          >
+            Stock bajo
+          </button>
+        </div>
+      </div>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -72,22 +173,25 @@ export function InventoryView() {
       ) : rows.length === 0 ? (
         <EmptyState
           message={
-            term === ""
-              ? "Todavía no hay productos. Crealos en Productos para gestionar su stock."
-              : "Ningún producto coincide con la búsqueda."
+            lowStockOnly
+              ? "No hay productos por debajo de su mínimo. Si esperabas ver alguno, verificá que tenga un mínimo configurado en Ajustar → Mínimo."
+              : term === ""
+                ? "Todavía no hay productos. Crealos en Productos para gestionar su stock."
+                : "Ningún producto coincide con la búsqueda."
           }
         />
       ) : (
         <>
           <ul className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
             {rows.map((item) => {
-              const low =
-                item.initialized && item.quantity <= item.minimum_quantity;
+              const low = isLow(item);
               return (
                 <li
                   key={item.product_id}
                   className={`flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-3 last:border-b-0 ${
-                    selectedId === item.product_id ? "bg-primary-light/40" : ""
+                    selectedItem?.product_id === item.product_id
+                      ? "bg-primary-light/40"
+                      : ""
                   }`}
                 >
                   <div className="min-w-0 flex-1 basis-40">
@@ -97,48 +201,66 @@ export function InventoryView() {
                     </p>
                   </div>
                   {!item.initialized ? (
-                    <Badge tone="neutral">Sin stock inicial</Badge>
+                    <Badge tone="neutral">Sin inicializar</Badge>
                   ) : (
                     <>
                       {low && <Badge tone="warning">Stock bajo</Badge>}
                       <p
-                        className={`num w-16 text-right text-lg font-semibold ${
+                        className={`num w-24 text-right text-lg font-semibold ${
                           low ? "text-warning" : ""
                         }`}
                       >
                         {item.quantity}
+                        {low && (
+                          <span className="ml-1 text-xs font-normal text-text-secondary">
+                            mín. {item.minimum_quantity}
+                          </span>
+                        )}
                       </p>
                     </>
                   )}
-                  <Button
-                    variant="secondary"
-                    className="min-h-11 md:min-h-9"
-                    onClick={() => setSelectedId(item.product_id)}
-                  >
-                    {item.initialized ? "Ajustar" : "Inicializar"}
-                  </Button>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      variant="ghost"
+                      className="min-h-11 md:min-h-9"
+                      onClick={() =>
+                        setHistoryRequest({
+                          productId: item.product_id,
+                          nonce: Date.now(),
+                        })
+                      }
+                    >
+                      Historial
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="min-h-11 md:min-h-9"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      {item.initialized ? "Ajustar" : "Inicializar"}
+                    </Button>
+                  </div>
                 </li>
               );
             })}
           </ul>
-          {total > PAGE_SIZE && (
+          {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-text-secondary">
-                Mostrando {offset + 1}–{Math.min(offset + PAGE_SIZE, total)} de{" "}
-                {total} productos
+                Página {page} de {totalPages} · {total} productos
               </p>
               <div className="flex gap-3">
                 <Button
                   variant="secondary"
-                  disabled={offset === 0}
-                  onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Anterior
                 </Button>
                 <Button
                   variant="secondary"
-                  disabled={offset + PAGE_SIZE >= total}
-                  onClick={() => setOffset(offset + PAGE_SIZE)}
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
                   Siguiente
                 </Button>
@@ -149,32 +271,45 @@ export function InventoryView() {
       )}
 
       <Dialog
-        open={!!selectedId}
+        open={!!selectedItem}
         title="Gestionar stock"
-        onClose={() => setSelectedId("")}
+        onClose={() => setSelectedItem(null)}
       >
-        {selectedId && (
+        {selectedItem && (
           <StockPanel
-            key={selectedId}
-            productId={selectedId}
+            key={selectedItem.product_id}
+            productId={selectedItem.product_id}
+            isLow={isLow(selectedItem)}
             onChanged={reload}
-            onClose={() => setSelectedId("")}
+            onClose={() => setSelectedItem(null)}
           />
         )}
       </Dialog>
+
+      {historyRequest && (
+        <MovementHistorySection
+          key={historyRequest.nonce}
+          initialProductId={historyRequest.productId}
+          onClose={() => setHistoryRequest(null)}
+        />
+      )}
     </div>
   );
 }
 
 function StockPanel({
   productId,
+  isLow,
   onChanged,
   onClose,
 }: {
   productId: string;
+  isLow: boolean;
   onChanged: () => void;
   onClose: () => void;
 }) {
+  const [tab, setTab] = useState<"adjust" | "minimum">("adjust");
+
   // stock: null inside the wrapper means "not initialized" (backend 404)
   const fetcher = useCallback(
     () =>
@@ -207,15 +342,13 @@ function StockPanel({
     );
   const stock = data.stock;
 
-  const low = stock.quantity <= stock.minimum_quantity;
-
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between rounded-app bg-surface-2 px-4 py-3">
         <div>
           <p className="text-sm text-text-secondary">Stock actual</p>
           <p
-            className={`num text-2xl font-semibold ${low ? "text-warning" : ""}`}
+            className={`num text-2xl font-semibold ${isLow ? "text-warning" : ""}`}
           >
             {stock.quantity}
             <span className="ml-2 text-sm font-normal text-text-secondary">
@@ -223,15 +356,49 @@ function StockPanel({
             </span>
           </p>
         </div>
-        {low && <Badge tone="warning">Stock bajo</Badge>}
+        {isLow && <Badge tone="warning">Stock bajo</Badge>}
       </div>
-      <AdjustStockForm
-        productId={productId}
-        onDone={() => {
-          refreshAll();
-          onClose();
-        }}
-      />
+
+      <div className="flex gap-1 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setTab("adjust")}
+          className={`px-3 py-2 text-sm font-medium transition-colors ${
+            tab === "adjust"
+              ? "border-b-2 border-primary text-primary"
+              : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          Ajustar
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("minimum")}
+          className={`px-3 py-2 text-sm font-medium transition-colors ${
+            tab === "minimum"
+              ? "border-b-2 border-primary text-primary"
+              : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          Mínimo
+        </button>
+      </div>
+
+      {tab === "adjust" ? (
+        <AdjustStockForm
+          productId={productId}
+          onDone={() => {
+            refreshAll();
+            onClose();
+          }}
+        />
+      ) : (
+        <SetMinimumForm
+          productId={productId}
+          currentMinimum={stock.minimum_quantity}
+          onDone={refreshAll}
+        />
+      )}
     </div>
   );
 }
@@ -379,5 +546,233 @@ function AdjustStockForm({
         </Button>
       </form>
     </div>
+  );
+}
+
+function SetMinimumForm({
+  productId,
+  currentMinimum,
+  onDone,
+}: {
+  productId: string;
+  currentMinimum: number;
+  onDone: () => void;
+}) {
+  const toast = useToast();
+  const [value, setValue] = useState(String(currentMinimum));
+  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError(null);
+    const parsed = parseInt(value, 10);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      setFieldError("Ingresá un número entero mayor o igual a 0.");
+      return;
+    }
+    setFieldError(null);
+    setPending(true);
+    try {
+      await api(`/inventory/stock/${productId}/minimum`, {
+        method: "PATCH",
+        body: { minimum_quantity: parsed },
+      });
+      toast("success", "Mínimo actualizado");
+      onDone();
+    } catch (e) {
+      setError((e as ApiError).message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <p className="text-sm text-text-secondary">
+        Debajo de este número el producto aparece como stock bajo.{" "}
+        <strong className="font-medium text-text-primary">
+          0 desactiva la alerta.
+        </strong>{" "}
+        No requiere motivo: no mueve mercadería.
+      </p>
+      <Input
+        label="Cantidad mínima"
+        type="number"
+        min={0}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        error={fieldError ?? undefined}
+        required
+      />
+      {error && <p className="text-sm text-error">{error}</p>}
+      <Button type="submit" pending={pending}>
+        {pending ? "Guardando…" : "Guardar mínimo"}
+      </Button>
+    </form>
+  );
+}
+
+function MovementHistorySection({
+  initialProductId,
+  onClose,
+}: {
+  initialProductId: string;
+  onClose: () => void;
+}) {
+  const [productId, setProductId] = useState(initialProductId);
+  const [type, setType] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
+
+  function updateFilter(update: () => void) {
+    update();
+    setPage(1);
+  }
+
+  const productsFetcher = useCallback(
+    () =>
+      api<{ products: { id: string; name: string; sku: string }[] }>(
+        "/products",
+      ).then((list) => list.products),
+    [],
+  );
+  const { data: products } = useLoad(productsFetcher);
+
+  const fetcher = useCallback(
+    () =>
+      api<MovementList>(
+        `/inventory/movements?${buildMovementsQuery({ productId, type, from, to, page })}`,
+      ),
+    [productId, type, from, to, page],
+  );
+  const { data, error, reload } = useLoad(fetcher);
+  const rows = data?.items ?? null;
+  const totalPages = data ? computeTotalPages(data.total, data.limit) : 1;
+
+  return (
+    <section className="flex flex-col gap-4 rounded-app border border-border bg-surface p-5 shadow-soft">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="font-semibold">Historial de movimientos</h2>
+        <Button variant="ghost" onClick={onClose}>
+          Cerrar
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <Select
+          label="Producto"
+          value={productId}
+          onChange={(e) => updateFilter(() => setProductId(e.target.value))}
+          className="max-w-64"
+        >
+          <option value="">Todos los productos</option>
+          {(products ?? []).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.sku})
+            </option>
+          ))}
+        </Select>
+        <Select
+          label="Tipo"
+          value={type}
+          onChange={(e) => updateFilter(() => setType(e.target.value))}
+          className="max-w-56"
+        >
+          <option value="">Todos los tipos</option>
+          {Object.entries(MOVEMENT_TYPE_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Input
+          label="Desde"
+          type="date"
+          value={from}
+          onChange={(e) => updateFilter(() => setFrom(e.target.value))}
+        />
+        <Input
+          label="Hasta"
+          type="date"
+          value={to}
+          onChange={(e) => updateFilter(() => setTo(e.target.value))}
+        />
+      </div>
+
+      {error ? (
+        <ErrorState error={error} onRetry={reload} />
+      ) : rows === null ? (
+        <ListSkeleton rows={3} />
+      ) : rows.length === 0 ? (
+        <EmptyState message="No hay movimientos registrados con estos filtros." />
+      ) : (
+        <>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Fecha</Th>
+                <Th>Producto</Th>
+                <Th>Tipo</Th>
+                <Th className="text-right">Cantidad</Th>
+                <Th>Motivo</Th>
+                <Th>Usuario</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <Td className="data">
+                    {new Date(row.created_at).toLocaleString("es-AR")}
+                  </Td>
+                  <Td className="font-medium">{row.product_name}</Td>
+                  <Td>{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</Td>
+                  <Td
+                    className={`num text-right ${
+                      row.quantity_delta < 0 ? "text-error" : "text-success"
+                    }`}
+                  >
+                    {row.previous_quantity} → {row.new_quantity}
+                    <span className="ml-2 text-xs text-text-secondary">
+                      ({row.quantity_delta > 0 ? "+" : ""}
+                      {row.quantity_delta})
+                    </span>
+                  </Td>
+                  <Td className="text-text-secondary">{row.reason || "—"}</Td>
+                  <Td className="text-text-secondary">
+                    {row.performed_by_username || "—"}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-text-secondary">
+                Página {page} de {totalPages}
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Siguiente
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }

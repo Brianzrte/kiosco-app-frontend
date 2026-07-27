@@ -8,7 +8,7 @@ import { NAV_ITEMS } from "@/lib/nav";
 const roleLabels: Record<Role, string> = {
   admin: "Administración",
   cashier: "Caja",
-  inventory_manager: "Inventario",
+  inventory: "Inventario",
 };
 
 function useActiveCheck() {
