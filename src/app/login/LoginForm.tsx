@@ -59,7 +59,7 @@ export function LoginForm() {
           required
         />
         {error && <p className="text-sm text-error">{error}</p>}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" pending={pending}>
           {pending ? "Ingresando…" : "Iniciar sesión"}
         </Button>
       </form>

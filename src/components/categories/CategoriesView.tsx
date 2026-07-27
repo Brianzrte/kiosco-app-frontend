@@ -70,7 +70,7 @@ export function CategoriesView() {
             required
             className="flex-1"
           />
-          <Button type="submit" disabled={pending || !name.trim()}>
+          <Button type="submit" disabled={!name.trim()} pending={pending}>
             {pending ? "Creando…" : "Crear categoría"}
           </Button>
         </form>
@@ -78,7 +78,7 @@ export function CategoriesView() {
       </Card>
 
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : categories === null ? (
         <ListSkeleton rows={4} />
       ) : categories.length === 0 ? (

@@ -10,7 +10,7 @@ import { ApiError } from "./api";
  */
 export function useLoad<T>(fetcher: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -19,8 +19,13 @@ export function useLoad<T>(fetcher: () => Promise<T>) {
       .then((result) => {
         if (!cancelled) setData(result);
       })
-      .catch((e: ApiError) => {
-        if (!cancelled) setError(e.message);
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        setError(
+          e instanceof ApiError
+            ? e
+            : new ApiError(0, "Ocurrió un error inesperado.", "message"),
+        );
       });
     return () => {
       cancelled = true;

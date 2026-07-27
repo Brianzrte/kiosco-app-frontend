@@ -66,7 +66,7 @@ export function InventoryView() {
       />
 
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : rows === null ? (
         <ListSkeleton />
       ) : rows.length === 0 ? (
@@ -193,7 +193,7 @@ function StockPanel({
     onChanged();
   }
 
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (error) return <ErrorState error={error} onRetry={reload} />;
   if (!data) return <ListSkeleton rows={2} />;
   if (!data.stock)
     return (
@@ -294,7 +294,7 @@ function InitializeStockForm({
           required
         />
         {error && <p className="text-sm text-error">{error}</p>}
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" pending={pending}>
           {pending ? "Inicializando…" : "Inicializar stock"}
         </Button>
       </form>
@@ -370,7 +370,11 @@ function AdjustStockForm({
           required
         />
         {error && <p className="text-sm text-error">{error}</p>}
-        <Button type="submit" disabled={pending || !reason.trim() || !quantity}>
+        <Button
+          type="submit"
+          disabled={!reason.trim() || !quantity}
+          pending={pending}
+        >
           {pending ? "Registrando…" : "Registrar ajuste"}
         </Button>
       </form>

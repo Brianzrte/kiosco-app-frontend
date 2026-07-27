@@ -28,6 +28,7 @@ export function PosView() {
     null,
   );
   const [confirmedTotal, setConfirmedTotal] = useState<string | null>(null);
+  const [totalFlash, setTotalFlash] = useState(0);
   // manual search: lazy-loaded catalog, filtered client-side (no search endpoint yet)
   const [searchTerm, setSearchTerm] = useState("");
   const [catalog, setCatalog] = useState<Product[] | null>(null);
@@ -86,6 +87,7 @@ export function PosView() {
       return [...lines, { product, quantity: 1 }];
     });
     setFlash((f) => ({ id: product.id, nonce: (f?.nonce ?? 0) + 1 }));
+    setTotalFlash((n) => n + 1);
   }
 
   async function loadCatalog() {
@@ -130,6 +132,7 @@ export function PosView() {
             l.product.id === productId ? { ...l, quantity } : l,
           ),
     );
+    setTotalFlash((n) => n + 1);
     refocus();
   }
 
@@ -349,7 +352,12 @@ export function PosView() {
 
       <Card className="h-fit lg:sticky lg:top-6">
         <h2 className="mb-2 text-sm font-medium text-text-secondary">Total</h2>
-        <p className="num mb-6 text-5xl font-bold tracking-tight">
+        <p
+          key={totalFlash}
+          className={`num mb-6 text-5xl font-bold tracking-tight ${
+            totalFlash > 0 ? "total-flash" : ""
+          }`}
+        >
           {formatMoney(fromCents(totalCents))}
         </p>
 
@@ -396,7 +404,9 @@ export function PosView() {
 
         <Button
           className="w-full py-3.5 text-base"
-          disabled={cart.length === 0 || !payment || pending}
+          disabled={cart.length === 0 || !payment}
+          pending={pending}
+          pendingImmediate
           onClick={confirmSale}
         >
           {pending ? "Confirmando…" : "Confirmar venta"}

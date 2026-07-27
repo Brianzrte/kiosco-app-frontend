@@ -49,7 +49,7 @@ export function ProductDetail({ id }: { id: string }) {
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (error) return <ErrorState error={error} onRetry={reload} />;
   if (!product) return <LoadingState />;
 
   return (
@@ -68,7 +68,7 @@ export function ProductDetail({ id }: { id: string }) {
             Desactivar producto
           </Button>
         ) : (
-          <Button variant="primary" onClick={activate} disabled={pending}>
+          <Button variant="primary" onClick={activate} pending={pending}>
             {pending ? "Activando…" : "Activar producto"}
           </Button>
         )}
@@ -93,7 +93,7 @@ export function ProductDetail({ id }: { id: string }) {
           >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={deactivate} disabled={pending}>
+          <Button variant="primary" onClick={deactivate} pending={pending}>
             {pending ? "Desactivando…" : "Desactivar"}
           </Button>
         </div>

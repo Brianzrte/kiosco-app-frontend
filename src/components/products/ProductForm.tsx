@@ -119,7 +119,7 @@ export function ProductForm({ product }: { product?: Product }) {
         </div>
         {error && <p className="text-sm text-error">{error}</p>}
         <div className="flex gap-3">
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" pending={pending}>
             {pending
               ? "Guardando…"
               : product

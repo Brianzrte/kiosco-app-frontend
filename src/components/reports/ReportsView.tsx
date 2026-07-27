@@ -114,7 +114,7 @@ function SalesSummarySection({ from, to }: { from: string; to: string }) {
         Resumen de ventas
       </h2>
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : summary === null ? (
         <ListSkeleton rows={3} />
       ) : summary.total_sales > 0 ? (
@@ -161,7 +161,7 @@ function SalesListSection({ from, to }: { from: string; to: string }) {
         Ventas realizadas
       </h2>
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : rows === null ? (
         <ListSkeleton rows={3} />
       ) : rows.length === 0 ? (
@@ -226,7 +226,7 @@ function SaleReceipt({ saleId }: { saleId: string }) {
   );
   const { data: detail, error, reload } = useLoad(fetcher);
 
-  if (error) return <ErrorState message={error} onRetry={reload} />;
+  if (error) return <ErrorState error={error} onRetry={reload} />;
   if (detail === null) return <ListSkeleton rows={4} />;
 
   return (
@@ -295,7 +295,7 @@ function TopProductsSection({ from, to }: { from: string; to: string }) {
         Productos más vendidos
       </h2>
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : rows === null ? (
         <ListSkeleton rows={3} />
       ) : rows.length === 0 ? (
@@ -377,7 +377,7 @@ function StockHistoryTable({ productId }: { productId: string }) {
   return (
     <>
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : rows === null ? (
         <ListSkeleton rows={3} />
       ) : rows.length === 0 ? (

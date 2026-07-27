@@ -91,7 +91,7 @@ export function ProductsView() {
       </div>
 
       {error ? (
-        <ErrorState message={error} onRetry={reload} />
+        <ErrorState error={error} onRetry={reload} />
       ) : products === null ? (
         <ListSkeleton />
       ) : filtered.length === 0 ? (

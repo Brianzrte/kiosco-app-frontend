@@ -54,6 +54,15 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+:root {
+  /* Motion — three durations, two curves. Nothing animates outside these. */
+  --motion-fast: 120ms; /* punctual feedback: hover, line highlight */
+  --motion-base: 200ms; /* section transitions, dialog entry */
+  --motion-slow: 320ms; /* only for motion that travels a long distance */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-text-primary);
@@ -72,7 +81,9 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* One-shot highlight when a cart line is added or incremented */
+/* One-shot highlight when a cart line is added or incremented.
+   Colour only — this is how the cashier confirms a scan, so it must
+   survive prefers-reduced-motion unchanged. */
 @keyframes line-flash {
   0% {
     background-color: var(--color-primary-light);
@@ -82,7 +93,20 @@ body {
   }
 }
 .flash {
-  animation: line-flash 0.6s ease-out;
+  animation: line-flash var(--motion-base) var(--ease-out);
+}
+
+/* Running total acknowledged as a colour pulse, never a progressive count. */
+@keyframes total-flash {
+  0% {
+    color: var(--color-primary);
+  }
+  100% {
+    color: inherit;
+  }
+}
+.total-flash {
+  animation: total-flash var(--motion-fast) var(--ease-standard);
 }
 
 /* Post-sale confirmation splash */
@@ -97,7 +121,22 @@ body {
   }
 }
 .pop-in {
-  animation: pop-in 0.18s ease-out;
+  animation: pop-in var(--motion-base) var(--ease-out);
+}
+
+/* Section entry transition: fades in, shifts up 4px. Exit is never animated. */
+@keyframes section-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.section-enter {
+  animation: section-enter var(--motion-base) var(--ease-out);
 }
 
 :focus-visible {
@@ -105,12 +144,18 @@ body {
   outline-offset: 2px;
 }
 
+/* Reduced motion removes translation/scale but keeps the signal: fade only. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  @keyframes fade-only {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  .pop-in,
+  .section-enter {
+    animation: fade-only var(--motion-fast) linear;
   }
 }
