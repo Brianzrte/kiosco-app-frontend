@@ -22,6 +22,16 @@
   --color-rose: #e8c5d5;
   --color-rose-strong: #85485c;
 
+  /* Data palette — categorical series only (2+ simultaneous categories).
+     Single-series charts use --color-primary instead. Validated with the
+     dataviz skill's validate_palette.js against surface #FFFFFF: lightness
+     band, chroma floor, CVD separation (worst ΔE 16.7 deutan), normal-vision
+     floor (worst ΔE 24.2), contrast — all PASS. Fixed order, never cycled. */
+  --color-chart-1: #2166ac;
+  --color-chart-2: #b2560d;
+  --color-chart-3: #762a83;
+  --color-chart-4: #1b7837;
+
   /* State */
   --color-success: #22c55e;
   --color-warning: #f59e0b;
