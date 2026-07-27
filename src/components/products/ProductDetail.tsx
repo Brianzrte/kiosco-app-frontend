@@ -9,10 +9,10 @@ import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { Product } from "@/lib/types";
+import { Product, Role } from "@/lib/types";
 import { ProductForm } from "./ProductForm";
 
-export function ProductDetail({ id }: { id: string }) {
+export function ProductDetail({ id, role }: { id: string; role: Role }) {
   const router = useRouter();
   const toast = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -68,9 +68,11 @@ export function ProductDetail({ id }: { id: string }) {
             Desactivar producto
           </Button>
         ) : (
-          <Button variant="primary" onClick={activate} pending={pending}>
-            {pending ? "Activando…" : "Activar producto"}
-          </Button>
+          role === "admin" && (
+            <Button variant="primary" onClick={activate} pending={pending}>
+              {pending ? "Activando…" : "Activar producto"}
+            </Button>
+          )
         )}
       </div>
 

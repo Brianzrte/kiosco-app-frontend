@@ -6,7 +6,7 @@ export default async function ProductDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireRole(["inventory_manager", "admin"]);
+  const session = await requireRole(["inventory_manager", "admin"]);
   const { id } = await params;
-  return <ProductDetail id={id} />;
+  return <ProductDetail id={id} role={session.role} />;
 }
