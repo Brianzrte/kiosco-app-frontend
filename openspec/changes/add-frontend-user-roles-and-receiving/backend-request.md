@@ -1,6 +1,6 @@
 # Backend request — add-frontend-user-roles-and-receiving
 
-Todo lo de abajo **no existe hoy** en `../backend`. Nada se mockea. El cambio espejo que lo cubre es `../backend/openspec/changes/add-multi-role-and-receiving`; esta lista es el contrato mínimo que el frontend necesita, expresado desde la pantalla.
+El backend ya implementa este contrato en `../backend/openspec/changes/add-multi-role-and-receiving`. Esta lista deja documentada la forma final que consume el frontend.
 
 Verificado contra `../backend/internal/bootstrap/router.go`, `internal/identity/domain/user.go`, `internal/identity/application/update_user_profile.go` y `internal/purchasing/**` al 2026-07-28.
 
@@ -8,10 +8,10 @@ Verificado contra `../backend/internal/bootstrap/router.go`, `internal/identity/
 
 | Necesidad | Estado hoy |
 |---|---|
-| `roles: string[]` en toda respuesta que devuelve un usuario (`GET /users`, `POST /users`, `PUT /users/{id}`) | `role` escalar (`domain.User.Role`) |
-| `roles: string[]` en la respuesta de `POST /auth/login` | devuelve `role` |
-| `GET /users/{id}` — detalle de un usuario | **no existe**; hoy sólo hay listado |
-| `PUT /users/{id}/roles` con `{ roles: [...] }`, Admin, `422` si el conjunto viene vacío | **no existe**; `PUT /users/{id}` es sólo perfil, por diseño explícito |
+| `roles: string[]` en toda respuesta que devuelve un usuario (`GET /users`, `POST /users`, `PUT /users/{id}`) | Implementado; `role` escalar sigue deprecado por compatibilidad. |
+| `roles: string[]` en la respuesta de `POST /auth/login` | Implementado, junto al `role` escalar deprecado. |
+| `GET /users/{id}` — detalle de un usuario | Implementado, sólo Admin. |
+| `PUT /users/{id}/roles` con `{ roles: [...] }`, Admin, `422` si el conjunto viene vacío | Implementado; `PUT /users/{id}` sigue siendo sólo perfil. |
 
 Pedidos concretos:
 
@@ -28,11 +28,11 @@ Se necesita un cuarto rol con exactamente este alcance:
 
 Este rol es la razón por la que los roles múltiples solos no alcanzan: darle `inventory` a un cajero le daría escritura sobre el catálogo.
 
-**El nombre literal del rol (`receiving`) tiene que quedar fijado antes de implementar el frontend**: la UI descarta roles desconocidos, así que un nombre distinto hace desaparecer la sección sin error visible.
+El nombre literal del rol es **`receiving`**: la UI debe usarlo sin traducción como valor de autorización.
 
 ## 3. Purchasing — detalle de pedido
 
-`GET /purchase-orders/{id}` — **no existe**. El listado devuelve cabeceras sin ítems.
+`GET /purchase-orders/{id}` está implementado para `admin`, `inventory` y `receiving`; devuelve la cabecera, proveedor e ítems, incluidos los removidos. Devuelve `404` si no existe.
 
 Necesita devolver, además de la cabecera: proveedor, `ordered_at`, total, estado, y para cada ítem:
 
@@ -40,7 +40,7 @@ Necesita devolver, además de la cabecera: proveedor, `ordered_at`, total, estad
 - `product_id` (nullable) **y `product_name`** — sin el nombre resuelto, el detalle tendría que hacer un `GET /products/{id}` por ítem, que es un N+1 en la pantalla que se usa con el repartidor esperando
 - `description` (nullable): el texto libre del ítem no catalogado
 - `removed_at`, `removed_by`, `removal_reason` (nullables): los ítems removidos se devuelven, no se ocultan
-- Para un pedido recibido: `received_at`, `received_by` (nombre de usuario, no id) y `payment_method`
+- Para un pedido recibido: `received_at`, `received_by` (id), `received_by_name` (nombre de usuario) y `payment_method`.
 
 ## 4. Purchasing — recepción con método de pago
 
