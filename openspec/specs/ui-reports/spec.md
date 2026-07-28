@@ -5,11 +5,9 @@
 Resumen de ventas, evolución diaria, ventas por cajero, ventas por producto y top de productos — todas agregaciones de venta, de sólo lectura, exclusivas de Admin. El historial de movimientos de stock vive en `ui-inventory` desde `add-frontend-inventory-v15` (`GET /api/v1/inventory/movements`); `/reports/stock/history` fue retirado por el backend en `add-reporting-v15`.
 
 Fuente: `CLAUDE.md` (spec de frontend y design system), los specs de backend en `../backend/docs/specs/` y `../backend/openspec/specs/reporting/spec.md`, y la skill `dataviz` para los gráficos.
-
 ## Requirements
-
 ### Requirement: Sales summary by date range
-The frontend SHALL show a sales summary from `GET /api/v1/reports/sales/summary` with a date-range selector, presenting range totals as stat tiles rather than as a chart, and supporting the `group_by` parameter to switch between the range total and the daily breakdown. Report views SHALL never expose write actions.
+The frontend SHALL show a sales summary from `GET /api/v1/reports/sales/summary` with a date-range selector, presenting range totals as stat tiles rather than as a chart, and supporting the `group_by` parameter to switch between the range total and the daily breakdown. The summary SHALL appear on the reports dashboard, above the daily trend. Report views SHALL never expose write actions.
 
 #### Scenario: Summary for a range
 - **WHEN** the user selects a date range
@@ -24,7 +22,7 @@ The frontend SHALL show a sales summary from `GET /api/v1/reports/sales/summary`
 - **THEN** it is presented as stat tiles, not as a chart of two values
 
 ### Requirement: Top products
-The frontend SHALL display top-selling products from `GET /api/v1/reports/products/top` as a ranked, read-only list.
+The frontend SHALL display top-selling products from `GET /api/v1/reports/products/top` as a ranked, read-only list. On the reports dashboard this SHALL be the compact three-product card described by `ui-reports-dashboard`, showing product name and quantity sold only.
 
 #### Scenario: Top products listed
 - **WHEN** the top products view loads
@@ -61,7 +59,7 @@ Every chart the frontend renders SHALL follow a single set of rules. Single-seri
 - **THEN** labels, values, and axes use text tokens, and every series is identifiable by a label as well as by colour
 
 ### Requirement: Daily revenue trend
-The frontend SHALL show the daily evolution of sales over the selected range using `GET /api/v1/reports/sales/summary?group_by=day`, rendered as a line chart. Days absent from the response SHALL be rendered as zero in the chart so the line never implies continuity across a day with no sales; the accompanying table SHALL show only the rows the backend returned, with no fabricated entries. The frontend SHALL NOT regroup or recompute daily aggregates itself.
+The frontend SHALL show the daily evolution of sales over the selected range using `GET /api/v1/reports/sales/summary?group_by=day`, rendered as a line chart on the reports dashboard at reduced height and width (two-thirds of its card, sharing it with the comparison against the previous period defined in `ui-reports-dashboard`). Days absent from the response SHALL be rendered as zero in the chart so the line never implies continuity across a day with no sales. The frontend SHALL NOT regroup or recompute daily aggregates itself. The day-by-day table this trend used to be paired with is not part of the dashboard — the same days, with a payment-method and cashier breakdown besides, are the daily sales report in `ui-reports-detail`.
 
 #### Scenario: Trend over a range
 - **WHEN** an Admin selects a date range
@@ -73,7 +71,7 @@ The frontend SHALL show the daily evolution of sales over the selected range usi
 
 #### Scenario: The table is not padded
 - **WHEN** days are missing from the response
-- **THEN** the table lists only the returned rows
+- **THEN** the dashboard renders no day-by-day table at all, and the daily sales report of `ui-reports-detail` lists only the rows the backend returned, with no fabricated entries
 
 #### Scenario: Grouping is never recomputed
 - **WHEN** the trend renders
@@ -83,32 +81,3 @@ The frontend SHALL show the daily evolution of sales over the selected range usi
 - **WHEN** the range spans enough days that axis labels would collide
 - **THEN** a subset of ticks is shown and label text is not rotated
 
-### Requirement: Sales by cashier
-The frontend SHALL show sales count and revenue per cashier from `GET /api/v1/reports/sales/by-cashier` as a horizontal bar chart plus a table. Cashiers who have been deactivated SHALL still appear, marked with a labelled inactive badge, so per-cashier figures reconcile against the range total.
-
-#### Scenario: Breakdown by cashier
-- **WHEN** an Admin requests the cashier breakdown for a range
-- **THEN** each cashier appears with sales count and revenue, in both chart and table
-
-#### Scenario: Deactivated cashiers are included and marked
-- **WHEN** a cashier with sales in the range has since been deactivated
-- **THEN** they still appear, carrying a labelled inactive badge
-
-#### Scenario: Figures reconcile
-- **WHEN** the per-cashier revenues are summed
-- **THEN** the sum equals the range total shown in the summary
-
-### Requirement: Sales by product
-The frontend SHALL show quantity sold and revenue per product from `GET /api/v1/reports/sales/by-product` as a horizontal bar chart plus a table, with an optional category filter. Product names SHALL be displayed as returned by the backend, which sources them from the sale snapshot. When more products are returned than the chart can legibly display, the remainder SHALL be folded into a single "Otros" bar while the table retains every row.
-
-#### Scenario: Breakdown by product
-- **WHEN** an Admin requests the product breakdown for a range
-- **THEN** each product appears with quantity sold and revenue
-
-#### Scenario: Filter by category
-- **WHEN** a category filter is applied
-- **THEN** only products of that category are returned and displayed
-
-#### Scenario: Long tail is folded in the chart only
-- **WHEN** the response contains more products than the chart displays legibly
-- **THEN** the chart shows the top products plus a single "Otros" bar, and the table still lists every product

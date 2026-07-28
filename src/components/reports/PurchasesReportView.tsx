@@ -16,7 +16,7 @@ import { presetRange, today, type RangePreset } from "@/lib/reports";
 type Supplier = { id: string; name: string; active: boolean };
 type SuppliersResponse = { suppliers: Supplier[] };
 
-type PurchaseOrderStatus = "PENDING" | "RECEIVED";
+type PurchaseOrderStatus = "PENDING" | "RECEIVED" | "CANCELLED";
 
 type PurchaseOrder = {
   id: string;
@@ -37,9 +37,20 @@ type PurchaseOrdersResponse = {
 
 const PAGE_SIZE = 20;
 
+/** Los tres estados del dominio de compras (`purchasing/domain/purchase_order.go`). */
 const STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
   PENDING: "Pendiente",
   RECEIVED: "Recibido",
+  CANCELLED: "Cancelado",
+};
+
+const STATUS_TONES: Record<
+  PurchaseOrderStatus,
+  "success" | "warning" | "neutral"
+> = {
+  PENDING: "warning",
+  RECEIVED: "success",
+  CANCELLED: "neutral",
 };
 
 const PRESETS: { key: RangePreset; label: string }[] = [
@@ -209,7 +220,7 @@ function PurchasesReportTable({
                 {formatMoney(order.total)}
               </Td>
               <Td>
-                <Badge tone={order.status === "RECEIVED" ? "success" : "warning"}>
+                <Badge tone={STATUS_TONES[order.status]}>
                   {STATUS_LABELS[order.status]}
                 </Badge>
               </Td>

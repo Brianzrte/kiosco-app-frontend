@@ -10,10 +10,10 @@
 
 ## 1. Aritmética
 
-- [ ] 1.1 Extender `lib/money.ts` con la resta decimal usada para derivar el resto
-- [ ] 1.2 Implementar la regla de reparto: el cajero escribe un monto, el resto sale por resta; nunca división ni reparto proporcional
-- [ ] 1.3 Tests con totales de reparto incómodo (0.01, 0.05, 33.33, 73.49): los pagos deben sumar exacto siempre
-- [ ] 1.4 Verificar que no exista `parseFloat` en ningún camino de monto
+- [x] 1.1 Extender `lib/money.ts` con la resta decimal usada para derivar el resto — `subtractMoney()` opera sobre centavos
+- [x] 1.2 Implementar la regla de reparto: el cajero escribe un monto, el resto sale por resta; nunca división ni reparto proporcional — `composeSplitPayment()` deja el segundo pago como resto exacto
+- [x] 1.3 Tests con totales de reparto incómodo (0.01, 0.05, 33.33, 73.49): los pagos deben sumar exacto siempre — cubierto en `money.test.ts`
+- [x] 1.4 Verificar que no exista `parseFloat` en ningún camino de monto — `rg -n 'parseFloat' src` sin resultados
 
 ## 2. Camino rápido (no debe cambiar)
 
@@ -23,9 +23,9 @@
 
 ## 3. División de pago
 
-- [ ] 3.1 Acción de dividir visible desde el área de pago, sin menú
-- [ ] 3.2 Compositor con método y monto por línea; el último absorbe el resto
-- [ ] 3.3 `PUT /sales/{id}/payment` con la lista completa (reemplaza, no acumula)
+- [x] 3.1 Acción de dividir visible desde el área de pago, sin menú — botón `Dividir pago` en el panel de cobro
+- [x] 3.2 Compositor con método y monto por línea; el último absorbe el resto — primer importe editable y segundo derivado con `composeSplitPayment()`
+- [x] 3.3 `PUT /sales/{id}/payment` con la lista completa (reemplaza, no acumula) — `PosView` envía el `paymentPayload` completo
 
 ## 4. Balance en vivo
 

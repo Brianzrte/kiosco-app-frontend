@@ -5,9 +5,7 @@
 Registro de venta: input de escaneo, carrito, método de pago, confirmación y manejo de fallos.
 
 Fuente: `CLAUDE.md` (spec de frontend y design system) y los specs de backend en `../backend/docs/specs/`.
-
 ## Requirements
-
 ### Requirement: Scan-first sale screen
 The POS screen SHALL keep keyboard focus on a scan input at all times: on page load and after every add, error, or dialog close, focus SHALL return to the scan input. Barcode readers are treated as keyboard input.
 
@@ -53,11 +51,23 @@ The cashier SHALL select exactly one payment method (cash or card) before confir
 - **THEN** the confirm action is disabled
 
 ### Requirement: Atomic sale confirmation
-Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `POST /api/v1/sales/{id}/confirm`. On success the frontend SHALL show "Venta confirmada", clear the cart, and refocus the scan input. On any failure the frontend SHALL NOT assume success: the cart is preserved and the backend sale status is treated as authoritative.
+Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `POST /api/v1/sales/{id}/confirm`. On success the frontend SHALL show "Venta confirmada" together with the assigned `sale_number`, presented with high typographic prominence, selectable as text, and persisting until the next sale begins — not only in a transient toast. Displaying the number SHALL NOT move keyboard focus away from the scan input. When the confirmed sale carries no number, the confirmation SHALL simply omit it. On any failure the frontend SHALL NOT assume success: the cart is preserved and the backend sale status is treated as authoritative.
 
 #### Scenario: Successful confirmation
 - **WHEN** the cashier confirms a valid sale
-- **THEN** a success toast "Venta confirmada" appears, the cart resets, and the scan input regains focus
+- **THEN** the confirmation shows "Venta confirmada" with the sale number, the cart resets, and the scan input regains focus
+
+#### Scenario: Number survives long enough to be used
+- **WHEN** a sale is confirmed
+- **THEN** the sale number remains visible until the next sale starts and can be selected with the pointer
+
+#### Scenario: Next sale can start immediately
+- **WHEN** the sale number is displayed after confirmation
+- **THEN** the scan input already holds focus and the next barcode is accepted without any pointer or keyboard action
+
+#### Scenario: Confirmation without a number
+- **WHEN** the confirmed sale has no `sale_number`
+- **THEN** the confirmation is shown without a number and without any placeholder or error
 
 #### Scenario: Confirmation rejected by backend
 - **WHEN** the backend rejects confirmation (e.g. insufficient stock)
@@ -66,3 +76,27 @@ Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `PO
 #### Scenario: Network failure during confirmation
 - **WHEN** the confirmation request fails with a network error
 - **THEN** the frontend shows a warning that the sale state is unknown, keeps the cart, and instructs the cashier to verify before retrying
+
+### Requirement: Cart feedback on scan
+When an item is added to the cart or an existing line's quantity is incremented, the affected line SHALL be highlighted in place for `--motion-base` and the running total SHALL be visually acknowledged. The line SHALL NOT slide, enter from offscreen, or otherwise displace surrounding rows, and the total SHALL NOT animate as a progressive numeric count. The feedback SHALL NOT alter scan focus behaviour or delay readiness for the next scan.
+
+#### Scenario: Added line is acknowledged in place
+- **WHEN** a scanned product is added to the cart
+- **THEN** its row is briefly highlighted without moving, and no other row shifts position
+
+#### Scenario: Rapid consecutive scans stay legible
+- **WHEN** several barcodes are scanned in rapid succession
+- **THEN** each addition is acknowledged without rows displacing each other, and the list remains readable throughout
+
+#### Scenario: Feedback does not gate the next scan
+- **WHEN** the highlight animation is still running
+- **THEN** the scan input already holds focus and accepts the next barcode
+
+#### Scenario: Colour is not the only confirmation
+- **WHEN** a repeated scan increments an existing line
+- **THEN** the displayed quantity changes value, independently of the highlight
+
+#### Scenario: Reduced motion
+- **WHEN** the user has `prefers-reduced-motion: reduce` set
+- **THEN** the line still receives a brief colour acknowledgement and nothing translates or scales
+

@@ -134,7 +134,7 @@ export function UserForm({ user }: { user?: User }) {
               {roleOptions.map((option) => (
                 <label
                   key={option.value}
-                  className={`cursor-pointer rounded-app border p-4 transition-colors ${
+                  className={`cursor-pointer rounded-app border p-4 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary ${
                     role === option.value
                       ? "border-primary bg-primary-light/50"
                       : "border-border hover:border-border-hover"

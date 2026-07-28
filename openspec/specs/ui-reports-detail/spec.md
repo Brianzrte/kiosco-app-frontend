@@ -1,9 +1,10 @@
-> Las requirements de esta capability que dependen de endpoints inexistentes (reporte de ventas por día, reporte de productos, valorización de inventario, compras a proveedores) están especificadas pero **no se implementan** hasta que el backend despliegue lo pedido en `backend-request.md`. Ver `design.md` para la investigación que confirma la ausencia.
+# ui-reports-detail Specification
 
-## ADDED Requirements
-
+## Purpose
+TBD - created by archiving change add-frontend-reports-dashboard. Update Purpose after archive.
+## Requirements
 ### Requirement: Daily sales report
-`/reports/sales` SHALL list one row per calendar day in the selected range, each showing the date, the day's total revenue, how much of it was paid in cash, how much by card, how much by bank transfer, and the cashier. The day grouping and every monetary total SHALL come from a backend aggregation; the frontend SHALL NOT group individual sales by date nor sum payment amounts client-side. A payment method the backend does not report for a day SHALL render as zero rather than being omitted, so the columns stay aligned across rows.
+`/reports/sales` SHALL list one row per calendar day in the selected range, each showing the date, the day's total revenue, how much of it was paid in cash, how much by card, how much by bank transfer, and the cashier. The day grouping and every per-day monetary total SHALL come from a backend aggregation; the frontend SHALL NOT group individual sales by date nor recompute a day's payment amounts client-side. Range-level summary totals MAY be derived by adding the backend's per-day amounts. A payment method the backend does not report for a day SHALL render as zero rather than being omitted, so the columns stay aligned across rows.
 
 #### Scenario: Days listed with payment split
 - **WHEN** an Admin opens the sales report for a range
@@ -72,3 +73,4 @@ The frontend SHALL provide an inventory valuation view, reachable from the repor
 #### Scenario: Orders listed once supported
 - **WHEN** the supplier module exists and an Admin opens the purchases report
 - **THEN** each order appears with its date, value, received status, and receiving user, filterable by week, month, and supplier
+

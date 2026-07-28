@@ -112,7 +112,8 @@ export function UserDetailView({
       <Dialog
         open={confirmOpen}
         title="Desactivar usuario"
-        onClose={pending ? () => {} : () => setConfirmOpen(false)}
+        onClose={() => setConfirmOpen(false)}
+        dismissible={!pending}
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm text-text-secondary">

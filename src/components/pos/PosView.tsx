@@ -3,22 +3,35 @@
 import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
+import {
+  composeSplitPayment,
+  type PaymentInput,
+  type SplitPaymentMethod,
+} from "@/lib/paymentComposition";
 import { Product, ProductList, Sale, Stock } from "@/lib/types";
 
 type CartLine = { product: Product; quantity: number };
 
-type PaymentMethod = "cash" | "card";
+const PAYMENT_LABELS: Record<SplitPaymentMethod, string> = {
+  CASH: "Efectivo",
+  CARD: "Tarjeta",
+};
 
 export function PosView() {
   const toast = useToast();
   const scanRef = useRef<HTMLInputElement>(null);
+  const splitAmountRef = useRef<HTMLInputElement>(null);
   const [barcode, setBarcode] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [payment, setPayment] = useState<PaymentMethod | null>(null);
+  const [payment, setPayment] = useState<SplitPaymentMethod | null>(null);
+  const [splitPayments, setSplitPayments] = useState<PaymentInput[] | null>(
+    null,
+  );
   const [scanError, setScanError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [unknownState, setUnknownState] = useState(false);
@@ -201,13 +214,41 @@ export function PosView() {
     (sum, line) => sum + toCents(line.product.price) * line.quantity,
     0,
   );
+  const saleTotal = fromCents(totalCents);
+
+  function selectPaymentMethod(method: SplitPaymentMethod) {
+    setPayment(method);
+    if (splitPayments) {
+      setSplitPayments(
+        composeSplitPayment(saleTotal, method, splitPayments[0].amount),
+      );
+    }
+  }
+
+  function startSplitPayment() {
+    const method = payment ?? "CASH";
+    setPayment(method);
+    setSplitPayments(composeSplitPayment(saleTotal, method, ""));
+    requestAnimationFrame(() => splitAmountRef.current?.focus());
+  }
+
+  function updateSplitAmount(amount: string) {
+    if (!splitPayments) return;
+    setSplitPayments(
+      composeSplitPayment(saleTotal, splitPayments[0].method, amount),
+    );
+  }
+
+  const paymentPayload = splitPayments ??
+    (payment ? [{ method: payment, amount: saleTotal }] : []);
+  const hasSplitAmount = !splitPayments || splitPayments[0].amount.trim() !== "";
 
   async function confirmSale() {
-    if (cart.length === 0 || !payment || pending) return;
+    if (cart.length === 0 || !payment || !hasSplitAmount || pending) return;
     setConfirmError(null);
     setUnknownState(false);
     setPending(true);
-    const total = formatMoney(fromCents(totalCents));
+    const total = formatMoney(saleTotal);
     try {
       const sale = await api<{ id: string }>("/sales", { method: "POST" });
       for (const line of cart) {
@@ -219,9 +260,7 @@ export function PosView() {
       await api(`/sales/${sale.id}/payment`, {
         method: "PUT",
         body: {
-          payments: [
-            { method: payment.toUpperCase(), amount: fromCents(totalCents) },
-          ],
+          payments: paymentPayload,
         },
       });
       const confirmed = await api<Sale>(`/sales/${sale.id}/confirm`, {
@@ -231,6 +270,7 @@ export function PosView() {
       setConfirmedSale({ total, saleNumber: confirmed.sale_number ?? null });
       setCart([]);
       setPayment(null);
+      setSplitPayments(null);
     } catch (e) {
       const err = e as ApiError;
       if (err.status === 0) {
@@ -441,12 +481,14 @@ export function PosView() {
         </div>
 
         <fieldset className="mb-6">
-          <legend className="mb-2 text-sm font-medium">Método de pago</legend>
+          <legend className="mb-2 text-sm font-medium">
+            {splitPayments ? "Pagos divididos" : "Método de pago"}
+          </legend>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                ["cash", "Efectivo"],
-                ["card", "Tarjeta"],
+                ["CASH", "Efectivo"],
+                ["CARD", "Tarjeta"],
               ] as const
             ).map(([value, label]) => (
               <label
@@ -462,13 +504,55 @@ export function PosView() {
                   name="payment"
                   value={value}
                   checked={payment === value}
-                  onChange={() => setPayment(value)}
+                  onChange={() => selectPaymentMethod(value)}
                   className="sr-only"
                 />
                 {label}
               </label>
             ))}
           </div>
+
+          {splitPayments ? (
+            <div className="mt-3 flex flex-col gap-3 rounded-app border border-border bg-surface-2 p-3">
+              <Input
+                ref={splitAmountRef}
+                label={`${PAYMENT_LABELS[splitPayments[0].method]} (importe)`}
+                value={splitPayments[0].amount}
+                onChange={(event) => updateSplitAmount(event.target.value)}
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+              />
+              <div className="rounded-app border border-border bg-surface px-3.5 py-2.5">
+                <p className="text-sm font-medium">
+                  {PAYMENT_LABELS[splitPayments[1].method]}
+                </p>
+                <p className="num mt-1 text-lg font-semibold">
+                  {formatMoney(splitPayments[1].amount)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="self-start"
+                onClick={() => setSplitPayments(null)}
+              >
+                Usar un solo medio
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              className="mt-3"
+              disabled={cart.length === 0}
+              onClick={startSplitPayment}
+            >
+              Dividir pago
+            </Button>
+          )}
         </fieldset>
 
         {confirmError && (
@@ -483,7 +567,7 @@ export function PosView() {
 
         <Button
           className="w-full py-3.5 text-base"
-          disabled={cart.length === 0 || !payment}
+          disabled={cart.length === 0 || !payment || !hasSplitAmount}
           pending={pending}
           pendingImmediate
           onClick={confirmSale}

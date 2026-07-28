@@ -6,11 +6,13 @@ export function Dialog({
   open,
   title,
   onClose,
+  dismissible = true,
   children,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
+  dismissible?: boolean;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -26,9 +28,15 @@ export function Dialog({
     <dialog
       ref={ref}
       onClose={onClose}
-      onCancel={onClose}
+      onCancel={(event) => {
+        if (!dismissible) {
+          event.preventDefault();
+          return;
+        }
+        onClose();
+      }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (dismissible && e.target === ref.current) onClose();
       }}
       className="m-auto w-full max-w-md rounded-app border border-border bg-surface p-0 shadow-soft-lg backdrop:bg-text-primary/40"
     >

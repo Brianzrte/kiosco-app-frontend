@@ -33,6 +33,10 @@ The frontend SHALL show the daily evolution of sales over the selected range usi
 - **WHEN** the backend omits a day within the range
 - **THEN** that day appears at zero in the chart and the line does not connect across it as if it did not exist
 
+#### Scenario: The table is not padded
+- **WHEN** days are missing from the response
+- **THEN** the dashboard renders no day-by-day table at all, and the daily sales report of `ui-reports-detail` lists only the rows the backend returned, with no fabricated entries
+
 #### Scenario: Grouping is never recomputed
 - **WHEN** the trend renders
 - **THEN** it plots the rows as returned, performing no client-side date grouping

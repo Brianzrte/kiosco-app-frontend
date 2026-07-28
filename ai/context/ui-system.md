@@ -47,7 +47,7 @@ Reglas:
 | `Card` | `ui/Card.tsx` | `rounded-app border border-border bg-surface p-6 shadow-soft` |
 | `Badge` + `pastelFor(id)` | `ui/Badge.tsx` | `tone: pastel-* \| success \| warning \| error \| info \| neutral`; `pastelFor` da un pastel estable por id de entidad |
 | `Table`, `Th`, `Td` | `ui/Table.tsx` | contenedor con scroll + estilo de encabezado y celda |
-| `Dialog` | `ui/Dialog.tsx` | `<dialog>` nativo + `showModal()`; cierra por Esc (`onCancel`) y por click en el backdrop; recibe `open`, `title`, `onClose` |
+| `Dialog` | `ui/Dialog.tsx` | `<dialog>` nativo + `showModal()`; cierra por Esc (`onCancel`) y por click en el backdrop; recibe `open`, `title`, `onClose` y `dismissible` (por defecto `true`) para bloquear ambos cierres mientras una acción está pendiente |
 | `Toast` | `ui/Toast.tsx` | `ToastProvider` (montado en `(app)/layout.tsx`) + `useToast()` → `toast("success" \| "error" \| "warning" \| "info", "…")`, autodescarte a los 4s |
 | `Spinner` | `ui/Spinner.tsx` | `className` para color/tamaño |
 | Estados | `ui/states.tsx` | `LoadingState`, `Skeleton`, `ListSkeleton({ rows })`, `EmptyState({ message, action })`, `ErrorState({ error, onRetry })` |

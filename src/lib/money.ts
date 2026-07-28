@@ -18,6 +18,15 @@ export function fromCents(cents: number): string {
   return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
 }
 
+/**
+ * Subtracts two decimal money strings through integer cents. This is used for
+ * split payments: the cashier enters one amount and the final payment absorbs
+ * the exact remainder, without division or floating-point rounding.
+ */
+export function subtractMoney(minuend: string, subtrahend: string): string {
+  return fromCents(toCents(minuend) - toCents(subtrahend));
+}
+
 export function formatMoney(decimal: string): string {
   const sign = decimal.startsWith("-") ? "-" : "";
   const [units, fraction = "00"] = decimal.replace("-", "").split(".");

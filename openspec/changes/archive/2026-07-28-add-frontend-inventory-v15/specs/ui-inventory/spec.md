@@ -72,7 +72,7 @@ The frontend SHALL show current stock from the inventory endpoints, displaying q
 - **WHEN** the inventory screen loads a product's stock
 - **THEN** quantity, minimum quantity, and updated-at are shown
 
-#### Scenario: Low stock reflects the backend
+#### Scenario: Low stock highlighted
 - **WHEN** a product is reported low on stock by the backend
 - **THEN** it is highlighted with the Warning color and an accompanying text label
 
