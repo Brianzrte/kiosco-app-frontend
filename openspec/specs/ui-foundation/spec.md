@@ -43,6 +43,10 @@ The frontend SHALL render a navigation shell that shows only the sections permit
 - **WHEN** a user with role `inventory` is authenticated
 - **THEN** the navigation does not show the sales section, and navigating to it directly redirects them away without requesting sales data
 
+#### Scenario: Users section is Admin-only
+- **WHEN** a user with role `inventory` is authenticated
+- **THEN** the navigation does not show the users section, and navigating to it directly redirects them away without requesting user data
+
 ### Requirement: Explicit loading, empty, and error states
 Every data-driven screen SHALL render explicit loading, empty, and error states. Empty states SHALL invite the primary action; error states SHALL state what happened and SHALL offer an explicit recovery action appropriate to the failure (retry, sign in again, or go back). An error state SHALL NOT be shown as a transient toast.
 

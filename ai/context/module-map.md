@@ -97,16 +97,13 @@ categoría.
 | Componentes | `UsersView.tsx` · `UserForm.tsx` · `UserDetailView.tsx` |
 | Libs | `lib/pagination.ts`, `lib/types.ts` (`User`, `Role`) |
 | Roles | `admin` |
-| Endpoints | `GET /users?limit=100` · `POST /users` · `PUT /users/{id}` (perfil) · `PATCH /users/{id}/deactivate` |
+| Endpoints | `GET /users?limit=&page=` · `GET /users/{id}` · `POST /users` · `PUT /users/{id}` (perfil) · `PATCH /users/{id}/deactivate` |
 | Specs | capability `ui-users` — hoy vive sólo como delta en `openspec/changes/add-frontend-users/specs/ui-users/spec.md`; **no hay `openspec/specs/ui-users/`** todavía |
 | Se toca al extender | los tres componentes, `lib/types.ts`, `lib/nav.ts` |
 
-`UserDetailView` resuelve el detalle escaneando `GET /users?limit=100` en el
-cliente. Es una limitación conocida y anotada en la tarea 6.5 de
-`add-frontend-users`. El **working tree** del backend ya contiene
-`GET /users/{id}` dentro del change abierto `add-multi-role-and-receiving`,
-pero eso no prueba que esté desplegado; hasta verificar una instancia, la tarea
-sigue dependiendo del rollout.
+`UserDetailView` obtiene el detalle con `GET /users/{id}`; el listado paginado
+queda exclusivamente para `/users`. El endpoint es admin-only, igual que el
+resto del módulo.
 El alta fija username y rol; no hay edición de contraseña ni reactivación.
 
 ## Sales (`/sales`)

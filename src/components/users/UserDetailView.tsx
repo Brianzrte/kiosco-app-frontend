@@ -40,15 +40,7 @@ export function UserDetailView({
   const [pending, setPending] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
-  // No existe GET /users/{id} todavía (pedido en backend-request.md); a
-  // escala kiosco el listado completo entra en una sola página de 100.
-  const fetcher = useCallback(
-    () =>
-      api<{ users: User[]; total: number }>("/users?limit=100").then((res) =>
-        res.users.find((u) => u.id === id),
-      ),
-    [id],
-  );
+  const fetcher = useCallback(() => api<User>(`/users/${id}`), [id]);
   const { data: user, error, reload } = useLoad(fetcher);
 
   async function deactivate() {

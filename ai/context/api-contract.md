@@ -99,7 +99,7 @@ saber qué existe, la autoridad es el router del backend.
 | `PATCH /inventory/stock/{product_id}/minimum` | inventario — **PATCH**, no PUT |
 | `GET /inventory/movements` | panel de movimientos en `InventoryView` |
 | `GET /inventory/valuation` | `/reports/inventory-valuation` |
-| `GET /users` (`limit`), `POST /users`, `PUT /users/{id}`, `PATCH /users/{id}/deactivate` | usuarios; `GET /users` también alimenta el selector de cajero |
+| `GET /users` (`limit`/`page`), `GET /users/{id}`, `POST /users`, `PUT /users/{id}`, `PATCH /users/{id}/deactivate` | usuarios; `GET /users` también alimenta el selector de cajero |
 | `POST /sales`, `GET /sales/{id}`, `POST /sales/{id}/items`, `PUT /sales/{id}/payment`, `POST /sales/{id}/confirm` | POS y detalle de venta |
 | `GET /sales` (`status`, `page`, `limit`, `cashier_id`, `from`, `to`, `sale_number`) | historial operativo |
 | `POST /sales/{id}/returns`, `GET /sales/{id}/returns` | devoluciones |
@@ -123,7 +123,7 @@ antes de asumir que acepta `payment_method`).
 ### Presentes sólo en trabajo backend no desplegado
 
 Al 2026-07-28, el working tree de `../backend` contiene
-`GET /users/{id}`, `PUT /users/{id}/roles`, `GET /purchase-orders/{id}`,
+`PUT /users/{id}/roles`, `GET /purchase-orders/{id}`,
 `POST /purchase-orders/{id}/items`,
 `DELETE /purchase-orders/{id}/items/{item_id}` y
 `GET /purchase-orders/uncatalogued-items`, además del nuevo body para
