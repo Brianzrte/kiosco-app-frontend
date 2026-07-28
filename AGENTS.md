@@ -66,5 +66,11 @@ Para analizar un requerimiento antes de crear un change: leé
 `ai/roles/requirement-analyst.md` y seguí
 `ai/skills/analyze-frontend-requirement/SKILL.md`.
 
+Para cerrar un change: leé `ai/roles/change-closer.md` y seguí
+`ai/skills/close-openspec-change/SKILL.md`. Implementar no es cerrar; el
+reviewer y el verifier no archivan. El closer es el único rol que sincroniza
+specs, archiva y crea el commit de cierre — y sólo recomienda la integración:
+`push`, PR y `merge` requieren una acción explícita posterior.
+
 La matriz completa de roles, skills y presupuestos de contexto está en
 `ai/README.md`.

@@ -89,3 +89,23 @@ deje de describir el sistema, que es exactamente lo que lo vuelve inútil.
 4. Implementá en las tres capas de `architecture.md`, reutilizando `api()`,
    `useLoad()`, `requireRole()`, el UI kit y `lib/money.ts`.
 5. Cerrá con `npm run lint` y `npm test`, y reportá qué quedó sin verificar.
+
+## Al cerrar un change
+
+El cierre formal es un paso propio, con su rol (`ai/roles/change-closer.md`) y
+su procedimiento (`ai/skills/close-openspec-change/SKILL.md`):
+
+```
+verification
+ → manual evidence
+ → change closer preflight
+ → spec synchronization
+ → OpenSpec archive
+ → closure commit
+ → PR or direct-merge recommendation
+```
+
+El closer es el único rol que sincroniza specs, archiva y crea el commit de
+cierre, siempre sobre un change pedido por su nombre exacto. La integración
+—`push`, PR o `merge`— sólo se recomienda; ejecutarla requiere una acción
+explícita posterior del usuario.
