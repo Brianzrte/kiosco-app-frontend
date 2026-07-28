@@ -87,9 +87,28 @@ También breaking change de forma de respuesta — mismo aviso de coordinación 
 
 ## 6. Checklist de verificación sugerida
 
-- [ ] Migración aplicada, columnas nuevas con default `''`.
-- [ ] `POST /users` sigue funcionando sin los campos nuevos (son opcionales).
-- [ ] `PUT /users/{id}` rechaza caller no-admin con `403`.
-- [ ] `GET /users?limit=20&offset=0` devuelve `{ users, total }` con exactamente 20 ítems cuando hay más de 20.
-- [ ] `GET /categories?limit=20&offset=0` devuelve `{ categories, total }`.
-- [ ] Ningún endpoint expone `password_hash`.
+- [x] Migración aplicada, columnas nuevas con default `''`.
+- [x] `POST /users` sigue funcionando sin los campos nuevos (son opcionales).
+- [x] `PUT /users/{id}` rechaza caller no-admin con `403`.
+- [x] `GET /users?limit=20&offset=0` devuelve `{ users, total }` con exactamente 20 ítems cuando hay más de 20.
+- [x] `GET /categories?limit=20&offset=0` devuelve `{ categories, total }`.
+- [x] Ningún endpoint expone `password_hash`.
+
+## 7. Nuevo pedido: `GET /api/v1/users/{id}` *(Admin only)*
+
+El frontend movió el detalle/edición de usuario de un modal a una página dedicada
+(`/users/{id}`, igual que `/products/{id}`), porque a futuro esa pantalla va a
+sumar edición de rol/permisos y un modal no escala para eso.
+
+Sin este endpoint, la página resuelve el detalle pidiendo `GET /users?limit=100`
+y filtrando por `id` en el cliente — funciona porque hoy el listado completo
+entra en una sola página, pero es un workaround, no la solución correcta.
+
+**Request:** `GET /api/v1/users/{id}`
+
+**Response:** `200` con el mismo `userResponse` de la lista (incluye los campos
+de perfil). `404` si no existe. Mismo criterio de autorización que el resto del
+módulo (Admin only).
+
+Una vez esté disponible, el frontend cambia `UserDetailView` a pedir por id en
+vez de escanear el listado.

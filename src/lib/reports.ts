@@ -35,7 +35,7 @@ export type ProductSalesItem = {
  * the one place date arithmetic happens on backend-supplied day strings;
  * every caller below reuses it instead of constructing its own `Date`.
  */
-function addDays(isoDate: string, delta: number): string {
+export function addDays(isoDate: string, delta: number): string {
   const [year, month, day] = isoDate.split("-").map(Number);
   const utc = Date.UTC(year, month - 1, day + delta);
   const d = new Date(utc);
@@ -123,6 +123,34 @@ export function comparePeriods(
 /** "el día anterior" / "los N días anteriores", named by the range's own length. */
 export function periodLengthLabel(days: number): string {
   return days === 1 ? "el día anterior" : `los ${days} días anteriores`;
+}
+
+/** Today as a plain "YYYY-MM-DD" string, in the browser's local calendar. */
+export function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export type RangePreset = "week" | "month" | "six_months";
+
+const PRESET_DAYS: Record<RangePreset, number> = {
+  week: 7,
+  month: 30,
+  six_months: 183,
+};
+
+/**
+ * Rolling window of fixed length ending today — never a calendar-aligned
+ * period ("this week", "this month"), matching the rule that a preset must
+ * never assert a calendar period the range does not actually span
+ * (`design.md`, period comparison decision).
+ */
+export function presetRange(preset: RangePreset): {
+  from: string;
+  to: string;
+} {
+  const to = today();
+  const from = addDays(to, -(PRESET_DAYS[preset] - 1));
+  return { from, to };
 }
 
 const OTROS_ID = "__otros__";

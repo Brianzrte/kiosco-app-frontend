@@ -5,6 +5,10 @@ export type User = {
   username: string;
   role: Role;
   active: boolean;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  address: string;
   created_at: string;
 };
 

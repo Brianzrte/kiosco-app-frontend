@@ -1,13 +1,42 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context — shown to AI when creating artifacts.
+context: |
+  Kiosco App frontend ("Mini Moni"): point-of-sale + inventory for a single-location
+  kiosk run by 1-5 people. This repo is the frontend only; the Go backend in
+  ../backend is the source of truth for every business rule.
+
+  Stack: Next.js 16 App Router, React 19, TypeScript strict, Tailwind v4, Vitest.
+  No runtime dependencies beyond next/react — no query/state/UI/chart/date library.
+
+  Architecture (see .claude/skills/frontend-kiosco-app/SKILL.md for the full guide):
+  - app/(app)/<route>/page.tsx: thin server component, calls requireRole() and
+    renders one feature component.
+  - components/<feature>/XView.tsx: "use client" screen; owns fetch + local state.
+  - components/ui/: the token-bound UI kit (Button, Input, Card, Badge, Table,
+    Dialog, Toast, states). Compose it — never style ad hoc per page.
+  - lib/: pure functions with colocated *.test.ts (money, reports, inventory,
+    returns, salesSummary). Business math lives here, not in views.
+  - Data access: api<T>() from lib/api.ts through the /api/backend proxy, loaded
+    with useLoad(). The auth token is an httpOnly cookie and never reaches
+    browser JS. Surface the backend's { message } on failure.
+
+  Roles: admin, cashier, inventory. Role gating (requireRole, NAV_ITEMS) is UX
+  only; the backend enforces. All /reports/* endpoints are admin-only.
+
+  Conventions:
+  - Money is a decimal string ("12.50") end to end; arithmetic via toCents/fromCents.
+  - User-facing copy in Spanish (rioplatense); code and identifiers in English.
+  - Every screen handles loading, empty, and error states explicitly.
+  - Design tokens only (globals.css @theme): 12px radius, soft shadows, mauve/rose
+    palette, light theme only.
+
+  When a change needs an endpoint the backend does not implement yet, flag it in
+  the change's backend-request.md instead of mocking it silently.
+
+  Out of scope for MVP: discounts, multi-payment, customers, suppliers, CSV export,
+  notifications, offline mode, dark mode. Returns are in scope, always registered
+  against a confirmed sale.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

@@ -62,8 +62,8 @@ export function SalesView({ role }: { role: Role }) {
 
   // GET /users es admin-only: el Cajero nunca lo pide (403 esperado). No
   // hace falta el selector de cajero para ese rol — hay uno solo, él mismo.
-  // limit=100: cubre el tamaño de kiosco (1-5 personas) hasta que exista
-  // paginación real en esta pantalla (add-frontend-users, sección 7).
+  // limit=100: alimenta el selector de cajero, no una lista paginada — a
+  // escala kiosco (1-5 personas) siempre entra en una sola página.
   const usersFetcher = useCallback(() => {
     if (isCashier) return Promise.resolve<User[]>([]);
     return api<{ users: User[]; total: number }>("/users?limit=100").then(

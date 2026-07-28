@@ -11,7 +11,7 @@ export type LinePoint = { x: string; y: number; xLabel: string };
 
 const WIDTH = 640;
 const DEFAULT_HEIGHT = 220;
-const PAD_LEFT = 92;
+const PAD_LEFT = 108;
 const PAD_RIGHT = 32;
 const PAD_TOP = 24;
 const PAD_BOTTOM = 28;
@@ -20,7 +20,7 @@ const MAX_X_LABELS = 8;
 /** Minimum horizontal gap between two direct point labels before the
  * lower-priority one is dropped (its dot marker stays; see marks-and-anatomy.md
  * on colliding end-labels — the tooltip and table remain the fallback). */
-const MIN_LABEL_GAP_PX = 56;
+const MIN_LABEL_GAP_PX = 72;
 /** Below this plot height, 5 y-axis tick labels crowd each other — fall
  * back to 3 (0 / mid / max). */
 const COMPACT_PLOT_HEIGHT = 100;
@@ -156,7 +156,7 @@ export function LineChart({
               y={yFor(t)}
               textAnchor="end"
               dominantBaseline="middle"
-              className="fill-text-secondary text-[10px]"
+              className="fill-text-secondary text-[14px]"
             >
               {formatValue(t)}
             </text>
@@ -170,7 +170,7 @@ export function LineChart({
               x={xFor(i)}
               y={height - 6}
               textAnchor="middle"
-              className="fill-text-secondary text-[10px]"
+              className="fill-text-secondary text-[14px]"
             >
               {p.xLabel}
             </text>
@@ -206,7 +206,7 @@ export function LineChart({
                   x={textX}
                   y={yFor(p.y) - 10}
                   textAnchor={anchor}
-                  className="fill-text-primary text-[11px] font-medium"
+                  className="fill-text-primary text-[15px] font-medium"
                 >
                   {formatValue(p.y)}
                 </text>

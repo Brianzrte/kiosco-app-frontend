@@ -1,0 +1,248 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input, Select } from "@/components/ui/Input";
+import { Table, Td, Th } from "@/components/ui/Table";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { api } from "@/lib/api";
+import { useLoad } from "@/lib/useLoad";
+import { formatMoney } from "@/lib/money";
+import { computeTotalPages } from "@/lib/pagination";
+import { presetRange, today, type RangePreset } from "@/lib/reports";
+
+type Supplier = { id: string; name: string; active: boolean };
+type SuppliersResponse = { suppliers: Supplier[] };
+
+type PurchaseOrderStatus = "PENDING" | "RECEIVED";
+
+type PurchaseOrder = {
+  id: string;
+  supplier_name: string;
+  ordered_at: string;
+  total: string;
+  status: PurchaseOrderStatus;
+  received_at: string | null;
+  received_by: string | null;
+};
+
+type PurchaseOrdersResponse = {
+  purchase_orders: PurchaseOrder[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+const PAGE_SIZE = 20;
+
+const STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
+  PENDING: "Pendiente",
+  RECEIVED: "Recibido",
+};
+
+const PRESETS: { key: RangePreset; label: string }[] = [
+  { key: "week", label: "Semana" },
+  { key: "month", label: "Mes" },
+];
+
+function firstOfMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+export function PurchasesReportView() {
+  const [from, setFrom] = useState(firstOfMonth());
+  const [to, setTo] = useState(today());
+  const [supplierId, setSupplierId] = useState("");
+  const [page, setPage] = useState(1);
+
+  const suppliersFetcher = useCallback(
+    () =>
+      api<SuppliersResponse>("/suppliers").then((res) => res.suppliers ?? []),
+    [],
+  );
+  const { data: suppliers } = useLoad(suppliersFetcher);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <Link
+          href="/reports"
+          className="text-sm font-medium text-primary hover:text-primary-hover"
+        >
+          ← Volver a reportes
+        </Link>
+      </div>
+
+      <h1 className="text-xl font-semibold">Compras a proveedores</h1>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex gap-2">
+          {PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const range = presetRange(preset.key);
+                setFrom(range.from);
+                setTo(range.to);
+                setPage(1);
+              }}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+        <Input
+          label="Desde"
+          type="date"
+          value={from}
+          onChange={(e) => {
+            setFrom(e.target.value);
+            setPage(1);
+          }}
+        />
+        <Input
+          label="Hasta"
+          type="date"
+          value={to}
+          onChange={(e) => {
+            setTo(e.target.value);
+            setPage(1);
+          }}
+        />
+        <Select
+          label="Proveedor"
+          value={supplierId}
+          onChange={(e) => {
+            setSupplierId(e.target.value);
+            setPage(1);
+          }}
+          className="w-56"
+        >
+          <option value="">Todos los proveedores</option>
+          {(suppliers ?? []).map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <PurchasesReportTable
+        key={`${from}-${to}-${supplierId}-${page}`}
+        from={from}
+        to={to}
+        supplierId={supplierId}
+        page={page}
+        onPageChange={setPage}
+      />
+    </div>
+  );
+}
+
+function PurchasesReportTable({
+  from,
+  to,
+  supplierId,
+  page,
+  onPageChange,
+}: {
+  from: string;
+  to: string;
+  supplierId: string;
+  page: number;
+  onPageChange: (page: number) => void;
+}) {
+  const fetcher = useCallback(() => {
+    const params = new URLSearchParams({
+      from,
+      to,
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    });
+    if (supplierId) params.set("supplier_id", supplierId);
+    return api<PurchaseOrdersResponse>(`/purchase-orders?${params.toString()}`);
+  }, [from, to, supplierId, page]);
+  const { data, error, reload } = useLoad(fetcher);
+
+  if (error) return <ErrorState error={error} onRetry={reload} />;
+  if (data === null) return <ListSkeleton rows={6} />;
+  if (data.purchase_orders.length === 0) {
+    return (
+      <EmptyState message="No hay pedidos a proveedores en el período seleccionado." />
+    );
+  }
+
+  const totalPages = computeTotalPages(data.total, PAGE_SIZE);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Table>
+        <thead>
+          <tr>
+            <Th>Fecha</Th>
+            <Th>Proveedor</Th>
+            <Th className="text-right">Total</Th>
+            <Th>Estado</Th>
+            <Th>Recibido</Th>
+            <Th>Recibido por</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.purchase_orders.map((order) => (
+            <tr key={order.id}>
+              <Td className="num">{formatDateTime(order.ordered_at)}</Td>
+              <Td>{order.supplier_name}</Td>
+              <Td className="num text-right font-medium">
+                {formatMoney(order.total)}
+              </Td>
+              <Td>
+                <Badge tone={order.status === "RECEIVED" ? "success" : "warning"}>
+                  {STATUS_LABELS[order.status]}
+                </Badge>
+              </Td>
+              <Td className="num">{formatDateTime(order.received_at)}</Td>
+              <Td>{order.received_by ?? "—"}</Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-text-secondary">
+            Página {page} de {totalPages} · {data.total} pedidos
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

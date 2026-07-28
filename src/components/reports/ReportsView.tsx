@@ -312,25 +312,21 @@ function ReportNavCards() {
           href="/reports/sales"
           title="Reporte de ventas"
           description="Por día, con desglose por medio de pago y cajero."
-          disabledReason="Requiere un endpoint de backend todavía no disponible."
         />
         <ReportNavCard
           href="/reports/products"
           title="Reporte de productos"
           description="Stock, costo, precio y margen por producto."
-          disabledReason="Requiere un endpoint de backend todavía no disponible."
         />
         <ReportNavCard
           href="/reports/inventory-valuation"
           title="Valorización de inventario"
           description="Costo y valor de venta de todo el inventario."
-          disabledReason="Requiere un endpoint de backend todavía no disponible."
         />
         <ReportNavCard
           href="/reports/purchases"
           title="Compras a proveedores"
           description="Pedidos realizados a proveedores, por fecha y estado."
-          disabledReason="Requiere el módulo de proveedores, que no existe en el backend."
         />
       </div>
     </section>

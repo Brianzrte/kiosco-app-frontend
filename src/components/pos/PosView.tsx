@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
-import { Product, ProductList, Sale } from "@/lib/types";
+import { Product, ProductList, Sale, Stock } from "@/lib/types";
 
 type CartLine = { product: Product; quantity: number };
 
@@ -36,7 +36,29 @@ export function PosView() {
   const [searchTerm, setSearchTerm] = useState("");
   const [catalog, setCatalog] = useState<Product[] | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [activeResultIndex, setActiveResultIndex] = useState(0);
   const catalogRequested = useRef(false);
+  // Stock available per product, fetched lazily the first time it's needed
+  // and cached — the cart quantity is capped against it so a cashier can
+  // never sell more than what's actually in inventory.
+  const [stockByProduct, setStockByProduct] = useState<Record<string, number>>(
+    {},
+  );
+
+  async function availableStock(
+    productId: string,
+  ): Promise<number | undefined> {
+    if (productId in stockByProduct) return stockByProduct[productId];
+    try {
+      const stock = await api<Stock>(`/inventory/stock/${productId}`);
+      setStockByProduct((prev) => ({ ...prev, [productId]: stock.quantity }));
+      return stock.quantity;
+    } catch {
+      // Unknown stock never blocks a scan — the backend remains the
+      // authority and rejects an over-sell at confirm time regardless.
+      return undefined;
+    }
+  }
 
   function refocus() {
     setBarcode("");
@@ -60,7 +82,7 @@ export function PosView() {
         );
         return;
       }
-      addToCart(product);
+      await addToCart(product);
     } catch (e) {
       const err = e as ApiError;
       setScanError(
@@ -73,8 +95,24 @@ export function PosView() {
     }
   }
 
-  function addToCart(product: Product) {
+  function stockLimitMessage(product: Product, available: number): string {
+    return available === 0
+      ? `“${product.name}” no tiene stock disponible.`
+      : `Solo hay ${available} unidad${available === 1 ? "" : "es"} disponible${
+          available === 1 ? "" : "s"
+        } de “${product.name}”.`;
+  }
+
+  async function addToCart(product: Product) {
+    const currentQuantity =
+      cart.find((l) => l.product.id === product.id)?.quantity ?? 0;
+    const available = await availableStock(product.id);
+    if (available !== undefined && currentQuantity + 1 > available) {
+      setScanError(stockLimitMessage(product, available));
+      return;
+    }
     setConfirmedSale(null);
+    setScanError(null);
     setCart((lines) => {
       const existing = lines.find((l) => l.product.id === product.id);
       if (existing) {
@@ -86,6 +124,15 @@ export function PosView() {
     });
     setFlash((f) => ({ id: product.id, nonce: (f?.nonce ?? 0) + 1 }));
     setTotalFlash((n) => n + 1);
+  }
+
+  async function incrementQuantity(line: CartLine) {
+    const available = await availableStock(line.product.id);
+    if (available !== undefined && line.quantity + 1 > available) {
+      setScanError(stockLimitMessage(line.product, available));
+      return;
+    }
+    setQuantity(line.product.id, line.quantity + 1);
   }
 
   async function loadCatalog() {
@@ -111,15 +158,31 @@ export function PosView() {
       .slice(0, 8);
   }, [catalog, searchTerm]);
 
-  function pickSearchResult(product: Product) {
-    addToCart(product);
+  async function pickSearchResult(product: Product) {
+    await addToCart(product);
     setSearchTerm("");
     refocus();
   }
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
-    if (searchResults.length > 0) pickSearchResult(searchResults[0]);
+    const target = searchResults[activeResultIndex] ?? searchResults[0];
+    if (target) pickSearchResult(target);
+  }
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") {
+      setSearchTerm("");
+      return;
+    }
+    if (searchResults.length === 0) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveResultIndex((i) => Math.min(i + 1, searchResults.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveResultIndex((i) => Math.max(i - 1, 0));
+    }
   }
 
   function setQuantity(productId: string, quantity: number) {
@@ -213,16 +276,20 @@ export function PosView() {
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
+                setActiveResultIndex(0);
                 if (e.target.value.trim()) void loadCatalog();
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setSearchTerm("");
-              }}
+              onKeyDown={handleSearchKeyDown}
               autoComplete="off"
               placeholder="Nombre o SKU del producto"
               role="combobox"
               aria-expanded={searchResults.length > 0}
               aria-controls="pos-search-results"
+              aria-activedescendant={
+                searchResults[activeResultIndex]
+                  ? `pos-search-result-${searchResults[activeResultIndex].id}`
+                  : undefined
+              }
               className="w-full rounded-app border border-border bg-surface px-4 py-2.5 shadow-soft placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
             />
           </form>
@@ -248,16 +315,22 @@ export function PosView() {
                   Ningún producto activo coincide con “{searchTerm.trim()}”.
                 </li>
               ) : (
-                searchResults.map((p) => (
+                searchResults.map((p, index) => (
                   <li
                     key={p.id}
+                    id={`pos-search-result-${p.id}`}
+                    role="option"
+                    aria-selected={index === activeResultIndex}
                     className="border-b border-border last:border-b-0"
                   >
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
+                      onMouseEnter={() => setActiveResultIndex(index)}
                       onClick={() => pickSearchResult(p)}
-                      className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
+                      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 ${
+                        index === activeResultIndex ? "bg-surface-2" : ""
+                      }`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-medium">
@@ -327,9 +400,7 @@ export function PosView() {
                       variant="secondary"
                       aria-label={`Sumar uno a ${line.product.name}`}
                       className="size-11 !p-0 md:size-9"
-                      onClick={() =>
-                        setQuantity(line.product.id, line.quantity + 1)
-                      }
+                      onClick={() => incrementQuantity(line)}
                     >
                       +
                     </Button>
@@ -355,15 +426,19 @@ export function PosView() {
       </div>
 
       <Card className="h-fit lg:sticky lg:top-6">
-        <h2 className="mb-2 text-sm font-medium text-text-secondary">Total</h2>
-        <p
-          key={totalFlash}
-          className={`num mb-6 text-5xl font-bold tracking-tight ${
-            totalFlash > 0 ? "total-flash" : ""
-          }`}
-        >
-          {formatMoney(fromCents(totalCents))}
-        </p>
+        <h2 className="mb-2 text-center text-sm font-medium text-text-secondary">
+          Total
+        </h2>
+        <div className="mb-6 flex min-h-[3.75rem] items-center justify-center">
+          <p
+            key={totalFlash}
+            className={`num whitespace-nowrap text-center text-4xl font-bold tracking-tight sm:text-5xl ${
+              totalFlash > 0 ? "total-flash" : ""
+            }`}
+          >
+            {formatMoney(fromCents(totalCents))}
+          </p>
+        </div>
 
         <fieldset className="mb-6">
           <legend className="mb-2 text-sm font-medium">Método de pago</legend>

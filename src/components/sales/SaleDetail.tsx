@@ -12,7 +12,11 @@ import { Table, Td, Th } from "@/components/ui/Table";
 import { ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import { computeAvailability } from "@/lib/returns";
+import {
+  computeAvailability,
+  computeNetTotal,
+  sumReturnedTotal,
+} from "@/lib/returns";
 import { Return, ReturnList, Role, Sale, SaleStatus, User } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 
@@ -65,6 +69,11 @@ export function SaleDetail({ id, role }: { id: string; role: Role }) {
 
   const canRegisterReturn =
     sale?.status === "confirmed" && (role === "admin" || role === "cashier");
+
+  const hasReturns = !!returns && returns.length > 0;
+  const returnedTotal = hasReturns ? sumReturnedTotal(returns) : null;
+  const netTotal =
+    sale && hasReturns ? computeNetTotal(sale.total, returns) : null;
 
   // La venta original nunca cambia (design.md): esto es sólo una marca
   // visual sobre los mismos ítems, tachado completo únicamente cuando no
@@ -217,11 +226,36 @@ export function SaleDetail({ id, role }: { id: string; role: Role }) {
             )}
           </section>
 
-          <div className="flex items-center justify-between rounded-app bg-rose-strong px-4 py-3 text-text-inverse">
-            <span className="text-sm font-medium">Total de la venta</span>
-            <span className="num text-xl font-semibold">
-              {formatMoney(sale.total)}
-            </span>
+          <div className="flex flex-col gap-2 rounded-app bg-rose-strong px-4 py-3 text-text-inverse">
+            {netTotal !== null ? (
+              <>
+                <div className="flex items-center justify-between text-sm text-text-inverse/80">
+                  <span>Total facturado</span>
+                  <span className="num line-through">
+                    {formatMoney(sale.total)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-text-inverse/80">
+                  <span>Devuelto</span>
+                  <span className="num">− {formatMoney(returnedTotal!)}</span>
+                </div>
+                <div className="flex items-center justify-between border-t border-text-inverse/20 pt-2">
+                  <span className="text-sm font-medium">
+                    Total neto de la venta
+                  </span>
+                  <span className="num text-xl font-semibold">
+                    {formatMoney(netTotal)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total de la venta</span>
+                <span className="num text-xl font-semibold">
+                  {formatMoney(sale.total)}
+                </span>
+              </div>
+            )}
           </div>
 
           {sale.status === "confirmed" &&

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   comparePeriods,
   fillDailySeries,
   foldProductsIntoOtros,
   periodLengthLabel,
+  presetRange,
   previousPeriodRange,
   type ProductSalesItem,
 } from "./reports";
@@ -132,5 +133,28 @@ describe("periodLengthLabel", () => {
   it("names a single day distinctly from a multi-day range", () => {
     expect(periodLengthLabel(1)).toBe("el día anterior");
     expect(periodLengthLabel(7)).toBe("los 7 días anteriores");
+  });
+});
+
+describe("presetRange", () => {
+  it("returns a rolling window of fixed length ending today, never a calendar-aligned period", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T12:00:00Z"));
+    try {
+      expect(presetRange("week")).toEqual({
+        from: "2026-07-09",
+        to: "2026-07-15",
+      });
+      expect(presetRange("month")).toEqual({
+        from: "2026-06-16",
+        to: "2026-07-15",
+      });
+      expect(presetRange("six_months")).toEqual({
+        from: "2026-01-14",
+        to: "2026-07-15",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

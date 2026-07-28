@@ -7,7 +7,9 @@ export function toCents(decimal: string): number {
   const [units, fraction = ""] = decimal.split(".");
   const cents = (fraction + "00").slice(0, 2);
   const sign = units.startsWith("-") ? -1 : 1;
-  return sign * (Math.abs(parseInt(units || "0", 10)) * 100 + parseInt(cents, 10));
+  return (
+    sign * (Math.abs(parseInt(units || "0", 10)) * 100 + parseInt(cents, 10))
+  );
 }
 
 export function fromCents(cents: number): string {
@@ -17,5 +19,8 @@ export function fromCents(cents: number): string {
 }
 
 export function formatMoney(decimal: string): string {
-  return `$ ${decimal}`;
+  const sign = decimal.startsWith("-") ? "-" : "";
+  const [units, fraction = "00"] = decimal.replace("-", "").split(".");
+  const grouped = units.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `$ ${sign}${grouped},${fraction.padEnd(2, "0")}`;
 }

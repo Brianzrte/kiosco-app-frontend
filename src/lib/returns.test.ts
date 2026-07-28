@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   buildReturnPayload,
   computeAvailability,
+  computeNetTotal,
   computeSelectionValue,
   hasAnySelection,
   isValidReason,
   sumReturnedByItem,
+  sumReturnedTotal,
 } from "./returns";
 import { Return, SaleItem } from "./types";
 
@@ -28,12 +30,16 @@ const items: SaleItem[] = [
   },
 ];
 
-function makeReturn(saleItemId: string, quantity: number, unitPrice = "1000.00"): Return {
+function makeReturn(
+  saleItemId: string,
+  quantity: number,
+  unitPrice = "1000.00",
+): Return {
   return {
     id: `ret-${saleItemId}-${quantity}`,
     sale_id: "sale-1",
     reason: "motivo",
-    total_amount: "0.00",
+    total_amount: (Number(unitPrice) * quantity).toFixed(2),
     performed_by: "user-1",
     created_at: "2026-07-27T10:00:00Z",
     items: [
@@ -148,6 +154,36 @@ describe("buildReturnPayload", () => {
       reason: "producto roto",
       items: [{ sale_item_id: "item-1", quantity: 2 }],
     });
+  });
+});
+
+describe("sumReturnedTotal", () => {
+  it("is zero with no returns", () => {
+    expect(sumReturnedTotal([])).toBe("0.00");
+  });
+
+  it("sums the total_amount across all returns", () => {
+    const returns = [
+      makeReturn("item-1", 2, "1000.00"),
+      makeReturn("item-2", 1, "500.00"),
+    ];
+    expect(sumReturnedTotal(returns)).toBe("2500.00");
+  });
+});
+
+describe("computeNetTotal", () => {
+  it("equals the sale total when nothing was returned", () => {
+    expect(computeNetTotal("6000.00", [])).toBe("6000.00");
+  });
+
+  it("subtracts returned merchandise from the sale total", () => {
+    const returns = [makeReturn("item-1", 2, "1000.00")];
+    expect(computeNetTotal("6000.00", returns)).toBe("4000.00");
+  });
+
+  it("never goes negative even if returns exceed the sale total", () => {
+    const returns = [makeReturn("item-1", 9, "1000.00")];
+    expect(computeNetTotal("6000.00", returns)).toBe("0.00");
   });
 });
 

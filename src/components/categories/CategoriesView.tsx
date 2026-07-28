@@ -15,8 +15,11 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
+import { computeTotalPages } from "@/lib/pagination";
 import { useLoad } from "@/lib/useLoad";
 import { Category, CategoryList, ProductList } from "@/lib/types";
+
+const PAGE_SIZE = 20;
 
 const swatches: Record<string, string> = {
   "pastel-pink": "bg-pastel-pink",
@@ -35,24 +38,28 @@ export function CategoriesView() {
   const [editingName, setEditingName] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editPending, setEditPending] = useState(false);
+  const [page, setPage] = useState(1);
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
-  // en esta pantalla (add-frontend-users, sección 7.2).
-  const fetcher = useCallback(
-    () =>
-      Promise.all([
-        api<CategoryList>("/categories?limit=100").then(
-          (res) => res.categories,
-        ),
-        api<ProductList>("/products").then((list) => list.products),
-      ]),
+  const categoriesFetcher = useCallback(
+    () => api<CategoryList>(`/categories?limit=${PAGE_SIZE}&page=${page}`),
+    [page],
+  );
+  const { data: categoryList, error, reload } = useLoad(categoriesFetcher);
+  const categories = categoryList?.categories ?? null;
+  const totalPages = categoryList
+    ? computeTotalPages(categoryList.total, PAGE_SIZE)
+    : 1;
+
+  // Sólo alimenta el contador de productos por categoría; no participa de la
+  // paginación de la lista de categorías.
+  const productsFetcher = useCallback(
+    () => api<ProductList>("/products?limit=100").then((list) => list.products),
     [],
   );
-  const { data, error, reload } = useLoad(fetcher);
-  const categories = data?.[0] ?? null;
+  const { data: products } = useLoad(productsFetcher);
   const productCount = new Map<string, number>();
-  for (const p of data?.[1] ?? []) {
+  for (const p of products ?? []) {
     productCount.set(p.category_id, (productCount.get(p.category_id) ?? 0) + 1);
   }
 
@@ -73,6 +80,7 @@ export function CategoriesView() {
       await api("/categories", { method: "POST", body: { name: name.trim() } });
       toast("success", "Categoría creada");
       setName("");
+      setPage(1);
       reload();
     } catch (e) {
       setFormError((e as ApiError).message);
@@ -156,65 +164,90 @@ export function CategoriesView() {
       ) : categories.length === 0 ? (
         <EmptyState message="Todavía no hay categorías. Creá la primera para organizar los productos." />
       ) : (
-        <ul className="max-w-xl overflow-hidden rounded-app border border-border bg-surface shadow-soft">
-          {categories.map((c) => (
-            <li
-              key={c.id}
-              className="border-b border-border px-4 py-3 last:border-b-0"
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  aria-hidden
-                  className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
-                />
-                {editingId === c.id ? (
-                  <div className="min-w-0 flex-1">
-                    <Input
-                      ref={editInputRef}
-                      aria-label={`Renombrar ${c.name}`}
-                      value={editingName}
-                      onChange={(event) => setEditingName(event.target.value)}
-                      onKeyDown={(event) => handleEditKeyDown(event, c.id)}
-                      error={editError ?? undefined}
-                      disabled={editPending}
-                    />
-                  </div>
-                ) : (
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {c.name}
+        <>
+          <ul className="max-w-xl overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+            {categories.map((c) => (
+              <li
+                key={c.id}
+                className="border-b border-border px-4 py-3 last:border-b-0"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    aria-hidden
+                    className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
+                  />
+                  {editingId === c.id ? (
+                    <div className="min-w-0 flex-1">
+                      <Input
+                        ref={editInputRef}
+                        aria-label={`Renombrar ${c.name}`}
+                        value={editingName}
+                        onChange={(event) => setEditingName(event.target.value)}
+                        onKeyDown={(event) => handleEditKeyDown(event, c.id)}
+                        error={editError ?? undefined}
+                        disabled={editPending}
+                      />
+                    </div>
+                  ) : (
+                    <span className="min-w-0 flex-1 truncate font-medium">
+                      {c.name}
+                    </span>
+                  )}
+                  <span className="num shrink-0 text-sm text-text-secondary">
+                    {productCount.get(c.id) ?? 0}{" "}
+                    {(productCount.get(c.id) ?? 0) === 1
+                      ? "producto"
+                      : "productos"}
                   </span>
-                )}
-                <span className="num shrink-0 text-sm text-text-secondary">
-                  {productCount.get(c.id) ?? 0}{" "}
-                  {(productCount.get(c.id) ?? 0) === 1
-                    ? "producto"
-                    : "productos"}
-                </span>
-                {editingId === c.id ? (
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={cancelEditing}
-                      disabled={editPending}
-                    >
-                      Cancelar
+                  {editingId === c.id ? (
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        variant="secondary"
+                        onClick={cancelEditing}
+                        disabled={editPending}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={() => saveEditing(c.id)}
+                        pending={editPending}
+                      >
+                        {editPending ? "Guardando…" : "Guardar"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="ghost" onClick={() => startEditing(c)}>
+                      Renombrar
                     </Button>
-                    <Button
-                      onClick={() => saveEditing(c.id)}
-                      pending={editPending}
-                    >
-                      {editPending ? "Guardando…" : "Guardar"}
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="ghost" onClick={() => startEditing(c)}>
-                    Renombrar
-                  </Button>
-                )}
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {totalPages > 1 && (
+            <div className="flex max-w-xl items-center justify-between gap-3 text-sm text-text-secondary">
+              <span>
+                Página {page} de {totalPages} · {categoryList?.total} categorías
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Siguiente
+                </Button>
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -5,7 +5,7 @@
 ## 0. Prerrequisito
 
 - [x] 0.1 Verificar que `POST/GET /api/v1/users` y `PATCH /api/v1/users/{id}/deactivate` estén desplegados — confirmado, implementados en `internal/identity`
-- [ ] 0.2 **Bloqueado por backend** — perfil editable (`first_name`, `last_name`, `phone`, `address`), `PUT /api/v1/users/{id}` y paginación `limit`/`offset` en `GET /users` y `GET /categories` no existen todavía. Pedido documentado en `backend-request.md`. No mockear: las secciones 6 y 7 de abajo quedan pausadas hasta que el backend confirme el despliegue
+- [x] 0.2 Backend desplegado: perfil editable (`first_name`, `last_name`, `phone`, `address`), `PUT /api/v1/users/{id}` y paginación `limit`/`offset` en `GET /users` y `GET /categories` — confirmado en `internal/bootstrap/router.go` y `internal/identity/transport/http/`. Secciones 6 y 7 desbloqueadas e implementadas
 
 ## 1. Tipos y acceso
 
@@ -41,14 +41,15 @@
 - [ ] 5.2 Verificar que ninguna respuesta ni ningún log del cliente exponga material de contraseña
 - [ ] 5.3 Recorrido completo por teclado con foco visible, incluido el diálogo de confirmación
 
-## 6. Perfil editable (bloqueado por backend, ver `backend-request.md`)
+## 6. Perfil editable
 
-- [ ] 6.1 Agregar `first_name`, `last_name`, `phone`, `address` a `User` en `lib/types.ts`
-- [ ] 6.2 Panel de detalle al hacer clic en una fila: username, rol con descripción, estado, alta y los 4 campos de perfil
-- [ ] 6.3 Formulario de edición del perfil dentro del panel (no username/rol/password/active): `PUT /users/{id}`, deshabilitar envío mientras está pendiente, mostrar `message` del backend ante error
-- [ ] 6.4 La acción de desactivar se mueve al panel de detalle (ya no vive en la fila de la tabla)
+- [x] 6.1 Agregar `first_name`, `last_name`, `phone`, `address` a `User` en `lib/types.ts`
+- [x] 6.2 Página dedicada `/users/{id}` (no modal — se decidió así porque la edición de rol/permisos se suma más adelante y un modal no escala): username, rol, estado, alta y los 4 campos de perfil. `/users/new` reutiliza el mismo `UserForm` para el alta, igual que `products/new` + `products/[id]` con `ProductForm`
+- [x] 6.3 Formulario de edición del perfil en la página de detalle (no username/rol/password/active): `PUT /users/{id}`, deshabilitar envío mientras está pendiente, mostrar `message` del backend ante error
+- [x] 6.4 La acción de desactivar se mueve a la página de detalle (ya no vive en la fila de la tabla)
+- [ ] 6.5 Bloqueado por backend (ver `backend-request.md` §7): `GET /users/{id}` — hoy `UserDetailView` resuelve el detalle escaneando `GET /users?limit=100` client-side; cambiar a pedir por id cuando el endpoint exista
 
-## 7. Paginación 20 (bloqueado por backend, ver `backend-request.md`)
+## 7. Paginación 20
 
-- [ ] 7.1 `/users`: consumir `GET /users?limit=20&offset=0`, parsear `{ users, total }`, control "Cargar más"/paginado
-- [ ] 7.2 `/categories`: mismo criterio con `GET /categories?limit=20&offset=0` → `{ categories, total }`
+- [x] 7.1 `/users`: consumir `GET /users?limit=20&page=`, parsear `{ users, total }`, control Anterior/Siguiente (mismo patrón que `SalesView`)
+- [x] 7.2 `/categories`: mismo criterio con `GET /categories?limit=20&page=` → `{ categories, total }`

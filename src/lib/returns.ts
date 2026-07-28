@@ -22,6 +22,21 @@ export type ReturnAvailability = {
   available: number;
 };
 
+/** Total merchandise value across all returns already registered for a sale. */
+export function sumReturnedTotal(returns: Return[]): string {
+  const cents = returns.reduce(
+    (sum, ret) => sum + toCents(ret.total_amount),
+    0,
+  );
+  return fromCents(cents);
+}
+
+/** Sale total net of everything already returned — never negative. */
+export function computeNetTotal(saleTotal: string, returns: Return[]): string {
+  const net = toCents(saleTotal) - toCents(sumReturnedTotal(returns));
+  return fromCents(Math.max(0, net));
+}
+
 export function sumReturnedByItem(returns: Return[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const ret of returns) {

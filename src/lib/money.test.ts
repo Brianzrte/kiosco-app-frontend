@@ -15,6 +15,9 @@ describe("money", () => {
   });
 
   it("formats money for display", () => {
-    expect(formatMoney("12.50")).toBe("$ 12.50");
+    expect(formatMoney("12.50")).toBe("$ 12,50");
+    expect(formatMoney("1000.00")).toBe("$ 1.000,00");
+    expect(formatMoney("1234567.89")).toBe("$ 1.234.567,89");
+    expect(formatMoney("-305.00")).toBe("$ -305,00");
   });
 });
