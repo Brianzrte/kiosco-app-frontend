@@ -20,6 +20,9 @@ canónico y neutral vive en `ai/`:
   Claude Code con el CLI de OpenSpec. No redefinen el núcleo del frontend.
 - Usá sólo las herramientas declaradas por el agente elegido. Las restricciones
   de edición del rol siguen aplicando aunque una herramienta esté disponible.
+- `/ux-ui-supervisor` expone la skill de supervisión UX/UI para design
+  discovery, auditorías y revisión previa al cierre. La regla de cuándo usarla
+  vive en `AGENTS.md`; acá no se repite.
 
 ## Reglas de plataforma
 

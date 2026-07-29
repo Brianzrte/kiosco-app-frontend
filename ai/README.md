@@ -26,6 +26,7 @@ Roles y skills vigentes:
 | `roles/frontend-reviewer.md` | `skills/review-frontend-diff/SKILL.md` | Revisar el diff implementado sin corregirlo. |
 | `roles/frontend-test-verifier.md` | `skills/verify-frontend-change/SKILL.md` | Ejecutar checks y contrastar tasks con evidencia. |
 | `roles/change-closer.md` | `skills/close-openspec-change/SKILL.md` | Cerrar un change verificado: sync de specs, archivado, commit de cierre y recomendación de integración. |
+| — (transversal, sin rol propio) | `skills/ux-ui-supervisor/SKILL.md` | Supervisar UX/UI: design discovery, propuesta visual, auditoría de pantallas y revisión previa al cierre. Asesora; no implementa ni archiva. |
 
 El procedimiento de implementación ya está migrado. La skill
 `.claude/skills/frontend-kiosco-app/SKILL.md` se conserva únicamente como alias

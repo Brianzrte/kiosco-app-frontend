@@ -66,6 +66,14 @@ Para analizar un requerimiento antes de crear un change: leé
 `ai/roles/requirement-analyst.md` y seguí
 `ai/skills/analyze-frontend-requirement/SKILL.md`.
 
+## Supervisión UX/UI
+
+Usá la skill `ai/skills/ux-ui-supervisor/SKILL.md` cuando una tarea crea o
+cambia layouts, componentes, formularios, tablas, navegación, interacciones,
+comportamiento responsive o estados visuales de cara al usuario, y antes de
+cerrar un change frontend con impacto visible. Es supervisora: no implementa,
+no agrega dependencias, no marca tasks y no archiva.
+
 Para cerrar un change: leé `ai/roles/change-closer.md` y seguí
 `ai/skills/close-openspec-change/SKILL.md`. Implementar no es cerrar; el
 reviewer y el verifier no archivan. El closer es el único rol que sincroniza
