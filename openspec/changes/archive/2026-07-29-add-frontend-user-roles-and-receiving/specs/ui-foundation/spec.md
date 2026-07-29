@@ -13,6 +13,14 @@ The frontend SHALL render a navigation shell that shows only the sections permit
 - **WHEN** a cashier navigates directly to `/products` by URL
 - **THEN** the frontend redirects them away from the page and no product data is requested
 
+#### Scenario: Inventory Manager has no sales section
+- **WHEN** a user whose only role is `inventory` is authenticated
+- **THEN** the navigation does not show the sales section, and navigating to it directly redirects them away without requesting sales data
+
+#### Scenario: Users section is Admin-only
+- **WHEN** a user whose only role is `inventory` is authenticated
+- **THEN** the navigation does not show the users section, and navigating to it directly redirects them away without requesting user data
+
 #### Scenario: Union of two roles
 - **WHEN** a user holds `cashier` and `receiving`
 - **THEN** the navigation shows the POS section, their sales, the receiving section and stock loading, and still does not show categories, users or reports

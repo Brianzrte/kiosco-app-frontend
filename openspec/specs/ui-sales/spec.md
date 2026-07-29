@@ -27,7 +27,7 @@ The frontend SHALL show the operational sales list from `GET /api/v1/sales`. Rol
 - **THEN** creation and confirmation dates are shown as separately labelled values rather than a single ambiguous date column
 
 ### Requirement: Cashier sees only their own sales, defaulting to today
-The frontend SHALL offer the sales list to role `cashier` restricted to that cashier's own sales, including their own drafts. The restriction SHALL be enforced by the backend scoping the response to the authenticated user; the frontend SHALL NOT request an unrestricted list and filter it client-side under any circumstance. For a cashier the cashier filter SHALL be omitted entirely rather than rendered disabled. The date range SHALL default to the current day for a cashier — the primary use case is finding a sale from the shift in progress — while remaining adjustable so the cashier can page back to an earlier own sale if needed. This requirement depends on the backend admitting role `cashier` on the sales list endpoint; until it does, the cashier-facing view SHALL NOT be built.
+The frontend SHALL offer the sales list to a user whose access to it comes from role `cashier` and not from role `admin`, restricted to that cashier's own sales, including their own drafts, and restricted to the **current day**. The ownership restriction SHALL be enforced by the backend scoping the response to the authenticated user; the frontend SHALL NOT request an unrestricted list and filter it client-side under any circumstance. For a cashier the cashier filter SHALL be omitted entirely rather than rendered disabled, and the date range control SHALL be omitted as well: the day is fixed to today and displayed as a static label, so the screen never offers a range the backend will silently clip. The screen SHALL also show cards with that cashier's confirmed sales today — count, total billed, cash and card — from `GET /sales/today-summary`; it SHALL never derive those aggregates from the paginated list. A user holding both `cashier` and `admin` SHALL get the Admin view, with the adjustable date range and the cashier filter.
 
 #### Scenario: Cashier sees their own sales
 - **WHEN** a cashier opens the sales section
@@ -35,11 +35,15 @@ The frontend SHALL offer the sales list to role `cashier` restricted to that cas
 
 #### Scenario: Cashier's list defaults to today
 - **WHEN** a cashier opens the sales section without changing filters
-- **THEN** the date range shown is today
+- **THEN** the current day is shown as a static label and no date range control is rendered
 
 #### Scenario: Cashier can still look further back
-- **WHEN** a cashier widens the date range
-- **THEN** their own sales from earlier days are listed, still scoped to themselves by the backend
+- **WHEN** a cashier would try to widen the date range
+- **THEN** no date range control is available and only the current business day's own sales remain listed
+
+#### Scenario: Cashier's list is fixed to today
+- **WHEN** a cashier opens the sales section
+- **THEN** the current day is shown as a static label and no date range control is rendered
 
 #### Scenario: Scope is never enforced in the client
 - **WHEN** the cashier-facing list is requested
@@ -51,7 +55,23 @@ The frontend SHALL offer the sales list to role `cashier` restricted to that cas
 
 #### Scenario: Cashier finds their unfinished sale
 - **WHEN** a cashier filters their list by draft status
-- **THEN** their own unconfirmed sales are listed, newest first
+- **THEN** their own unconfirmed sales from today are listed, newest first
+
+#### Scenario: Cashier sees their sales cards
+- **WHEN** a cashier opens the sales section
+- **THEN** the cards show only their confirmed sales for the current business day, including count, total billed, cash and card
+
+#### Scenario: Cashier summary is unavailable
+- **WHEN** the today-summary request fails
+- **THEN** the screen shows the backend `message` with a retry action and does not render partial aggregates
+
+#### Scenario: Day rolls over during a shift
+- **WHEN** the cashier reloads the list after midnight
+- **THEN** the label shows the new day and the previous day's sales are no longer listed
+
+#### Scenario: Admin who is also a cashier
+- **WHEN** a user holding `admin` and `cashier` opens the sales section
+- **THEN** the Admin view is rendered, with the adjustable date range and the cashier filter
 
 ### Requirement: Find a sale by number
 The frontend SHALL provide an exact-match search by sale number, presented separately from the range filters. Activating it SHALL clear the other filters so an exact lookup cannot be silently narrowed by an unrelated date range. A search matching nothing SHALL render an empty state, not an error.

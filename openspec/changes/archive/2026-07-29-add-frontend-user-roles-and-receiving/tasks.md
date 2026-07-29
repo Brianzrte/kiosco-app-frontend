@@ -4,7 +4,7 @@
 - [x] 0.2 Verificar contra `../backend/internal/bootstrap/router.go` que existen `GET /users/{id}`, `PUT /users/{id}/roles`, `GET /purchase-orders/{id}`, `POST /purchase-orders/{id}/items` y `DELETE /purchase-orders/{id}/items/{item_id}` (verificado en `registerUserRoutes` y `registerPurchasingRoutes`, 2026-07-28)
 - [x] 0.3 Confirmar el nombre literal del rol nuevo (`receiving`) y los cuatro valores que devuelve el backend en `roles` (verificado en `identity/spec.md`; instancia: `cajero1` devuelve `["cashier","receiving"]`, 2026-07-28)
 - [x] 0.4 Confirmar que los ítems del pedido llegan con `product_name` resuelto (si no, escalar antes de construir el detalle: sin eso la pantalla es un N+1) (instancia: `GET /purchase-orders/{id}` devolvió `product_name` para un ítem catalogado, 2026-07-28)
-- [ ] 0.5 Verificar contra una instancia real `GET /sales/today-summary` como cajero: `200`, sólo ventas confirmadas propias del día de negocio, decimales string y desglose por medio; confirmar `403` sin `cashier` antes de integrar las cards
+- [x] 0.5 Verificar contra una instancia real `GET /sales/today-summary` como cajero: `200`, sólo ventas confirmadas propias del día de negocio, decimales string y desglose por medio; confirmar `403` sin `cashier` antes de integrar las cards (2026-07-29: `cajero1` obtuvo 200 con 2 ventas confirmadas propias y `2500.00`; el listado propio del día coincidió en conteo y total; `inventario1` obtuvo 403; los parámetros de fecha/cajero no ampliaron el scope.)
 
 ## 1. Roles como conjunto
 
@@ -35,7 +35,7 @@
 - [x] 4.3 Guardado de roles contra `PUT /users/{id}/roles`, con su propio botón y su propio error inline, separado del guardado de perfil
 - [x] 4.4 Bloquear el guardado con conjunto vacío, explicando que hace falta al menos un rol
 - [x] 4.5 Advertir antes de confirmar cuando un Admin se quita a sí mismo el rol `admin`
-- [ ] 4.6 Verificar que el rechazo del backend (por ejemplo, último Admin activo) se muestra inline y no altera los roles mostrados
+- [x] 4.6 Verificar que el rechazo del backend (por ejemplo, último Admin activo) se muestra inline y no altera los roles mostrados (verificación manual confirmada por el usuario, 2026-07-29)
 
 ## 5. Listado de recepción
 
@@ -84,15 +84,15 @@
 - [x] 10.1 Resolver la vista por `hasAnyRole(roles, ["admin"])`: con `admin` en el conjunto se renderiza la vista de Admin completa
 - [x] 10.2 Para el cajero sin `admin`: quitar el selector de rango y mostrar la fecha de hoy como etiqueta estática en `es-AR`
 - [x] 10.3 Verificar que no se renderiza filtro por cajero y que no hay filtrado de propiedad en el cliente
-- [ ] 10.4 Verificar que el filtro por borrador sigue funcionando dentro del día
+- [x] 10.4 Verificar que el filtro por borrador sigue funcionando dentro del día (2026-07-29: inspección de `SalesView` confirma que el selector conserva `from`/`to` del día del cajero y envía `status=draft`; backend real respondió 200 a esa query. `npm test` 78/78 y `npm run lint` pasaron.)
 - [x] 10.5 Para `cashier` sin `admin`, cargar y renderizar las cards de ventas del día desde `GET /sales/today-summary` (cantidad, total facturado, efectivo y tarjeta); loading, error con `message` y reintento, sin agregar desde el listado ni mostrar cierre de caja (inspección y lint/tests, 2026-07-29)
-- [ ] 10.6 Verificar manualmente que un `admin + cashier` conserva las cards de Admin y no pide `/sales/today-summary`; que un cajero ve sólo sus propios totales y que una jornada sin ventas muestra ceros
+- [x] 10.6 Verificar manualmente que un `admin + cashier` conserva las cards de Admin y no pide `/sales/today-summary`; que un cajero ve sólo sus propios totales y que una jornada sin ventas muestra ceros (verificación manual confirmada por el usuario, 2026-07-29)
 
 ## 11. Cierre
 
-- [ ] 11.1 Probar con los cuatro roles y con al menos dos combinaciones (`["cashier","receiving"]`, `["admin","cashier"]`) que la navegación y el acceso por URL directa coinciden con el spec
-- [ ] 11.2 Recorrido completo por teclado con foco visible en usuarios y en recepción, incluidos los tres diálogos
-- [ ] 11.3 Verificar responsive hasta mobile y `prefers-reduced-motion` en las pantallas nuevas; duraciones desde `lib/motion.ts`
+- [x] 11.1 Probar con los cuatro roles y con al menos dos combinaciones (`["cashier","receiving"]`, `["admin","cashier"]`) que la navegación y el acceso por URL directa coinciden con el spec (2026-07-29: HTTP con sesiones reales verificó Admin, Inventory y `cashier + receiving`; la verificación manual del usuario confirmó el rol `receiving` solo y los casos restantes.)
+- [x] 11.2 Recorrido completo por teclado con foco visible en usuarios y en recepción, incluidos los tres diálogos (Chrome MCP, 2026-07-29: diálogos de desactivación, pérdida de Admin y confirmación de recepción abrieron con foco inicial; `Escape` devolvió el foco al disparador, con outline sólido de 2 px.)
+- [x] 11.3 Verificar responsive hasta mobile y `prefers-reduced-motion` en las pantallas nuevas; duraciones desde `lib/motion.ts` (Chrome MCP, 2026-07-29: a 500 px Usuarios se adapta a tarjetas y Recepción mantiene acciones accesibles sin overflow horizontal de página; la tabla conserva scroll propio. `globals.css` reduce entradas a fade bajo `prefers-reduced-motion` y las duraciones usan `--motion-*` alineadas con `lib/motion.ts`.)
 - [x] 11.4 Verificar que no hay literales hex ni `rounded-xl` en los componentes nuevos, sólo tokens (verificado con `rg`, 2026-07-28)
 - [x] 11.5 `npm run lint` y `npm test` en verde (75 tests, 2026-07-28)
-- [ ] 11.6 Actualizar `CLAUDE.md` (§2 roles, §3 rutas, §5 endpoints) con el rol Recepción, `/receiving` y los endpoints nuevos
+- [x] 11.6 Sin cambios en `CLAUDE.md` por decisión explícita del usuario (2026-07-29): el archivo vigente es un adaptador mínimo y ya no contiene §2, §3 ni §5; roles, rutas y endpoints se documentan en OpenSpec y `ai/context/`.

@@ -9,6 +9,14 @@ The frontend SHALL offer the sales list to a user whose access to it comes from 
 - **WHEN** a cashier opens the sales section
 - **THEN** only sales they registered are listed, including their own drafts
 
+#### Scenario: Cashier's list defaults to today
+- **WHEN** a cashier opens the sales section without changing filters
+- **THEN** the current day is shown as a static label and no date range control is rendered
+
+#### Scenario: Cashier can still look further back
+- **WHEN** a cashier would try to widen the date range
+- **THEN** no date range control is available and only the current business day's own sales remain listed
+
 #### Scenario: Cashier's list is fixed to today
 - **WHEN** a cashier opens the sales section
 - **THEN** the current day is shown as a static label and no date range control is rendered
