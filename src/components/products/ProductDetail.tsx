@@ -12,7 +12,7 @@ import { useLoad } from "@/lib/useLoad";
 import { Product, Role } from "@/lib/types";
 import { ProductForm } from "./ProductForm";
 
-export function ProductDetail({ id, role }: { id: string; role: Role }) {
+export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
   const router = useRouter();
   const toast = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -56,7 +56,7 @@ export function ProductDetail({ id, role }: { id: string; role: Role }) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">{product.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">{product.name}</h1>
           {product.active ? (
             <Badge tone="success">Activo</Badge>
           ) : (
@@ -68,7 +68,7 @@ export function ProductDetail({ id, role }: { id: string; role: Role }) {
             Desactivar producto
           </Button>
         ) : (
-          role === "admin" && (
+          roles.includes("admin") && (
             <Button variant="primary" onClick={activate} pending={pending}>
               {pending ? "Activando…" : "Activar producto"}
             </Button>

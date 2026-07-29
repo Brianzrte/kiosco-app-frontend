@@ -82,6 +82,12 @@ formulado.
 25. Ante conflicto, el orden de prioridad es:
     **seguridad → finalización de la tarea → accesibilidad → claridad →
     consistencia → eficiencia → estética.**
+26. Se usa el mecanismo de motion más chico, claro y eficiente que resuelva
+    correctamente la interacción: CSS antes que Motion, Motion antes que
+    AutoAnimate, salvo que el nivel de control necesario lo exija
+    (`references/motion.md`, *Árbol de decisión*).
+27. Motion y AutoAnimate nunca controlan el mismo contenedor ni el mismo
+    conjunto de hijos directos.
 
 ## Product classification
 
@@ -348,7 +354,7 @@ Mejora opcional, exploratoria o de evolución futura.
 Cada hallazgo lleva los nueve campos, sin excepción:
 
 ```text
-ID                    · UX-01, A11Y-03, POS-02…
+ID                    · UX-01, A11Y-03, POS-02, MOTION-01…
 Severidad             · BLOCKER | HIGH | MEDIUM | LOW | SUGGESTION
 Área                  · jerarquía | interacción | accesibilidad | responsive |
                         teclado | estados | motion | performance | consistencia
@@ -407,8 +413,11 @@ Este skill es **supervisor y asesor** por defecto.
 No debe:
 
 - Implementar código sin pedido explícito.
-- Instalar dependencias — el runtime es `next`, `react`, `react-dom` y nada más
-  (`AGENTS.md` §5).
+- Instalar una dependencia nueva por iniciativa propia. El runtime incluye
+  `next`, `react`, `react-dom`, `motion` y `@formkit/auto-animate`
+  (`references/motion.md`, *Estado de dependencias*); cualquier otra librería
+  — incluida cualquiera de animación avanzada (GSAP, React Spring) — sigue
+  siendo una decisión que se levanta al usuario (`AGENTS.md` §5).
 - Reemplazar el design system ni cambiar la identidad visual global por una
   pantalla aislada.
 - Proponer rediseños masivos sin justificar el alcance.
@@ -443,7 +452,10 @@ Una intervención de este skill está terminada cuando:
 - [ ] Los criterios de aceptación son ejecutables por un implementador y
       comprobables por un revisor.
 - [ ] Los hallazgos positivos están incluidos cuando existen.
-- [ ] Ninguna recomendación agrega dependencias, tokens fuera de `globals.css`
+- [ ] Ninguna recomendación agrega una dependencia nueva sin autorización —
+      `motion` y `@formkit/auto-animate` ya están disponibles y no cuentan
+      como una dependencia nueva.
+- [ ] Ninguna recomendación agrega tokens fuera de `globals.css` / `lib/motion.ts`
       ni componentes que dupliquen un primitive existente.
 - [ ] No se editó código de producto, `tasks.md` ni specs sin pedido explícito.
 - [ ] La salida sigue el `Output contract` del modo, con todos sus encabezados.

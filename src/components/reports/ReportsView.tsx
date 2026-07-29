@@ -3,7 +3,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { IconCart, IconChart } from "@/components/ui/icons";
 import { LineChart } from "@/components/reports/charts/LineChart";
 import { ReportNavCard } from "@/components/reports/ReportNavCard";
 import { api } from "@/lib/api";
@@ -52,23 +55,26 @@ export function ReportsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-xl font-semibold">Reportes</h1>
-        <div className="flex gap-3">
-          <Input
-            label="Desde"
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-          <Input
-            label="Hasta"
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title="Reportes"
+        description="Panorama del período seleccionado y acceso a cada reporte detallado."
+        actions={
+          <div className="flex gap-3">
+            <Input
+              label="Desde"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+            <Input
+              label="Hasta"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </div>
+        }
+      />
 
       <SalesSummarySection key={`s-${from}-${to}`} from={from} to={to} />
 
@@ -91,7 +97,7 @@ function SalesSummarySection({ from, to }: { from: string; to: string }) {
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
         Resumen de ventas
       </h2>
       {error ? (
@@ -99,19 +105,19 @@ function SalesSummarySection({ from, to }: { from: string; to: string }) {
       ) : summary === null ? (
         <ListSkeleton rows={3} />
       ) : summary.total_sales > 0 ? (
-        <div className="grid max-w-xl grid-cols-2 gap-4">
-          <Card>
-            <p className="text-sm text-text-secondary">Ventas</p>
-            <p className="num mt-1 text-3xl font-semibold">
-              {summary.total_sales}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-sm text-text-secondary">Total facturado</p>
-            <p className="num mt-1 text-3xl font-semibold">
-              {formatMoney(String(summary.total_amount))}
-            </p>
-          </Card>
+        <div className="grid max-w-xl grid-cols-2 gap-3 sm:gap-4">
+          <StatCard
+            size="compact"
+            label="Ventas"
+            value={summary.total_sales}
+            icon={<IconCart className="size-4.5" />}
+          />
+          <StatCard
+            size="compact"
+            label="Total facturado"
+            value={formatMoney(String(summary.total_amount))}
+            icon={<IconChart className="size-4.5" />}
+          />
         </div>
       ) : (
         <EmptyState message="No hay ventas en el período seleccionado." />
@@ -213,7 +219,7 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
         Evolución diaria de ingresos
       </h2>
       {error ? (
@@ -224,8 +230,12 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
         <EmptyState message="No hay ventas en el período seleccionado." />
       ) : (
         <Card>
-          <div className="grid grid-cols-3 gap-6">
-            <div className="col-span-2">
+          {/* Below sm (640px) a 3-col split squeezes the 640-unit-wide SVG
+              chart into ~1/3 of a phone screen — unreadable axis labels.
+              Stack chart above comparison instead; the divider becomes a
+              top border instead of a left border once stacked. */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="sm:col-span-2">
               <LineChart
                 ariaLabel="Ingresos por día"
                 height={260}
@@ -239,7 +249,7 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
                 }
               />
             </div>
-            <div className="col-span-1 flex flex-col justify-center border-l border-border pl-6">
+            <div className="flex flex-col justify-center border-t border-border pt-4 sm:col-span-1 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
               {comparison && (
                 <ComparisonStat
                   comparison={comparison}
@@ -266,7 +276,7 @@ function TopProductsCard({ from, to }: { from: string; to: string }) {
 
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
         Productos más vendidos
       </h2>
       {error ? (
@@ -306,7 +316,9 @@ function TopProductsCard({ from, to }: { from: string; to: string }) {
 function ReportNavCards() {
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium text-text-secondary">Reportes</h2>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
+        Reportes
+      </h2>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ReportNavCard
           href="/reports/sales"

@@ -51,14 +51,14 @@ The cashier SHALL select exactly one payment method (cash or card) before confir
 - **THEN** the confirm action is disabled
 
 ### Requirement: Atomic sale confirmation
-Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `POST /api/v1/sales/{id}/confirm`. On success the frontend SHALL show "Venta confirmada" together with the assigned `sale_number`, presented with high typographic prominence, selectable as text, and persisting until the next sale begins — not only in a transient toast. Displaying the number SHALL NOT move keyboard focus away from the scan input. When the confirmed sale carries no number, the confirmation SHALL simply omit it. On any failure the frontend SHALL NOT assume success: the cart is preserved and the backend sale status is treated as authoritative.
+Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `POST /api/v1/sales/{id}/confirm`. On success the frontend SHALL show "Venta confirmada" together with the assigned `sale_number` where present, persisting until the next sale begins, without moving focus from the scan input. If the backend rejects confirmation because payments do not equal the total, the frontend SHALL show the backend message and return the cashier to the payment composition with the entered amounts preserved. On any failure the frontend SHALL NOT assume success: the cart is preserved and the backend sale status is treated as authoritative.
 
 #### Scenario: Successful confirmation
 - **WHEN** the cashier confirms a valid sale
 - **THEN** the confirmation shows "Venta confirmada" with the sale number, the cart resets, and the scan input regains focus
 
 #### Scenario: Number survives long enough to be used
-- **WHEN** a sale is confirmed
+- **WHEN** the sale number is displayed after confirmation
 - **THEN** the sale number remains visible until the next sale starts and can be selected with the pointer
 
 #### Scenario: Next sale can start immediately
@@ -68,6 +68,10 @@ Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `PO
 #### Scenario: Confirmation without a number
 - **WHEN** the confirmed sale has no `sale_number`
 - **THEN** the confirmation is shown without a number and without any placeholder or error
+
+#### Scenario: Backend rejects unbalanced payments
+- **WHEN** the backend rejects confirmation because payments do not sum to the total
+- **THEN** the backend message is shown, the payment composition is reopened, and the entered amounts are preserved
 
 #### Scenario: Confirmation rejected by backend
 - **WHEN** the backend rejects confirmation (e.g. insufficient stock)
@@ -99,4 +103,34 @@ When an item is added to the cart or an existing line's quantity is incremented,
 #### Scenario: Reduced motion
 - **WHEN** the user has `prefers-reduced-motion: reduce` set
 - **THEN** the line still receives a brief colour acknowledgement and nothing translates or scales
+
+### Requirement: Payment balance is resolved before confirming
+The frontend SHALL continuously display the difference between the composed payments and the sale total, distinguishing short, over, and exact states, and SHALL disable confirmation until the payments equal the total exactly. When the cart changes after payments were composed, the difference SHALL be recomputed and surfaced at the moment of the change rather than at confirmation. A single-method payment SHALL be re-imputed to the new total automatically; a split payment SHALL require the cashier to resolve the difference.
+
+#### Scenario: Short payment blocks confirmation
+- **WHEN** the composed payments sum to less than the total
+- **THEN** the shortfall is displayed and the confirm action is disabled
+
+#### Scenario: Exact payment enables confirmation
+- **WHEN** the composed payments equal the total exactly
+- **THEN** the balance reads as settled and confirmation is enabled
+
+#### Scenario: Adding an item after paying, single method
+- **WHEN** an item is added after a single-method payment was composed
+- **THEN** that payment is re-imputed to the new total without cashier intervention
+
+#### Scenario: Adding an item after paying, split payment
+- **WHEN** an item is added after a split payment was composed
+- **THEN** the resulting difference is shown immediately and confirmation is disabled until the cashier resolves it
+
+### Requirement: Change is displayed, never persisted
+The frontend MAY accept a locally entered cash-tendered amount solely to display the change owed. That amount SHALL NOT be sent to the backend and SHALL NOT alter the amount imputed to any payment method.
+
+#### Scenario: Change shown
+- **WHEN** the cashier enters an amount tendered greater than the cash payment
+- **THEN** the change owed is displayed
+
+#### Scenario: Tendered amount never reaches the backend
+- **WHEN** the sale is confirmed after entering a tendered amount
+- **THEN** the payment sent for that method is the imputed amount, not the tendered amount
 

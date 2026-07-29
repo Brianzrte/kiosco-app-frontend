@@ -57,6 +57,24 @@ La regla de la unión tiene un caso donde chocaría: `/sales` es más restrictiv
 
 El backend va a recortar cualquier rango del cajero al día en curso. Un selector deshabilitado o un rango que devuelve resultados distintos a los pedidos es peor que no tener selector. Se reemplaza por una etiqueta estática con la fecha de hoy en `es-AR`. Esto **modifica** el spec `ui-sales` de `add-frontend-sales-v15`, que hoy dice "por defecto hoy, ajustable".
 
+### 5.1 El cajero ve sus cards del día desde Sales, no desde Reporting
+
+El cajero necesita el mismo pantallazo operativo de cantidad, total facturado,
+efectivo y tarjeta, pero no puede llamar al resumen de Reporting: acepta rangos
+arbitrarios y agrega las ventas de todas las personas. Para ese caso se consume
+`GET /sales/today-summary`, que el backend scopea al cajero autenticado y al día
+de negocio actual, sin parámetros de fecha ni de usuario.
+
+La vista de cajero reutiliza las cards existentes y muestra explícitamente sus
+estados de carga, error con reintento y día vacío (ceros que vienen del backend).
+No muestra el cierre de caja ni ningún control de rango. Un usuario que también
+es Admin conserva la vista Admin y su resumen de Reporting; no pide el endpoint
+operativo del cajero.
+
+*Alternativa descartada:* sumar las ventas recibidas por `GET /sales` en el
+cliente. El listado es paginado, incluye borradores y no es una fuente válida
+para recalcular agregados de negocio.
+
 ### 6. La recepción re-lee el pedido después de cada escritura; nunca recalcula el total
 
 Confirmar recepción, agregar ítem y quitar ítem son las tres escrituras. Ninguna actualiza el estado local por optimismo: todas hacen `reload()` del detalle. Dos razones: el total lo recalcula el backend (CLAUDE.md §5 prohíbe recomputar agregados en el cliente) y la recepción es la operación menos idempotente de la pantalla — si la red falla no se asume éxito, se re-lee, igual que la confirmación de venta en POS.
@@ -93,7 +111,7 @@ La única validación de roles en el cliente es "al menos uno" — no es una reg
 2. Tipos y gating primero (`types.ts`, `roles.ts`, `nav.ts`, `/api/session`), en un paso: es el cambio que toca todas las pantallas y conviene tenerlo verde antes de agregar UI.
 3. Usuarios: detalle, perfil, roles.
 4. Recepción: listado, detalle, y recién después las tres escrituras.
-5. Historial del cajero.
+5. Historial y resumen diario del cajero.
 6. Rollback: revertir el paso 2 restaura el gating por rol único, siempre que el backend siga mandando `role`. Por eso el backend lo mantiene deprecado una versión en vez de eliminarlo de una.
 
 ## Open Questions

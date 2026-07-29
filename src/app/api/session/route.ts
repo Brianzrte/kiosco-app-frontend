@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   BACKEND_URL,
-  ROLE_COOKIE,
+  ROLES_COOKIE,
   TOKEN_COOKIE,
   USERNAME_COOKIE,
 } from "@/lib/session";
@@ -39,9 +39,12 @@ export async function POST(request: NextRequest) {
   }
 
   const expires = new Date(body.expires_at);
-  const response = NextResponse.json({ role: body.role });
+  const response = NextResponse.json({ roles: body.roles });
   response.cookies.set(TOKEN_COOKIE, body.token, { ...cookieBase, expires });
-  response.cookies.set(ROLE_COOKIE, body.role, { ...cookieBase, expires });
+  response.cookies.set(ROLES_COOKIE, body.roles.join(","), {
+    ...cookieBase,
+    expires,
+  });
   response.cookies.set(USERNAME_COOKIE, credentials.username, {
     ...cookieBase,
     expires,
@@ -60,7 +63,7 @@ export async function DELETE(request: NextRequest) {
 
   const response = NextResponse.json({ ok: true });
   response.cookies.delete(TOKEN_COOKIE);
-  response.cookies.delete(ROLE_COOKIE);
+  response.cookies.delete(ROLES_COOKIE);
   response.cookies.delete(USERNAME_COOKIE);
   return response;
 }

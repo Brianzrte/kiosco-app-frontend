@@ -23,6 +23,7 @@ import { useLoad } from "@/lib/useLoad";
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
   CARD: "Tarjeta",
+  TRANSFER: "Transferencia",
 };
 
 function formatDate(value: string) {
@@ -36,7 +37,7 @@ function statusLabel(status: SaleStatus) {
   return status === "confirmed" ? "Confirmada" : "Borrador";
 }
 
-export function SaleDetail({ id, role }: { id: string; role: Role }) {
+export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
   const [returnFormOpen, setReturnFormOpen] = useState(false);
 
   const fetcher = useCallback(() => api<Sale>(`/sales/${id}`), [id]);
@@ -57,18 +58,19 @@ export function SaleDetail({ id, role }: { id: string; role: Role }) {
   // admin-only, so a cashier never requests it — ReturnHistory falls back
   // to the raw id for that role, never an invented name.
   const usersFetcher = useCallback(() => {
-    if (role !== "admin") return Promise.resolve<User[]>([]);
+    if (!roles.includes("admin")) return Promise.resolve<User[]>([]);
     return api<{ users: User[]; total: number }>("/users?limit=100").then(
       (res) => res.users,
     );
-  }, [role]);
+  }, [roles]);
   const { data: users } = useLoad(usersFetcher);
   const usersById = new Map(
     (users ?? []).map((user) => [user.id, user.username]),
   );
 
   const canRegisterReturn =
-    sale?.status === "confirmed" && (role === "admin" || role === "cashier");
+    sale?.status === "confirmed" &&
+    (roles.includes("admin") || roles.includes("cashier"));
 
   const hasReturns = !!returns && returns.length > 0;
   const returnedTotal = hasReturns ? sumReturnedTotal(returns) : null;
@@ -217,9 +219,11 @@ export function SaleDetail({ id, role }: { id: string; role: Role }) {
                     <span>
                       {paymentMethodLabels[payment.method] ?? payment.method}
                     </span>
-                    <span className="num font-medium">
-                      {formatMoney(payment.amount)}
-                    </span>
+                    {sale.payments.length > 1 && (
+                      <span className="num font-medium">
+                        {formatMoney(payment.amount)}
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>

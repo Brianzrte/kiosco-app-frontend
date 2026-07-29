@@ -74,6 +74,15 @@ comportamiento responsive o estados visuales de cara al usuario, y antes de
 cerrar un change frontend con impacto visible. Es supervisora: no implementa,
 no agrega dependencias, no marca tasks y no archiva.
 
+Para ejecutar ese conocimiento de punta a punta —discovery, diseño, auditoría,
+corrección acotada e implementada, y verificación independiente— usá el agente
+`ux-ui-reviewer` (`agent-definitions/ux-ui-reviewer/`, con adaptadores para
+Claude Code y Codex). Usa siempre `ux-ui-supervisor`; en modo `fix` combina
+además `ai/roles/frontend-implementer.md` +
+`ai/skills/implement-nextjs-change/SKILL.md`. No se usa para trabajo
+puramente backend, y no cierra changes, no hace commit ni merge: el resultado
+de su modo `pre-merge` se entrega a `ai/roles/change-closer.md`.
+
 Para cerrar un change: leé `ai/roles/change-closer.md` y seguí
 `ai/skills/close-openspec-change/SKILL.md`. Implementar no es cerrar; el
 reviewer y el verifier no archivan. El closer es el único rol que sincroniza

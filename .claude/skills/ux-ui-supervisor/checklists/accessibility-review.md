@@ -91,10 +91,17 @@ completar la tarea, `BLOCKER`.
 
 - [ ] Ninguna información esencial depende sólo del color (1.4.1).
 - [ ] Verificado con filtro de escala de grises.
-- [ ] `prefers-reduced-motion` respetado (2.3.3).
+- [ ] `prefers-reduced-motion` respetado (2.3.3), incluidas las animaciones
+      con Motion (`MotionConfig`/`useReducedMotion`) y con AutoAnimate
+      (verificado que la versión instalada lo respeta por defecto —
+      `../references/motion.md`, sección *AutoAnimate*).
 - [ ] Nada parpadea más de 3 veces por segundo.
 - [ ] Nada se mueve o auto-actualiza > 5 s sin poder pausarse (2.2.2).
 - [ ] Ninguna funcionalidad depende sólo de hover.
+- [ ] El foco se restaura al cerrar un overlay animado (`AnimatePresence`,
+      `Dialog`) como parte del cierre, no cuando termina la animación.
+- [ ] El anuncio accesible (`aria-live`, `role="alert"`/`role="status"`) no
+      depende de que la animación visual haya corrido.
 
 ---
 

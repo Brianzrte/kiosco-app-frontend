@@ -41,7 +41,7 @@ export function InventoryValuationView() {
         </Link>
       </div>
 
-      <h1 className="text-xl font-semibold">Valorización de inventario</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Valorización de inventario</h1>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />

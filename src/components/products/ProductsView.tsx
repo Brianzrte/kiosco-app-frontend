@@ -5,8 +5,10 @@ import { useCallback, useMemo, useState } from "react";
 import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { IconSearch } from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
@@ -55,24 +57,33 @@ export function ProductsView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Productos</h1>
-        <Link href="/products/new">
-          <Button>Crear producto</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Productos"
+        description={
+          products
+            ? `${products.length} producto${products.length === 1 ? "" : "s"} en el catálogo.`
+            : undefined
+        }
+        actions={
+          <Link href="/products/new">
+            <Button>Crear producto</Button>
+          </Link>
+        }
+      />
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3">
         <Input
+          icon={<IconSearch />}
           placeholder="Buscar por nombre, SKU o código de barras"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="min-w-64 flex-1"
+          className="w-full sm:min-w-64 sm:flex-1"
+          inputMode="search"
         />
         <Select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-48"
+          className="w-full sm:w-48"
           aria-label="Filtrar por categoría"
         >
           <option value="">Todas las categorías</option>
@@ -85,7 +96,7 @@ export function ProductsView() {
         <Select
           value={activeFilter}
           onChange={(e) => setActiveFilter(e.target.value)}
-          className="w-40"
+          className="w-full sm:w-40"
           aria-label="Filtrar por estado"
         >
           <option value="">Todos</option>
@@ -165,7 +176,10 @@ export function ProductsView() {
               </thead>
               <tbody>
                 {filtered.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-2">
+                  <tr
+                    key={p.id}
+                    className="transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover"
+                  >
                     <Td>
                       <Link
                         href={`/products/${p.id}`}

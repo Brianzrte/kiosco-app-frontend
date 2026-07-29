@@ -138,6 +138,16 @@ en gráficos sin etiqueta directa.
 - `prefers-reduced-motion: reduce` respetado (`motion.md`).
 - Nada parpadea más de 3 veces por segundo.
 - Nada que se mueva, parpadee o auto-actualice por más de 5 s sin poder pausarse.
+- La animación de un overlay (`AnimatePresence`, `Dialog`) **no retrasa la
+  restauración del foco**: el foco vuelve al disparador como parte del cierre,
+  no cuando termina la animación de salida (`motion.md`, sección
+  `AnimatePresence`).
+- El anuncio accesible (`aria-live`, `role="alert"`/`role="status"`) es una
+  responsabilidad **separada** de la animación visual. Un cambio importante se
+  anuncia igual con `prefers-reduced-motion: reduce` activo, aunque la
+  animación no corra.
+- `useAutoAnimate` no reemplaza `aria-live`: no anuncia nada por sí mismo
+  (`motion.md`, sección *AutoAnimate*, *Limitaciones*).
 
 ---
 

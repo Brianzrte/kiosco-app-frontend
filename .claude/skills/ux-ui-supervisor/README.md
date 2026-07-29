@@ -200,11 +200,46 @@ Cuando el usuario pide implementar lo propuesto, el trabajo pasa a
 `ai/roles/frontend-implementer.md` + `ai/skills/implement-nextjs-change/SKILL.md`
 con la `Design Proposal` como entrada.
 
+## Estrategia de motion
+
+`references/motion.md` es la referencia canónica de cómo este skill decide
+entre CSS, **Motion for React** (`motion/react`) y **FormKit AutoAnimate**
+(`@formkit/auto-animate`) — dos dependencias que ya están instaladas en este
+proyecto, no dos propuestas de instalación.
+
+**FormKit AutoAnimate no tiene relación con Formik.** Son proyectos distintos
+de organizaciones distintas; el nombre correcto del paquete es
+`@formkit/auto-animate`.
+
+La estrategia es una jerarquía de adecuación, no de potencia:
+
+```text
+Nivel 1 — CSS / Tailwind transitions        (por defecto; cubre casi todo)
+Nivel 2 — Motion for React                  (presencia, layout, gestos)
+Nivel 3 — FormKit AutoAnimate               (mutación simple de listas)
+Nivel 4 — Excepcional                        (se levanta al usuario)
+```
+
+`references/motion.md` tiene el árbol de decisión completo, la tabla de
+casos, la política de reduced motion (incluida la verificación puntual del
+comportamiento de `@formkit/auto-animate@0.10.0` contra `prefers-reduced-motion`,
+hecha contra el código fuente instalado, no contra la documentación pública),
+la integración con Server/Client Components de Next.js, y el detalle de
+`MotionConfig`/`LazyMotion`. No se duplica acá.
+
+Motion y AutoAnimate se combinan con la estrategia CSS existente del proyecto
+(`--motion-fast/base/slow`, `MOTION` en `src/lib/motion.ts`, y las clases
+`.flash`/`.total-flash`/`.pop-in`/`.section-enter`) — no la reemplazan. La
+mayoría del motion de Mini Moni sigue siendo, correctamente, Nivel 1.
+
 ## Qué no hace
 
 - No implementa código sin pedido explícito.
-- No instala dependencias — el runtime es `next`, `react`, `react-dom` y nada
-  más (`AGENTS.md` §5).
+- No instala una dependencia nueva por iniciativa propia. El runtime incluye
+  `next`, `react`, `react-dom`, `motion` y `@formkit/auto-animate`
+  (`references/motion.md`, *Estado de dependencias*) — cualquier otra
+  librería sigue siendo una decisión que se levanta al usuario (`AGENTS.md`
+  §5).
 - No reemplaza el design system ni cambia la identidad visual global por una
   pantalla aislada.
 - No propone rediseños masivos sin justificar el alcance.

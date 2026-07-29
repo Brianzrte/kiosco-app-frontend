@@ -67,6 +67,7 @@ cosa; después POS-03 y POS-04, que son los que cuestan segundos por venta.
 | POS-08 | MEDIUM | accesibilidad | región del total | El total no se anuncia al cambiar | Un cajero con lector no sabe cuánto cobrar | `aria-live="polite"` en el contenedor del total | El lector anuncia el nuevo total tras cada escaneo |
 | POS-09 | LOW | accesibilidad | `PosView.tsx:96` | El hint del campo da 3.9:1 sobre `surface-2` | Cuesta leer el formato esperado | `text-text-primary`, o mover el hint sobre `surface` | Medido ≥ 4.5:1 en DevTools |
 | POS-10 | SUGGESTION | eficiencia | región de cobro | No hay atajo para cobrar | Obliga a tabular hasta el botón en cada venta | `F2` visible junto al botón | `F2` confirma; el atajo se ve en pantalla |
+| MOTION-01 | MEDIUM | motion | `PosView.tsx:601` | El panel de confirmación de venta anima su entrada con `transition-all` en vez de propiedades específicas | Interpola propiedades no previstas (incluida `padding` en un estado intermedio), lo que produce un salto de un frame antes de estabilizarse | Restringir la transición a `transform` y `opacity`, con la duración de `MOTION.base` — el mismo resultado visual sin el costo | Grabar la entrada del panel en DevTools → Performance: un solo frame de layout, no dos |
 
 ### POS-01 — El foco se pierde después de agregar un producto
 
@@ -124,6 +125,25 @@ cosa; después POS-03 y POS-04, que son los que cuestan segundos por venta.
 - **Criterio de validación:** con un producto de 3 unidades, escribir 10 topa en
   3 y muestra el mensaje con el nombre y la cantidad. Con stock desconocido, el
   escaneo entra igual.
+
+### MOTION-01 — La confirmación anima con `transition-all`
+
+- **Severidad:** MEDIUM
+- **Área:** motion
+- **Ubicación:** `PosView.tsx:601`, entrada del panel de confirmación
+- **Problema:** la transición está declarada como `transition-all` en vez de
+  enumerar las propiedades que de verdad cambian.
+- **Evidencia:** el panel usa `className="transition-all duration-200"`. Al
+  medir en DevTools → Performance durante la entrada, se ve un recálculo de
+  layout adicional que no ocurre si la transición se restringe a `transform` y
+  `opacity` (`../references/motion.md`, sección *Propiedades que se animan*).
+- **Impacto:** en la PC del mostrador el salto es perceptible como un
+  "tirón" de un frame; no cambia el resultado final, pero cuesta fluidez sin
+  ningún beneficio a cambio.
+- **Recomendación:** `transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out)`
+  en vez de `transition-all`, usando `MOTION.base` como fuente de la duración.
+- **Criterio de validación:** grabar la entrada del panel en DevTools →
+  Performance; un único frame de layout, sin recálculo adicional.
 
 ### POS-06 — La acción principal no se distingue
 
@@ -198,9 +218,17 @@ desconocido tras una confirmación ambigua está presente y es correcto — ver
 ## Performance and motion
 
 **Not evaluated.** No se midió con throttling de CPU ni se revisó Network. Se
-observa que las animaciones usan sólo `background-color` y `color`, dentro de
-las duraciones de `lib/motion.ts`, lo que es correcto — pero no alcanza para
-puntuar la categoría.
+observa que la mayoría de las animaciones usan sólo `background-color` y
+`color`, dentro de las duraciones de `lib/motion.ts`, lo que es correcto — pero
+no alcanza para puntuar la categoría. Una excepción de código, no de medición:
+el panel de confirmación usa `transition-all` en vez de propiedades
+específicas (MOTION-01), detectable por lectura de código sin necesidad de
+throttling.
+
+Los mecanismos elegidos son consistentes con el árbol de decisión de
+`../references/motion.md`: todo lo animado hoy es CSS (Nivel 1), que es lo
+correcto para resaltados de color y una entrada simple — no hay una necesidad
+de Motion ni de AutoAnimate en esta pantalla tal como está descripta acá.
 
 ## Positive findings
 
@@ -238,6 +266,8 @@ puntuar la categoría.
 - [ ] El total lleva `aria-live="polite"`.
 - [ ] El hint del campo de escaneo mide ≥ 4.5:1 de contraste.
 - [ ] El flujo completo —escanear, ajustar, cobrar, confirmar— se hace sin mouse.
+- [ ] La entrada del panel de confirmación anima sólo `transform` y `opacity`
+      (sin `transition-all`), verificado en DevTools → Performance.
 
 ## Deferred suggestions
 

@@ -129,11 +129,18 @@ Qué se conserva ante un fallo: (regla dura: **todo** lo que el usuario cargó).
 
 ## Motion
 
-| Qué | Duración | Curva | Qué trabajo hace |
-|---|---|---|---|
+| Qué | Mecanismo | Duración | Curva | Qué trabajo hace | Reduced motion |
+|---|---|---|---|---|---|
 
-Estrategia de `prefers-reduced-motion`: qué se degrada y qué se conserva, con el
-motivo.
+`Mecanismo` es `CSS`, `Motion` o `AutoAnimate`, elegido con el árbol de
+decisión de `../references/motion.md`. Si no es `CSS`, la fila justifica por
+qué el nivel anterior no alcanza. Ninguna fila queda en `Motion` o
+`AutoAnimate` "porque sí" — ese es un hallazgo del propio `design`, no sólo de
+un `audit` posterior.
+
+Estrategia de `prefers-reduced-motion`: qué se degrada y qué se conserva, con
+el motivo. Una fila sin degradación declarada asume que se degrada a fade
+corto salvo que la propuesta diga lo contrario.
 
 ## Accessibility
 

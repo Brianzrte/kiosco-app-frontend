@@ -59,9 +59,14 @@ hallazgo.
 | **web.dev** · `web.dev` | Core Web Vitals (LCP, INP, CLS), patrones de performance |
 | **MDN Web Docs** · `developer.mozilla.org` | Referencia de CSS, HTML, ARIA y APIs del navegador |
 | **Chrome DevTools docs** · `developer.chrome.com/docs/devtools` | Cómo medir: contraste, layout shift, performance, emulación de visión |
-| **Next.js docs** · `nextjs.org/docs` | `next/font`, `next/image`, App Router, prefetch |
+| **Next.js docs** · `nextjs.org/docs` | `next/font`, `next/image`, App Router, prefetch, Server/Client Components, `next/dynamic` |
 | **Tailwind CSS docs** · `tailwindcss.com/docs` | `@theme`, container queries, breakpoints |
 | **React docs** · `react.dev` | Foco, refs, transiciones, comportamiento de render |
+| **Motion for React docs** · `motion.dev/docs/react` | API de `motion/react`: `AnimatePresence`, `layout`, `MotionConfig`, variants, gestos |
+| **Motion — Accessibility** · `motion.dev/docs/react-accessibility` | `useReducedMotion`, `reducedMotion="user"`, patrones de movimiento accesible |
+| **Motion — `LazyMotion`** · `motion.dev/docs/react-lazy-motion` | Carga diferida, `domAnimation`, uso de `m` vs `motion` |
+| **Motion — Layout animations** · `motion.dev/docs/react-layout-animations` | La prop `layout`, `layoutId`, animación de listas |
+| **FormKit AutoAnimate docs** · `auto-animate.formkit.com` | API de `useAutoAnimate`, opciones de configuración, límites documentados. No confundir con Formik — son proyectos distintos |
 
 ## Fuentes que no constituyen evidencia
 

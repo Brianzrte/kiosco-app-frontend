@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Cashier sees only their own sales, defaulting to today
-The frontend SHALL offer the sales list to a user whose access to it comes from role `cashier` and not from role `admin`, restricted to that cashier's own sales, including their own drafts, and restricted to the **current day**. The ownership restriction SHALL be enforced by the backend scoping the response to the authenticated user; the frontend SHALL NOT request an unrestricted list and filter it client-side under any circumstance. For a cashier the cashier filter SHALL be omitted entirely rather than rendered disabled, and the date range control SHALL be omitted as well: the day is fixed to today and displayed as a static label, so the screen never offers a range the backend will silently clip. A user holding both `cashier` and `admin` SHALL get the Admin view, with the full range and the cashier filter.
+The frontend SHALL offer the sales list to a user whose access to it comes from role `cashier` and not from role `admin`, restricted to that cashier's own sales, including their own drafts, and restricted to the **current day**. The ownership restriction SHALL be enforced by the backend scoping the response to the authenticated user; the frontend SHALL NOT request an unrestricted list and filter it client-side under any circumstance. For a cashier the cashier filter SHALL be omitted entirely rather than rendered disabled, and the date range control SHALL be omitted as well: the day is fixed to today and displayed as a static label, so the screen never offers a range the backend will silently clip. The screen SHALL also show cards with that cashier's confirmed sales today — count, total billed, cash and card — from `GET /sales/today-summary`; it SHALL never derive those aggregates from the paginated list. A user holding both `cashier` and `admin` SHALL get the Admin view, with the adjustable date range and the cashier filter.
 
 #### Scenario: Cashier sees their own sales
 - **WHEN** a cashier opens the sales section
@@ -24,6 +24,14 @@ The frontend SHALL offer the sales list to a user whose access to it comes from 
 #### Scenario: Cashier finds their unfinished sale
 - **WHEN** a cashier filters their list by draft status
 - **THEN** their own unconfirmed sales from today are listed, newest first
+
+#### Scenario: Cashier sees their sales cards
+- **WHEN** a cashier opens the sales section
+- **THEN** the cards show only their confirmed sales for the current business day, including count, total billed, cash and card
+
+#### Scenario: Cashier summary is unavailable
+- **WHEN** the today-summary request fails
+- **THEN** the screen shows the backend `message` with a retry action and does not render partial aggregates
 
 #### Scenario: Day rolls over during a shift
 - **WHEN** the cashier reloads the list after midnight

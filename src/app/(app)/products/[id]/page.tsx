@@ -8,5 +8,5 @@ export default async function ProductDetailPage({
 }) {
   const session = await requireRole(["inventory", "admin"]);
   const { id } = await params;
-  return <ProductDetail id={id} role={session.role} />;
+  return <ProductDetail id={id} roles={session.roles} />;
 }

@@ -19,7 +19,7 @@ export function Th({
 }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
-      className={`border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-text-secondary ${className}`}
+      className={`border-b border-border-strong bg-surface-subtle px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-secondary first:rounded-tl-app last:rounded-tr-app ${className}`}
       {...props}
     />
   );

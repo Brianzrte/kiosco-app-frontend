@@ -1,9 +1,9 @@
-export type Role = "admin" | "cashier" | "inventory";
+export type Role = "admin" | "cashier" | "inventory" | "receiving";
 
 export type User = {
   id: string;
   username: string;
-  role: Role;
+  roles: Role[];
   active: boolean;
   first_name: string;
   last_name: string;
@@ -16,7 +16,7 @@ export type SaleStatus = "draft" | "confirmed";
 
 export type SalePayment = {
   id: string;
-  method: "CASH" | "CARD";
+  method: "CASH" | "CARD" | "TRANSFER";
   amount: string;
 };
 
@@ -151,3 +151,10 @@ export type Return = {
 };
 
 export type ReturnList = { returns: Return[]; total: number };
+
+export type PurchaseOrderStatus = "PENDING" | "RECEIVED" | "CANCELLED";
+export type Supplier = { id: string; name: string; active: boolean };
+export type PurchaseOrderListItem = { id: string; supplier_name: string; ordered_at: string; total: string; status: PurchaseOrderStatus; has_uncatalogued_items: boolean };
+export type PurchaseOrdersList = { purchase_orders: PurchaseOrderListItem[]; page: number; limit: number; total: number };
+export type PurchaseOrderItem = { id: string; product_id?: string; product_name?: string; description?: string; quantity: number; unit_cost: string; subtotal: string; removed_at?: string; removed_by?: string; removal_reason?: string };
+export type PurchaseOrder = { id: string; supplier_id: string; supplier_name: string; ordered_at: string; total: string; status: PurchaseOrderStatus; received_at?: string; received_by?: string; received_by_name?: string; payment_method?: "cash" | "transfer" | "account"; items: PurchaseOrderItem[] };

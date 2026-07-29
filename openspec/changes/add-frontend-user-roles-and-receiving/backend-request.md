@@ -79,6 +79,66 @@ Necesita aceptar `{ "payment_method": "cash" | "transfer" | "account" }`, obliga
 
 El frontend deja de renderizar el selector de rango para ese caso. Si el backend decide rechazar en vez de recortar, avisar: cambia la pantalla.
 
+## 10. Sales — resumen operativo diario del cajero
+
+**Necesidad de usuario:** mientras cobra, el cajero necesita un pantallazo de
+lo vendido durante su turno para seguir el total y el desglose por medio de
+pago, sin acceso a reportes ni a las ventas de otras personas.
+
+**Estado original verificado al 2026-07-29:** `GET /reports/sales/summary` existe, pero
+`registerReportingRoutes` monta todo `/api/v1/reports/` detrás de
+`RequireRole(admin)`. Además, su caso de uso acepta un rango arbitrario y sus
+consultas agregan todas las ventas confirmadas; abrir ese endpoint a `cashier`
+expondría información fuera de su scope.
+
+Se solicitó un endpoint operativo nuevo, separado de Reporting:
+
+```text
+GET /api/v1/sales/today-summary
+```
+
+### Contrato mínimo solicitado
+
+- **Autorización:** `cashier`; un usuario con varios roles conserva los scopes
+  que el backend determine, pero la respuesta de este endpoint siempre se
+  calcula sobre el usuario autenticado, nunca sobre un `cashier_id` recibido
+  por query o body.
+- **Scope:** sólo ventas `confirmed` del cajero autenticado en el día de negocio
+  actual definido por el backend. No acepta parámetros de fecha, rango,
+  usuario ni filtro que permitan ampliar ese scope.
+- **Respuesta `200`:** reutiliza la forma agregada ya usada por las cards,
+  con decimales como strings:
+
+  ```json
+  {
+    "total_sales": 12,
+    "total_amount": "24500.00",
+    "by_payment_method": [
+      { "method": "CASH", "sale_count": 8, "total_amount": "15000.00" },
+      { "method": "CARD", "sale_count": 4, "total_amount": "9500.00" }
+    ]
+  }
+  ```
+
+  Si no hubo ventas, responde `200` con `total_sales: 0`, `total_amount:
+  "0.00"` y un desglose vacío o con ceros, como el resumen actual.
+- **Errores:** `401` para sesión ausente o vencida; `403` para un rol sin
+  permiso; cualquier otro error mantiene el formato `{ "message": "..." }`.
+
+### Estado posterior y desbloqueo
+
+El código del backend ahora registra la ruta en
+`registerCashierTodaySummaryRoute`, la protege con `RequireRole(cashier)` y el
+spec backend archivado `add-cashier-today-summary` describe el mismo contrato.
+`GET /reports/sales/summary` sigue Admin-only para el cierre de caja y los
+reportes. Falta verificar el despliegue contra una instancia real antes de que
+el frontend la consuma; no puede derivar los totales desde el listado paginado
+de ventas.
+
+Desbloquea la integración cuando una instancia real responda el contrato para
+un cajero con ventas propias, no devuelva ventas ajenas, respete el día de
+negocio del backend y devuelva `403` a un usuario sin `cashier`.
+
 ## Pregunta abierta hacia el backend
 
 **¿Un pedido recibido se puede corregir?** El frontend asume que `RECEIVED` es terminal y no ofrece edición. Si el kiosco necesita corregir un método de pago mal elegido, hace falta un flujo que ninguno de los dos cambios cubre.

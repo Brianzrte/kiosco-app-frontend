@@ -95,7 +95,7 @@ export function PurchasesReportView() {
         </Link>
       </div>
 
-      <h1 className="text-xl font-semibold">Compras a proveedores</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Compras a proveedores</h1>
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex gap-2">

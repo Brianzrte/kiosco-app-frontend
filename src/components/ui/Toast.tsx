@@ -8,6 +8,11 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  IconAlert,
+  IconCheckCircle,
+  IconInfoCircle,
+} from "@/components/ui/icons";
 
 type ToastTone = "success" | "error" | "warning" | "info";
 
@@ -18,6 +23,15 @@ const tones: Record<ToastTone, string> = {
   error: "border-error text-error",
   warning: "border-warning text-warning",
   info: "border-info text-info",
+};
+
+// Decorative — the toast's text always carries the message on its own;
+// see ui-system.md, "estado nunca comunicado sólo por color".
+const toneIcons: Record<ToastTone, typeof IconCheckCircle> = {
+  success: IconCheckCircle,
+  error: IconAlert,
+  warning: IconAlert,
+  info: IconInfoCircle,
 };
 
 const ToastContext = createContext<(tone: ToastTone, message: string) => void>(
@@ -47,14 +61,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         className="pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col gap-2"
       >
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`rounded-app border bg-surface px-4 py-3 text-sm font-medium shadow-soft-lg ${tones[toast.tone]}`}
-          >
-            {toast.message}
-          </div>
-        ))}
+        {toasts.map((toast) => {
+          const ToneIcon = toneIcons[toast.tone];
+          return (
+            <div
+              key={toast.id}
+              className={`pop-in flex items-start gap-2.5 rounded-app border bg-surface-raised px-4 py-3 text-sm font-medium shadow-soft-lg ${tones[toast.tone]}`}
+            >
+              <ToneIcon className="mt-0.5 size-4.5 shrink-0" />
+              <span className="text-text-primary">{toast.message}</span>
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

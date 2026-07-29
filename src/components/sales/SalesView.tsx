@@ -10,13 +10,22 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import {
+  IconCardPay,
+  IconCart,
+  IconCash,
+  IconChart,
+  IconTransfer,
+} from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
 import { computeTotalPages } from "@/lib/pagination";
+import { hasAnyRole } from "@/lib/roleAccess";
 import {
   buildSummaryQuery,
   normalizeByPaymentMethod,
@@ -45,8 +54,9 @@ function statusLabel(status: SaleStatus) {
   return status === "confirmed" ? "Confirmada" : "Borrador";
 }
 
-export function SalesView({ role }: { role: Role }) {
-  const isCashier = role === "cashier";
+export function SalesView({ roles }: { roles: Role[] }) {
+  const isAdmin = hasAnyRole(roles, ["admin"]);
+  const isCashier = hasAnyRole(roles, ["cashier"]) && !isAdmin;
   const today = todayISO();
 
   const [status, setStatus] = useState<SaleStatus>("confirmed");
@@ -72,7 +82,7 @@ export function SalesView({ role }: { role: Role }) {
   }, [isCashier]);
   const { data: users } = useLoad(usersFetcher);
   const cashiers = useMemo(
-    () => (users ?? []).filter((user) => user.role === "cashier"),
+    () => (users ?? []).filter((user) => user.roles.includes("cashier")),
     [users],
   );
 
@@ -101,8 +111,8 @@ export function SalesView({ role }: { role: Role }) {
     setSaleNumber(value);
     setStatus("confirmed");
     setCashierId("");
-    setFrom("");
-    setTo("");
+    setFrom(isCashier ? today : "");
+    setTo(isCashier ? today : "");
     setPage(1);
   }
 
@@ -119,25 +129,22 @@ export function SalesView({ role }: { role: Role }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">Historial de ventas</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Consultá ventas confirmadas y borradores operativos.
-          </p>
-        </div>
-        {!isCashier && (
-          <Button
-            variant="secondary"
-            onClick={() => setCashClosingOpen((open) => !open)}
-          >
-            {cashClosingOpen ? "Cerrar" : "Cierre de caja"}
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Historial de ventas"
+        description="Consultá ventas confirmadas y borradores operativos."
+        actions={
+          !isCashier && (
+            <Button
+              variant="secondary"
+              onClick={() => setCashClosingOpen((open) => !open)}
+            >
+              {cashClosingOpen ? "Cerrar" : "Cierre de caja"}
+            </Button>
+          )
+        }
+      />
 
-      {/* /reports/* es admin-only (CLAUDE.md §5): estos paneles no se piden para Cajero. */}
-      {!isCashier && <DailySummaryCards />}
+      {isCashier ? <CashierTodaySummaryCards /> : <DailySummaryCards />}
 
       {!isCashier && cashClosingOpen && <CashClosingTool />}
 
@@ -153,7 +160,7 @@ export function SalesView({ role }: { role: Role }) {
           value={saleNumberInput}
           onChange={(event) => setSaleNumberInput(event.target.value)}
           placeholder="Ej. 124"
-          className="min-w-52 flex-1"
+          className="w-full sm:min-w-52 sm:flex-1"
         />
         <Button type="submit" disabled={!saleNumberInput.trim()}>
           Buscar venta
@@ -171,7 +178,7 @@ export function SalesView({ role }: { role: Role }) {
           value={status}
           onChange={(event) => updateStatus(event.target.value as SaleStatus)}
           disabled={!!saleNumber}
-          className="w-44"
+          className="w-full sm:w-44"
         >
           <option value="confirmed">Confirmadas</option>
           <option value="draft">Borradores</option>
@@ -185,7 +192,7 @@ export function SalesView({ role }: { role: Role }) {
               setPage(1);
             }}
             disabled={!!saleNumber}
-            className="w-52"
+            className="w-full sm:w-52"
           >
             <option value="">Todos los cajeros</option>
             {cashiers.map((cashier) => (
@@ -196,28 +203,39 @@ export function SalesView({ role }: { role: Role }) {
             ))}
           </Select>
         )}
-        <Input
-          label="Desde"
-          type="date"
-          value={from}
-          onChange={(event) => {
-            setFrom(event.target.value);
-            setPage(1);
-          }}
-          disabled={!!saleNumber}
-          className="w-44"
-        />
-        <Input
-          label="Hasta"
-          type="date"
-          value={to}
-          onChange={(event) => {
-            setTo(event.target.value);
-            setPage(1);
-          }}
-          disabled={!!saleNumber}
-          className="w-44"
-        />
+        {isCashier ? (
+          <p className="pb-2 text-sm text-text-secondary">
+            Fecha:{" "}
+            {new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(
+              new Date(`${today}T12:00:00`),
+            )}
+          </p>
+        ) : (
+          <>
+            <Input
+              label="Desde"
+              type="date"
+              value={from}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setPage(1);
+              }}
+              disabled={!!saleNumber}
+              className="w-full sm:w-44"
+            />
+            <Input
+              label="Hasta"
+              type="date"
+              value={to}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setPage(1);
+              }}
+              disabled={!!saleNumber}
+              className="w-full sm:w-44"
+            />
+          </>
+        )}
       </div>
 
       {error ? (
@@ -307,7 +325,7 @@ function SalesTable({
             onKeyDown={(event) => handleRowKeyDown(event, sale.id)}
             tabIndex={0}
             role="button"
-            className="cursor-pointer rounded-app border border-border bg-surface p-4 shadow-soft transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+            className="cursor-pointer rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -367,7 +385,7 @@ function SalesTable({
                 onKeyDown={(event) => handleRowKeyDown(event, sale.id)}
                 tabIndex={0}
                 role="button"
-                className="cursor-pointer transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-none"
+                className="cursor-pointer transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
               >
                 <Td className="num font-medium">
                   {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
@@ -411,6 +429,7 @@ function SaleStatusBadge({ status }: { status: SaleStatus }) {
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
   CARD: "Tarjeta",
+  TRANSFER: "Transferencia",
 };
 
 /** Cards del día, siempre "hoy" — la propia agregación viene del backend. */
@@ -428,32 +447,63 @@ function DailySummaryCards() {
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={2} />;
 
+  return <SummaryCards data={data} />;
+}
+
+/** Resumen operativo propio; el backend fija usuario y día de negocio. */
+function CashierTodaySummaryCards() {
+  const fetcher = useCallback(
+    () => api<SalesSummaryByPaymentMethod>("/sales/today-summary"),
+    [],
+  );
+  const { data, error, reload } = useLoad(fetcher);
+
+  if (error) return <ErrorState error={error} onRetry={reload} />;
+  if (data === null) return <ListSkeleton rows={2} />;
+
+  return <SummaryCards data={data} />;
+}
+
+function SummaryCards({ data }: { data: SalesSummaryByPaymentMethod }) {
   const byMethod = normalizeByPaymentMethod(data.by_payment_method);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-      <Card>
-        <p className="text-sm text-text-secondary">Ventas hoy</p>
-        <p className="num mt-1 text-3xl font-semibold">{data.total_sales}</p>
-      </Card>
-      <Card>
-        <p className="text-sm text-text-secondary">Total facturado</p>
-        <p className="num mt-1 text-3xl font-semibold">
-          {formatMoney(data.total_amount)}
-        </p>
-      </Card>
-      <Card>
-        <p className="text-sm text-text-secondary">Efectivo</p>
-        <p className="num mt-1 text-3xl font-semibold">
-          {formatMoney(byMethod.CASH.totalAmount)}
-        </p>
-      </Card>
-      <Card>
-        <p className="text-sm text-text-secondary">Tarjeta</p>
-        <p className="num mt-1 text-3xl font-semibold">
-          {formatMoney(byMethod.CARD.totalAmount)}
-        </p>
-      </Card>
+    // Base grid-cols-2 (not 1): a phone-width stack of 5 full-height tiles
+    // pushed the actual sales table below the fold — see the "compact"
+    // StatCard note. The 5th tile spans both columns up to md (3-col),
+    // where it would otherwise be the lone tile on its own row.
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
+      <StatCard
+        size="compact"
+        label="Ventas hoy"
+        value={data.total_sales}
+        icon={<IconCart className="size-4.5" />}
+      />
+      <StatCard
+        size="compact"
+        label="Total facturado"
+        value={formatMoney(data.total_amount)}
+        icon={<IconChart className="size-4.5" />}
+      />
+      <StatCard
+        size="compact"
+        label="Efectivo"
+        value={formatMoney(byMethod.CASH.totalAmount)}
+        icon={<IconCash className="size-4.5" />}
+      />
+      <StatCard
+        size="compact"
+        label="Tarjeta"
+        value={formatMoney(byMethod.CARD.totalAmount)}
+        icon={<IconCardPay className="size-4.5" />}
+      />
+      <StatCard
+        size="compact"
+        className="col-span-2 md:col-span-1"
+        label="Transferencia"
+        value={formatMoney(byMethod.TRANSFER.totalAmount)}
+        icon={<IconTransfer className="size-4.5" />}
+      />
     </div>
   );
 }
@@ -491,6 +541,7 @@ function CashClosingTool() {
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           max={to}
+          className="w-full sm:w-auto"
         />
         <Input
           label="Hasta"
@@ -498,6 +549,7 @@ function CashClosingTool() {
           value={to}
           onChange={(e) => setTo(e.target.value)}
           min={from}
+          className="w-full sm:w-auto"
         />
       </div>
 
@@ -527,7 +579,7 @@ function CashClosingTool() {
               </tr>
             </thead>
             <tbody>
-              {(["CASH", "CARD"] as const).map((method) => (
+              {(["CASH", "CARD", "TRANSFER"] as const).map((method) => (
                 <tr key={method}>
                   <Td>{paymentMethodLabels[method]}</Td>
                   <Td className="num text-right">

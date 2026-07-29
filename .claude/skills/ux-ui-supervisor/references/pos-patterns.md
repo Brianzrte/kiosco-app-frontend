@@ -232,6 +232,38 @@ En todo momento tiene que poder responderse, de un vistazo:
 
 Si alguna de estas no se responde sin scrollear ni hacer clic, es un hallazgo.
 
+## Motion en el POS: mecanismo por caso
+
+El árbol de decisión de `motion.md` aplica igual acá, pero en `operational-pos`
+la mitad inferior de cada rango de duración es la que corresponde por defecto
+(`motion.md`, *Duraciones de referencia*), y **el carrito nunca usa AutoAnimate
+para reordenar**: el orden tiene que quedarse estable (arriba, *El carrito*), y
+una librería que anima reordenamientos automáticos está resolviendo un
+problema que acá no debe existir.
+
+| Caso | Mecanismo | Ya implementado como |
+|---|---|---|
+| Producto agregado (línea nueva) | CSS | `.flash`, color, 200 ms |
+| Producto ya existente (cantidad incrementada) | CSS | `.flash` reaplicado con una key que cambia (`id` + nonce) para re-disparar la animación sin re-animar el layout de la fila |
+| Eliminar producto | CSS (salida corta) o ninguna | Reacomodo de filas sin animación de layout — el orden de las demás no se anima, sólo desaparece la fila |
+| Total actualizado | CSS | `.total-flash`, pulso de color, 120 ms |
+| Confirmación de venta | CSS | `.pop-in`, entrada con scale 0.92→1, degrada a fade con reduced motion |
+| Error de stock | Ninguna espacial | Mensaje inline + estado de error — sin shake, sin vibración |
+| Mensajes de validación de un formulario auxiliar (p. ej. alta rápida de producto) | AutoAnimate | No implementado hoy; candidato válido si aparece esa lista |
+
+Estos cuatro mecanismos CSS (`.flash`, `.total-flash`, `.pop-in`,
+`.section-enter`) **no se migran a Motion**: ya cumplen la regla central de
+`motion.md` (el mecanismo más chico que resuelve la interacción) y migrarlos
+agregaría una dependencia de runtime a una animación que no la necesita. Un
+hallazgo que proponga "modernizar" estos cuatro casos con Motion sin una
+razón funcional nueva es un hallazgo mal formulado (`motion.md`, *Motion
+funcional vs decorativo*).
+
+Motion (Nivel 2) tendría un caso real en el POS si apareciera, por ejemplo,
+un drawer de detalle de venta con `AnimatePresence`, o un panel de medio de
+pago expandible con `layout`. Ninguno de los dos existe hoy; se documentan acá
+como referencia para cuando corresponda evaluarlos, no como trabajo pendiente.
+
 ## Layout de referencia
 
 ```text
@@ -289,3 +321,7 @@ Dos regiones fijas. La izquierda (entrada + carrito) scrollea; la derecha
 - [ ] Una respuesta ambigua se declara desconocida y no ofrece un reintento
       duplicante.
 - [ ] El flujo completo —escanear, ajustar, cobrar, confirmar— se hace sin mouse.
+- [ ] El carrito no usa AutoAnimate ni una layout animation de Motion para
+      reordenar: el orden se mantiene estable sin animación de posición.
+- [ ] Ninguna animación del POS supera 400 ms; la mayoría está en la mitad
+      inferior de su rango de referencia (`motion.md`).

@@ -71,7 +71,11 @@ Detalle de cada hallazgo debajo de la tabla, con los nueve campos:
 ## States
 ## Performance and motion
 
-En cada una: qué se revisó, qué se encontró, y qué quedó sin evaluar.
+En cada una: qué se revisó, qué se encontró, y qué quedó sin evaluar. Para
+motion específicamente: qué mecanismo usa cada animación relevante (CSS /
+Motion / AutoAnimate), si sigue el árbol de decisión de
+`../references/motion.md`, y el resultado de la verificación de
+`prefers-reduced-motion`.
 
 ## Positive findings
 

@@ -124,6 +124,28 @@ Sólo `transform` y `opacity` en el camino crítico (`motion.md`). Animar `width
 Nada se anima durante la carga inicial de una pantalla de trabajo: retrasa el
 momento en que se puede empezar.
 
+### Motion y AutoAnimate: costo de bundle
+
+`motion` y `@formkit/auto-animate` ya están instaladas (`motion.md`, *Estado
+de dependencias*), pero eso no vuelve gratis usarlas en cualquier ruta:
+
+- Un import de `motion/react` en un Client Component chico agrega ese costo
+  sólo al bundle de esa región, no a toda la ruta — es la razón por la que el
+  límite de Client Component debe ser mínimo (`motion.md`, sección
+  *Next.js: Server y Client Components*).
+- `LazyMotion` + `domAnimation` (importando `m` en vez de `motion`) reduce el
+  peso inicial cuando Motion se usa en varios componentes de una misma ruta.
+  No se agrega sin medir primero — ver `motion.md`, sección `LazyMotion`.
+- `next/dynamic` es la alternativa (o el complemento) cuando el componente
+  animado es pesado y poco frecuente: un modal especial, un panel que casi
+  nadie abre. No es necesario si el componente ya es chico.
+- AutoAnimate es liviano por diseño, pero igual se evalúa sobre listas
+  grandes: no tiene virtualización interna, y aplicarlo a una tabla de
+  cientos de filas sin medir es el mismo error que animar `height` sin medir.
+- Verificar el impacto de bundle con `next build` (tamaño de página) cuando
+  Motion se introduce en una ruta crítica como `/pos`; no es necesario para
+  una pantalla administrativa de bajo tráfico.
+
 ## Requests duplicados
 
 Síntomas frecuentes en este stack:
@@ -208,6 +230,10 @@ Lo que no se midió se declara `Not evaluated`. **Nunca** se inventa un número.
 - [ ] Nada salta de posición al cargar (verificado con Layout Shift Regions).
 - [ ] No se agregaron familias tipográficas ni dependencias.
 - [ ] Sólo se animan `transform` y `opacity` en el camino crítico.
+- [ ] El Client Component boundary de una región animada con Motion es mínimo.
+- [ ] `LazyMotion`/`next/dynamic` se evaluaron sólo si hay evidencia de costo
+      de bundle relevante, no preventivamente.
+- [ ] AutoAnimate no se aplicó a una lista grande sin medir.
 - [ ] El bloqueo durante una operación es el mínimo necesario.
 - [ ] Toda operación bloqueante termina en éxito, error o timeout.
 - [ ] Verificado con throttling de CPU 4×.

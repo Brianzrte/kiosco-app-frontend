@@ -8,5 +8,5 @@ export default async function SaleDetailPage({
 }) {
   const session = await requireRole(["admin", "cashier"]);
   const { id } = await params;
-  return <SaleDetail id={id} role={session.role} />;
+  return <SaleDetail id={id} roles={session.roles} />;
 }

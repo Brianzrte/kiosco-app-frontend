@@ -30,7 +30,7 @@ export function LoginForm() {
         setError(body.message ?? "Error de autenticación");
         return;
       }
-      router.push(homeFor(body.role as Role));
+      router.push(homeFor(body.roles as Role[]));
       router.refresh();
     } catch {
       setError("Error de red. Revisá tu conexión e intentá de nuevo.");
@@ -40,7 +40,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card>
+    <Card className="shadow-soft-lg">
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
           label="Usuario"

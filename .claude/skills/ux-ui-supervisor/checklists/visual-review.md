@@ -95,13 +95,24 @@ Cada ítem se marca sólo con evidencia. Lo no verificado va como
 ## Motion
 
 - [ ] Toda animación explica, conecta, confirma o da feedback.
-- [ ] No hay duraciones literales fuera de `lib/motion.ts` / `--motion-*`.
+- [ ] Se aplicó el árbol de decisión de `../references/motion.md`: CSS antes
+      que Motion, Motion antes que AutoAnimate, salvo que el control lo exija.
+- [ ] No hay duraciones literales fuera de `lib/motion.ts` / `--motion-*`, ni
+      en CSS ni en props de Motion.
+- [ ] No hay `transition-all` como valor por defecto.
 - [ ] Sólo se animan `transform`, `opacity`, `color`, `background-color`.
 - [ ] Las entradas usan `ease-out`; las salidas no se animan.
-- [ ] El foco no tiene transición.
-- [ ] `prefers-reduced-motion` verificado con emulación en DevTools.
+- [ ] Ningún import de Motion viene de `framer-motion` en vez de `motion/react`.
+- [ ] AutoAnimate y una layout animation de Motion no controlan el mismo
+      contenedor.
+- [ ] El foco no tiene transición, y se restaura al cerrar un overlay como
+      parte del cierre, no de la animación.
+- [ ] `prefers-reduced-motion` verificado con emulación en DevTools, incluidas
+      las interacciones con Motion y AutoAnimate.
 - [ ] Ninguna regla de reduced motion elimina la única señal de un evento.
-- [ ] En pantallas operativas ninguna animación supera 200 ms.
+- [ ] En pantallas operativas ninguna animación supera 400 ms.
+- [ ] Ningún Client Component boundary se agrandó sólo para animar una región
+      chica (`../references/motion.md`, *Next.js: Server y Client Components*).
 
 ## Cómo verificar
 

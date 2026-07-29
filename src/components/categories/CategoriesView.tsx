@@ -12,6 +12,7 @@ import { pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
@@ -138,7 +139,10 @@ export function CategoriesView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Categorías</h1>
+      <PageHeader
+        title="Categorías"
+        description="Agrupan productos para filtrar en Productos, Inventario y el POS."
+      />
 
       <Card className="max-w-xl">
         <form onSubmit={create} className="flex items-end gap-3">

@@ -16,6 +16,7 @@ describe("normalizeByPaymentMethod", () => {
     expect(normalizeByPaymentMethod(undefined)).toEqual({
       CASH: { saleCount: 0, totalAmount: "0.00" },
       CARD: { saleCount: 0, totalAmount: "0.00" },
+      TRANSFER: { saleCount: 0, totalAmount: "0.00" },
     });
   });
 
@@ -25,13 +26,16 @@ describe("normalizeByPaymentMethod", () => {
     ]);
     expect(result.CASH).toEqual({ saleCount: 5, totalAmount: "1200.50" });
     expect(result.CARD).toEqual({ saleCount: 0, totalAmount: "0.00" });
+    expect(result.TRANSFER).toEqual({ saleCount: 0, totalAmount: "0.00" });
   });
 
-  it("ignores unknown methods instead of throwing", () => {
+  it("counts transfer and ignores unknown methods instead of throwing", () => {
     const result = normalizeByPaymentMethod([
       { method: "TRANSFER", sale_count: 2, total_amount: "300.00" },
+      { method: "OTHER", sale_count: 99, total_amount: "999.00" },
     ]);
     expect(result.CASH.saleCount).toBe(0);
     expect(result.CARD.saleCount).toBe(0);
+    expect(result.TRANSFER).toEqual({ saleCount: 2, totalAmount: "300.00" });
   });
 });

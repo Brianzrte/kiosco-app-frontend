@@ -3,9 +3,15 @@
 @theme {
   /* Base — Mini Moni mauve/rose palette.
      Interactive darks (#9c566c / #85485c) are derived from #c08497 to keep
-     white-on-primary text at WCAG AA; #c08497 itself is the visible accent. */
+     white-on-primary text at WCAG AA; #c08497 itself is the visible accent.
+     --color-primary-active (visual-redesign, add-visual-redesign-tokens):
+     one step past primary-hover, for :active/pressed states — button press,
+     selected nav pill on click. --color-primary-light doubles as
+     "primary-subtle" (selected pill background, badge tint); no separate
+     token was added for that role to avoid two names for one value. */
   --color-primary: #9c566c;
   --color-primary-hover: #85485c;
+  --color-primary-active: #6e3b49;
   --color-primary-light: #f0d9e3;
   --color-secondary: #c08497;
   --color-secondary-hover: #9c566c;
@@ -32,29 +38,79 @@
   --color-chart-3: #762a83;
   --color-chart-4: #1b7837;
 
-  /* State */
+  /* State. "Subtle" tints (success-subtle, warning-subtle, danger-subtle,
+     info-subtle) are not separate tokens: use the Tailwind opacity modifier
+     on these same vars — bg-success/15, border-success/40, text-success —
+     which is already the established pattern (Badge, Toast, PosView's error
+     banner). A flat hex per subtle tint would duplicate four colors with no
+     gain, and would need a second set for hover states these don't have. */
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #0ea5e9;
 
-  /* Backgrounds */
+  /* POS payment accents — dedicated, muted tones for the payment-method
+     chips and the sale-confirmation action in PosView. NOT the same role as
+     the generic --color-success above (still used unchanged by Toast, the
+     post-sale confirmation panel, Badge and InventoryView deltas) or the
+     candy-bright --color-pastel-green/--color-pastel-yellow (still used
+     unchanged as decorative category colors in Badge/CategoriesView).
+     Derived in OKLCH, anchored to the brand's muted chroma (~0.045-0.085,
+     matching --color-border's C=0.045 and --color-primary's C=0.096 — see
+     ai/skills/ux-ui-supervisor/references/color-system.md, "Construir una
+     escala con OKLCH"), not generic saturated green/yellow/amber.
+     --color-payment-cash and --color-confirm-sale share the same hue
+     family (H≈145-148, sage/forest) at different lightness — confirm-sale
+     reads as "cash, one step darker" rather than an unrelated third color.
+     Transferencia uses the same muted family, not the raw
+     --color-pastel-blue. */
+  --color-payment-cash: #c3ddc2;
+  --color-payment-card: #e5d2b0;
+  --color-payment-transfer: #b5dbee;
+  --color-confirm-sale: #34653c;
+
+  /* Backgrounds — background/surface unchanged. surface-subtle/-hover/-raised
+     added (visual-redesign, add-visual-redesign-tokens) to give admin
+     screens depth without leaving the brand hue: a filter bar, table header
+     or dashboard shell needs a fill between "page background" and "white
+     card" (surface-subtle), a gentler row-hover than the strong-pink
+     surface-2 (surface-hover), and a lifted-off-the-page tone for sticky/
+     floating panels like the POS total card or an open dropdown
+     (surface-raised — pair with shadow-soft-lg, not a new shadow token). */
   --color-background: #f8edf1;
   --color-surface: #ffffff;
+  --color-surface-subtle: #fbf5f8;
   --color-surface-2: #f0d9e3;
+  --color-surface-hover: #f6e9ee;
+  --color-surface-raised: #ffffff;
 
-  /* Text */
+  /* Text — primary/secondary/disabled unchanged. text-muted added
+     (visual-redesign, add-visual-redesign-tokens): a tier between secondary
+     and disabled for de-emphasized but still legible meta text (timestamps,
+     helper captions) that isn't actually a disabled control. */
   --color-text-primary: #1f2937;
   --color-text-secondary: #6b7280;
+  --color-text-muted: #8b93a1;
   --color-text-disabled: #9ca3af;
   --color-text-inverse: #ffffff;
 
-  /* Borders */
+  /* Borders — border/border-hover unchanged. border-strong added
+     (visual-redesign, add-visual-redesign-tokens) for dividers that need to
+     read as a stronger structural line than the default card border: table
+     header underline, sidebar/section separators. */
   --color-border: #e8c5d5;
   --color-border-hover: #dfb2c4;
+  --color-border-strong: #c98fa8;
 
   /* Shape */
   --radius-app: 12px;
+  /* Small radius for compact inline chips (icon badges, stat icon tiles)
+     where the full 12px --radius-app reads as barely-rounded at a small box
+     size. Never used for anything a user clicks as a primary control.
+     Named "tight", not "sm": Tailwind v4's built-in radius scale already
+     owns the --radius-sm key (2px) — reusing it would silently override
+     Tailwind's own `rounded-sm` utility everywhere, not just here. */
+  --radius-tight: 8px;
 
   /* Soft shadows */
   --shadow-soft: 0 1px 2px rgb(31 41 55 / 0.04), 0 2px 8px rgb(31 41 55 / 0.06);

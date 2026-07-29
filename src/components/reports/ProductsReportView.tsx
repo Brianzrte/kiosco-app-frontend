@@ -50,7 +50,7 @@ export function ProductsReportView() {
         </Link>
       </div>
 
-      <h1 className="text-xl font-semibold">Reporte de productos</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Reporte de productos</h1>
 
       <div className="flex flex-wrap items-end gap-3">
         <Input

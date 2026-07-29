@@ -23,6 +23,11 @@ canónico y neutral vive en `ai/`:
 - `/ux-ui-supervisor` expone la skill de supervisión UX/UI para design
   discovery, auditorías y revisión previa al cierre. La regla de cuándo usarla
   vive en `AGENTS.md`; acá no se repite.
+- El agente `ux-ui-reviewer` (`.claude/agents/ux-ui-reviewer.md`, generado
+  desde `agent-definitions/ux-ui-reviewer/AGENT.md`) convierte esa skill en un
+  workflow ejecutable: discover, design, audit, fix, verify y pre-merge. La
+  regla de cuándo usarlo vive en `AGENTS.md`; el detalle de modos y límites
+  vive en `agent-definitions/ux-ui-reviewer/README.md`.
 
 ## Reglas de plataforma
 

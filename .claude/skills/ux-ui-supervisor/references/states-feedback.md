@@ -115,6 +115,19 @@ Casos distintos, mensajes distintos:
 | **Modal** | Decisión que debe tomarse antes de seguir, o acción destructiva | Información que no requiere decisión |
 | **Estado en la propia UI** | El resultado se ve en el dato: la fila cambió, el total subió | — |
 
+### Motion para cada canal
+
+El mecanismo sigue el árbol de decisión de `motion.md`, no la preferencia del
+momento:
+
+| Canal | Mecanismo típico |
+|---|---|
+| Toast (entrada/salida) | Motion (`AnimatePresence`) si necesita salida propia; CSS si sólo entra |
+| Mensajes de validación que aparecen/desaparecen en una lista de campos | AutoAnimate |
+| Resaltado de fila (`.flash`, `.total-flash`) | CSS — ya resuelto, no se migra |
+| Banner persistente | CSS simple o ninguna animación — es un estado, no un evento |
+| Modal de confirmación | Motion (`AnimatePresence` + foco gestionado por el cierre del diálogo) |
+
 ### La regla del toast
 
 **Un toast nunca es el único lugar donde aparece un error que hay que
@@ -236,3 +249,5 @@ confirmación de más devalúa las que importan.
 - [ ] Los botones del diálogo llevan verbo, no "Sí"/"No".
 - [ ] Ninguna confirmación sobra por una acción reversible de bajo impacto.
 - [ ] Ninguna operación con dinero se actualiza de forma optimista.
+- [ ] El mecanismo de motion de cada canal sigue el árbol de decisión de
+      `motion.md` (CSS / Motion / AutoAnimate), no una preferencia puntual.

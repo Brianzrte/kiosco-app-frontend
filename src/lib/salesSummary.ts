@@ -6,7 +6,7 @@
  * range, never derives totals from individual sales.
  */
 
-export const PAYMENT_METHODS = ["CASH", "CARD"] as const;
+export const PAYMENT_METHODS = ["CASH", "CARD", "TRANSFER"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export type PaymentMethodBreakdown = {

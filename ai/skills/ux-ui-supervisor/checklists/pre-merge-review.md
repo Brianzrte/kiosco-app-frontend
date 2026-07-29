@@ -120,16 +120,31 @@ código.
 ## 12. Motion
 
 - [ ] Toda animación nueva explica, conecta, confirma o da feedback.
+- [ ] El mecanismo elegido (CSS / Motion / AutoAnimate) sigue el árbol de
+      decisión de `../references/motion.md`, y está justificado si no es CSS.
 - [ ] Sólo se animan `transform`, `opacity`, `color`, `background-color`.
-- [ ] Las duraciones salen de los tokens.
-- [ ] En pantallas operativas ninguna animación supera 200 ms.
+- [ ] Las duraciones salen de los tokens (`lib/motion.ts` / `--motion-*`), en
+      CSS y en props de Motion por igual.
+- [ ] Ningún import nuevo de `framer-motion`; todo import de Motion es desde
+      `motion/react`.
+- [ ] AutoAnimate y una layout animation de Motion no controlan el mismo
+      contenedor.
+- [ ] Ninguna dependencia de animación nueva se agregó sin autorización
+      (`motion` y `@formkit/auto-animate` ya están disponibles; cualquier otra
+      no).
+- [ ] El Client Component boundary de cualquier región animada nueva es
+      mínimo — no se convirtió una página completa en cliente sólo por motion.
+- [ ] En pantallas operativas ninguna animación supera 400 ms.
 
 ## 13. Reduced motion
 
-- [ ] Verificado con emulación en DevTools.
+- [ ] Verificado con emulación en DevTools, incluidas las interacciones con
+      Motion y AutoAnimate.
 - [ ] Ninguna regla de reduced motion elimina la única señal de un evento.
 - [ ] Las animaciones nuevas están cubiertas por la estrategia existente o
       declaran la suya.
+- [ ] El foco se restaura al cerrar cualquier overlay animado nuevo como
+      parte del cierre, no de la animación.
 
 ## 14. Performance percibida
 

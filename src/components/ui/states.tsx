@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { ApiError } from "@/lib/api";
 import { Button } from "./Button";
 import { Spinner } from "./Spinner";
+import { IconAlert, IconBox } from "./icons";
 
 export function LoadingState({ label = "Cargando…" }: { label?: string }) {
   return (
@@ -54,6 +55,12 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-4 py-16 text-center">
+      <span
+        aria-hidden
+        className="flex size-11 items-center justify-center rounded-full bg-surface-subtle text-text-muted"
+      >
+        <IconBox className="size-5" />
+      </span>
       <p className="text-sm text-text-secondary">{message}</p>
       {action}
     </div>
@@ -108,7 +115,16 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div role="alert" className="flex flex-col items-center gap-4 py-16 text-center">
+    <div
+      role="alert"
+      className="flex flex-col items-center gap-4 py-16 text-center"
+    >
+      <span
+        aria-hidden
+        className="flex size-11 items-center justify-center rounded-full bg-error/10 text-error"
+      >
+        <IconAlert className="size-5" />
+      </span>
       <p className="text-sm font-medium text-error">{error.message}</p>
       <RecoveryAction error={error} onRetry={onRetry} />
     </div>

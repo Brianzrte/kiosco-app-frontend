@@ -109,7 +109,7 @@ export function SalesReportView() {
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-xl font-semibold">Reporte de ventas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Reporte de ventas</h1>
       </div>
 
       <div className="flex flex-wrap items-end gap-3">

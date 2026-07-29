@@ -5,9 +5,11 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { IconSearch } from "@/components/ui/icons";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import {
@@ -28,7 +30,7 @@ import {
 
 const PAGE_SIZE = INVENTORY_PAGE_SIZE;
 
-export function InventoryView() {
+export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
   const [selectedItem, setSelectedItem] = useState<StockListItem | null>(null);
   const [historyRequest, setHistoryRequest] = useState<{
     productId: string;
@@ -61,11 +63,12 @@ export function InventoryView() {
 
   // limit=100: cubre el tamaño de kiosco hasta que exista paginación real
   // en este selector (add-frontend-users, sección 7.2).
-  const categoriesFetcher = useCallback(
-    () =>
-      api<CategoryList>("/categories?limit=100").then((res) => res.categories),
-    [],
-  );
+  const categoriesFetcher = useCallback(() => {
+    if (!canPlanStock) return Promise.resolve<CategoryList["categories"]>([]);
+    return api<CategoryList>("/categories?limit=100").then(
+      (res) => res.categories,
+    );
+  }, [canPlanStock]);
   const { data: categories } = useLoad(categoriesFetcher);
 
   const fetcher = useCallback(
@@ -107,39 +110,47 @@ export function InventoryView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Inventario</h1>
-        <Button
-          variant="secondary"
-          onClick={() =>
-            setHistoryRequest({ productId: "", nonce: Date.now() })
-          }
-        >
-          Historial de movimientos
-        </Button>
-      </div>
+      <PageHeader
+        title="Inventario"
+        description="Stock por producto, con mínimos y movimientos."
+        actions={
+          canPlanStock && (
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setHistoryRequest({ productId: "", nonce: Date.now() })
+              }
+            >
+              Historial de movimientos
+            </Button>
+          )
+        }
+      />
 
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3">
         <Input
+          icon={<IconSearch />}
           placeholder="Buscar por nombre, SKU o código de barras"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="max-w-xl flex-1"
           aria-label="Buscar producto"
         />
-        <Select
-          value={categoryId}
-          onChange={(e) => selectCategory(e.target.value)}
-          className="w-full max-w-56"
-          aria-label="Filtrar por categoría"
-        >
-          <option value="">Todas las categorías</option>
-          {(categories ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+        {canPlanStock && (
+          <Select
+            value={categoryId}
+            onChange={(e) => selectCategory(e.target.value)}
+            className="w-full max-w-56"
+            aria-label="Filtrar por categoría"
+          >
+            <option value="">Todas las categorías</option>
+            {(categories ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        )}
         <div className="flex overflow-hidden rounded-app border border-border">
           <button
             type="button"
@@ -174,7 +185,9 @@ export function InventoryView() {
         <EmptyState
           message={
             lowStockOnly
-              ? "No hay productos por debajo de su mínimo. Si esperabas ver alguno, verificá que tenga un mínimo configurado en Ajustar → Mínimo."
+              ? canPlanStock
+                ? "No hay productos por debajo de su mínimo. Si esperabas ver alguno, verificá que tenga un mínimo configurado en Ajustar → Mínimo."
+                : "No hay productos por debajo de su mínimo."
               : term === ""
                 ? "Todavía no hay productos. Crealos en Productos para gestionar su stock."
                 : "Ningún producto coincide con la búsqueda."
@@ -220,18 +233,20 @@ export function InventoryView() {
                     </>
                   )}
                   <div className="flex shrink-0 gap-2">
-                    <Button
-                      variant="ghost"
-                      className="min-h-11 md:min-h-9"
-                      onClick={() =>
-                        setHistoryRequest({
-                          productId: item.product_id,
-                          nonce: Date.now(),
-                        })
-                      }
-                    >
-                      Historial
-                    </Button>
+                    {canPlanStock && (
+                      <Button
+                        variant="ghost"
+                        className="min-h-11 md:min-h-9"
+                        onClick={() =>
+                          setHistoryRequest({
+                            productId: item.product_id,
+                            nonce: Date.now(),
+                          })
+                        }
+                      >
+                        Historial
+                      </Button>
+                    )}
                     <Button
                       variant="secondary"
                       className="min-h-11 md:min-h-9"
@@ -280,6 +295,7 @@ export function InventoryView() {
             key={selectedItem.product_id}
             productId={selectedItem.product_id}
             isLow={isLow(selectedItem)}
+            canPlanStock={canPlanStock}
             onChanged={reload}
             onClose={() => setSelectedItem(null)}
           />
@@ -300,11 +316,13 @@ export function InventoryView() {
 function StockPanel({
   productId,
   isLow,
+  canPlanStock,
   onChanged,
   onClose,
 }: {
   productId: string;
   isLow: boolean;
+  canPlanStock: boolean;
   onChanged: () => void;
   onClose: () => void;
 }) {
@@ -371,17 +389,19 @@ function StockPanel({
         >
           Ajustar
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("minimum")}
-          className={`px-3 py-2 text-sm font-medium transition-colors ${
-            tab === "minimum"
-              ? "border-b-2 border-primary text-primary"
-              : "text-text-secondary hover:text-text-primary"
-          }`}
-        >
-          Mínimo
-        </button>
+        {canPlanStock && (
+          <button
+            type="button"
+            onClick={() => setTab("minimum")}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              tab === "minimum"
+                ? "border-b-2 border-primary text-primary"
+                : "text-text-secondary hover:text-text-primary"
+            }`}
+          >
+            Mínimo
+          </button>
+        )}
       </div>
 
       {tab === "adjust" ? (
@@ -392,13 +412,13 @@ function StockPanel({
             onClose();
           }}
         />
-      ) : (
+      ) : canPlanStock ? (
         <SetMinimumForm
           productId={productId}
           currentMinimum={stock.minimum_quantity}
           onDone={refreshAll}
         />
-      )}
+      ) : null}
     </div>
   );
 }
@@ -448,6 +468,7 @@ function InitializeStockForm({
         <Input
           label="Cantidad inicial"
           type="number"
+          inputMode="numeric"
           min={0}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
@@ -523,6 +544,7 @@ function AdjustStockForm({
           <Input
             label="Cantidad"
             type="number"
+            inputMode="numeric"
             min={1}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
@@ -600,6 +622,7 @@ function SetMinimumForm({
       <Input
         label="Cantidad mínima"
         type="number"
+        inputMode="numeric"
         min={0}
         value={value}
         onChange={(e) => setValue(e.target.value)}

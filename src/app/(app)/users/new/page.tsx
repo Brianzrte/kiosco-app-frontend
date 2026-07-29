@@ -14,7 +14,7 @@ export default async function NewUserPage() {
           ← Volver a usuarios
         </Link>
       </div>
-      <h1 className="text-xl font-semibold">Crear usuario</h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Crear usuario</h1>
       <UserForm />
     </div>
   );
