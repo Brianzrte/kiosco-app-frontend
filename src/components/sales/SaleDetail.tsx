@@ -230,7 +230,7 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             )}
           </section>
 
-          <div className="flex flex-col gap-2 rounded-app bg-rose-strong px-4 py-3 text-text-inverse">
+          <div className="flex flex-col gap-2 rounded-app bg-primary-hover px-4 py-3 text-text-inverse">
             {netTotal !== null ? (
               <>
                 <div className="flex items-center justify-between text-sm text-text-inverse/80">

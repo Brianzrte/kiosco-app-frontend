@@ -1,3 +1,7 @@
-import { ReceivingListView } from "@/components/receiving/ReceivingListView";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/roles";
-export default async function ReceivingPage() { await requireRole(["receiving", "admin"]); return <ReceivingListView />; }
+
+export default async function ReceivingPage() {
+  await requireRole(["receiving", "inventory", "admin"]);
+  redirect("/purchasing");
+}

@@ -3,7 +3,7 @@ import { homeFor, navItemsFor } from "./nav";
 
 describe("homeFor", () => {
   it("uses the fixed role priority", () => {
-    expect(homeFor(["receiving", "inventory"])).toBe("/receiving");
+    expect(homeFor(["receiving", "inventory"])).toBe("/purchasing");
     expect(homeFor(["cashier", "receiving"])).toBe("/");
     expect(homeFor(["admin", "cashier"])).toBe("/");
   });
@@ -17,7 +17,14 @@ describe("navItemsFor", () => {
       "/",
       "/sales",
       "/inventory",
-      "/receiving",
+      "/purchasing",
+    ]);
+  });
+
+  it("does not expose management-only routes to receiving", () => {
+    expect(navItemsFor(["receiving"]).map((item) => item.href)).toEqual([
+      "/inventory",
+      "/purchasing",
     ]);
   });
 });

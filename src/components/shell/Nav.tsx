@@ -29,7 +29,7 @@ const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   "/sales": IconHistory,
   "/products": IconBox,
   "/inventory": IconLayers,
-  "/receiving": IconTruck,
+  "/purchasing": IconTruck,
   "/categories": IconTag,
   "/users": IconUsers,
   "/reports": IconChart,
@@ -83,7 +83,7 @@ export function Nav({ roles }: { roles: Role[] }) {
   return (
     <>
       <header className="border-b border-border bg-surface shadow-soft">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 md:gap-6 md:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-4 px-3 py-3 md:gap-6 md:px-4">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <span className="flex size-8 items-center justify-center rounded-tight bg-primary text-sm font-bold text-text-inverse">
               M
@@ -103,7 +103,7 @@ export function Nav({ roles }: { roles: Role[] }) {
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
-                  className={`flex items-center gap-0 rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] 2xl:gap-1.5 2xl:px-3 ${
+                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] 2xl:gap-1.5 2xl:px-3 ${
                     active
                       ? "bg-primary-light text-primary"
                       : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
@@ -147,7 +147,7 @@ export function Nav({ roles }: { roles: Role[] }) {
             onClick={logout}
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
-            className={`ml-auto items-center gap-0 rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex 2xl:gap-1.5 2xl:px-3 ${
+            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex 2xl:gap-1.5 2xl:px-3 ${
               useDrawerNav ? "hidden" : "flex"
             }`}
           >

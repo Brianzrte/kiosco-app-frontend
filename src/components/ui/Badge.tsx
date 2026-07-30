@@ -1,6 +1,6 @@
 import { HTMLAttributes } from "react";
 
-type Tone =
+export type Tone =
   | "pastel-pink"
   | "pastel-peach"
   | "pastel-yellow"
@@ -10,7 +10,10 @@ type Tone =
   | "warning"
   | "error"
   | "info"
-  | "neutral";
+  | "neutral"
+  | "payment-cash"
+  | "payment-card"
+  | "payment-transfer";
 
 const tones: Record<Tone, string> = {
   "pastel-pink": "bg-pastel-pink text-text-primary",
@@ -23,6 +26,9 @@ const tones: Record<Tone, string> = {
   error: "bg-error/15 text-error",
   info: "bg-info/15 text-info",
   neutral: "bg-surface-2 text-text-secondary",
+  "payment-cash": "bg-payment-cash text-text-primary",
+  "payment-card": "bg-payment-card text-text-primary",
+  "payment-transfer": "bg-payment-transfer text-text-primary",
 };
 
 const pastelTones: Tone[] = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonHTMLAttributes, useEffect, useState } from "react";
+import { ButtonHTMLAttributes, forwardRef, useEffect, useState } from "react";
 import { MOTION } from "@/lib/motion";
 import { Spinner } from "./Spinner";
 
@@ -58,47 +58,53 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   iconOnly?: boolean;
 };
 
-export function Button({
-  variant = "primary",
-  size = "md",
-  iconOnly = false,
-  className = "",
-  pending = false,
-  pendingImmediate = false,
-  disabled,
-  children,
-  ...props
-}: ButtonProps) {
-  // Reset the elapsed-delay flag whenever a pending cycle starts or ends,
-  // computed during render (not in an effect) so a stale `true` from a
-  // previous cycle never bypasses the threshold on the next one.
-  const [prevPending, setPrevPending] = useState(pending);
-  const [thresholdElapsed, setThresholdElapsed] = useState(false);
-  if (pending !== prevPending) {
-    setPrevPending(pending);
-    if (thresholdElapsed) setThresholdElapsed(false);
-  }
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      variant = "primary",
+      size = "md",
+      iconOnly = false,
+      className = "",
+      pending = false,
+      pendingImmediate = false,
+      disabled,
+      children,
+      ...props
+    },
+    ref,
+  ) {
+    // Reset the elapsed-delay flag whenever a pending cycle starts or ends,
+    // computed during render (not in an effect) so a stale `true` from a
+    // previous cycle never bypasses the threshold on the next one.
+    const [prevPending, setPrevPending] = useState(pending);
+    const [thresholdElapsed, setThresholdElapsed] = useState(false);
+    if (pending !== prevPending) {
+      setPrevPending(pending);
+      if (thresholdElapsed) setThresholdElapsed(false);
+    }
 
-  useEffect(() => {
-    if (!pending || pendingImmediate) return;
-    const timer = setTimeout(
-      () => setThresholdElapsed(true),
-      MOTION.spinnerDelay,
+    useEffect(() => {
+      if (!pending || pendingImmediate) return;
+      const timer = setTimeout(
+        () => setThresholdElapsed(true),
+        MOTION.spinnerDelay,
+      );
+      return () => clearTimeout(timer);
+    }, [pending, pendingImmediate]);
+
+    const showSpinner = pending && (pendingImmediate || thresholdElapsed);
+
+    return (
+      <button
+        ref={ref}
+        disabled={disabled || pending}
+        aria-busy={pending || undefined}
+        className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${variants[variant]} ${className}`}
+        {...props}
+      >
+        {showSpinner && <Spinner />}
+        {children}
+      </button>
     );
-    return () => clearTimeout(timer);
-  }, [pending, pendingImmediate]);
-
-  const showSpinner = pending && (pendingImmediate || thresholdElapsed);
-
-  return (
-    <button
-      disabled={disabled || pending}
-      aria-busy={pending || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${variants[variant]} ${className}`}
-      {...props}
-    >
-      {showSpinner && <Spinner />}
-      {children}
-    </button>
-  );
-}
+  },
+);

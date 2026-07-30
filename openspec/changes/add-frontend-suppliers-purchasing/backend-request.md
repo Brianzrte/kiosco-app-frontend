@@ -1,69 +1,38 @@
-# Pedido a backend: proveedores, compras, pagos, planificación y recepción atómica
+# Contrato backend verificado: proveedores, compras, pagos, planificación y recepción atómica
 
-Fecha: 2026-07-28.
+Actualizado: 2026-07-30. La fuente de verdad es el backend implementado y sus specs vigentes.
 
-## Contexto
+## Evidencia de código
 
-El frontend requiere gestionar proveedores, planificar pedidos revisables, conciliar pagos y reflejar la entrega real en Inventory. Hoy sólo consume `GET /suppliers` y `GET /purchase-orders` desde `/reports/purchases`. El router del working tree ya contiene lectura/creación de suppliers y purchase orders, y el change abierto `add-multi-role-and-receiving` agrega detalle, edición de ítems y recepción con método de pago; su presencia no prueba despliegue.
+- `../backend/internal/bootstrap/router.go`: define los métodos, paths y gates de rol.
+- `../backend/internal/purchasing/transport/http/dto.go`: define request/response y nullabilidad de Purchasing.
+- `../backend/openspec/specs/purchasing/spec.md` y `../backend/openspec/specs/reporting/spec.md`: describen la recepción atómica, pago único y reporte agregado.
 
-El contrato vigente de recepción afirma explícitamente que recibir no actualiza stock. Este change requiere sustituir esa conducta por una operación atómica.
+## Contrato que debe consumir el frontend
 
-## Evidencia verificada
+| Área | Path y roles | Contrato relevante |
+|---|---|---|
+| Proveedores | `GET /suppliers`: Admin, Inventory, Receiving; `POST /suppliers`, `PUT /suppliers/{id}`, `PATCH /suppliers/{id}/deactivate`: Admin, Inventory | Supplier: `id`, `name`, `active`. La desactivación es lógica. |
+| Asociaciones | `GET`/`PUT /products/{id}/suppliers`: Admin, Inventory | Lista `suppliers` con `product_id`, `supplier_id`, `preferred` y `replenishment_frequency_days` nullable. |
+| Pedidos | `GET /purchase-orders`, `GET /purchase-orders/{id}`, recepción y edición de ítems: Admin, Inventory, Receiving; creación y sugerencias: Admin, Inventory | Total, subtotal y costo son strings decimales; `ordered_at` y timestamps usan RFC3339. |
+| Sugerencias | `GET /purchase-orders/suggestions`: Admin, Inventory | El backend devuelve `suggestions`; el frontend sólo presenta y permite revisar la propuesta. |
+| Pago único | `POST /purchase-orders/{id}/payment`: Admin, Cashier | Body: `amount` decimal y `payment_method` `cash` o `transfer`. Sólo admite un pago completo de un pedido recibido a cuenta corriente; no hay asignaciones ni saldo. |
+| Reporte | `GET /reports/purchases/by-supplier`: Admin | Requiere `from` y `to` (`YYYY-MM-DD`) y acepta `supplier_id`; devuelve inversión decimal, conteos de pedidos/entregas y productos no entregados. |
+| Recepción | `POST /purchase-orders/{id}/receive`: Admin, Inventory, Receiving | Body: `payment_method` (`cash`, `transfer`, `account`) e ítems con `item_id`, `received_quantity` y motivo nullable. Es atómica con stock y movimiento `PURCHASE`; puede devolver `RECEIVED` o `CANCELLED`. |
 
-- `../backend/internal/bootstrap/router.go:154-170`: `GET/POST /suppliers`, `GET/POST /purchase-orders`, detalle, recepción e ítems, repartidos por roles.
-- `../backend/openspec/changes/add-suppliers-purchases/specs/purchasing/spec.md`: Supplier sólo tiene alta/listado; PurchaseOrder se crea/lista/recibe sin stock.
-- `../backend/openspec/changes/add-multi-role-and-receiving/specs/purchasing/spec.md`: recepción con `cash | transfer | account`, pero sin movimiento de stock.
+## Restricciones de implementación
 
-## Estado actual
-
-| Necesidad frontend | Estado verificado |
-|---|---|
-| Listar/crear proveedor | existe en working tree |
-| Editar/desactivar proveedor | no existe en router |
-| Relación producto–proveedor | no existe en router ni specs |
-| Pedido manual | existe en working tree |
-| Sugerencia de reposición | no existe |
-| Pago, asignación y saldo | no existe |
-| Reporte agregado por proveedor | no existe |
-| Recepción con stock atómico | contradice contrato actual |
-
-## Contrato mínimo solicitado
-
-### 1. Gestión de proveedores y asociaciones
-
-Se necesita completar la administración de proveedores con edición y desactivación lógica, y exponer relaciones producto–proveedor múltiples con proveedor preferido. El backend define los campos de contacto/datos de compra y garantiza integridad: un proveedor inactivo no puede participar en pedidos nuevos y los pedidos históricos siguen resolviendo su nombre.
-
-El contrato debe ofrecer operaciones verificables para leer, crear, cambiar y desactivar proveedores, y para consultar/modificar las asociaciones de un producto. Respuestas incluyen `id`, `name`, `active`, relación de producto/proveedor y preferido; los errores de duplicado, estado inválido y relación inválida devuelven `{ message }` y status apropiado. Acceso: Admin e Inventory.
-
-### 2. Sugerencias de reposición revisables
-
-Se necesita una lectura de sugerencias y una forma de convertir una sugerencia revisada en pedido pendiente. La sugerencia se calcula sólo en backend con stock actual, ventas, frecuencia de reposición y asociaciones producto–proveedor; por ítem debe devolver producto, proveedor propuesto, cantidad propuesta y una razón o un indicador de datos insuficientes. No se crea un pedido sin una escritura explícita del usuario.
-
-El backend define fórmula, horizonte de ventas, stock de seguridad, tratamiento de faltantes y los paths concretos. Acceso: Admin e Inventory. Errores y datos insuficientes deben devolver `{ message }` o razones por ítem, sin cantidades inventadas por frontend.
-
-### 3. Pagos a proveedor y conciliación
-
-Se requiere a lo sumo un pago total por pedido `RECEIVED`: efectivo o transferencia al recibir lo crean en la misma transacción; cuenta corriente queda pendiente hasta que Admin o Cashier registra luego el único pago completo. El backend valida monto positivo e igual al total final, pedido elegible y unicidad; guarda auditoría y devuelve el pago. Los montos viajan como strings decimales y errores como `{ message }`.
-
-El contrato desplegado es `POST /purchase-orders/{id}/payment`, con `amount` decimal y `payment_method` `cash` o `transfer`; Admin y Cashier pueden llamarlo. Un segundo pago responde `409` y un monto distinto del total responde `422`. Inventory no registra pagos.
-
-### 4. Reporte agregado por proveedor
-
-Se necesita un endpoint Admin-only, filtrable por `from`, `to` y proveedor opcional, que devuelva agregados del período: inversión, cantidad de pedidos, entregas completas/incompletas y productos no entregados. El backend calcula todas las métricas; el frontend no las deriva de `GET /purchase-orders` paginado. Los días de rango son `YYYY-MM-DD`; montos, strings decimales.
-
-### 5. Recepción atómica con Inventory
-
-Extender la recepción de pedido pendiente para recibir método de pago y cantidades realmente entregadas por ítem. En una única transacción debe validar estado y cantidades, persistir recepción y diferencias auditables, cerrar el pedido, actualizar stock por las cantidades recibidas y crear los movimientos correspondientes. Si una validación o actualización falla, no debe persistirse ni la recepción ni un movimiento parcial. Un pedido ya recibido responde `409`.
-
-Los ítems no entregados conservan motivo y siguen visibles; los adicionales ya previstos por el change relacionado mantienen su tratamiento de catálogo o texto libre. Definir cómo se comporta un ítem sin stock inicial y el identificador/referencia de los movimientos. Acceso: Admin, Inventory y Receiving.
+- No calcular ni presentar saldos, pagos parciales o asignaciones entre pedidos: el backend no los ofrece.
+- Un pedido recibido con `cash` o `transfer` ya tiene su pago registrado; sólo los pedidos recibidos con `account` pueden mostrar la acción de pago pendiente.
+- `inventory` no registra pagos; `cashier` no accede a navegación de gestión de proveedores o pedidos, pero puede ejecutar la acción de pago autorizada desde un pedido elegible.
+- Los errores siguen el envelope `{ message }`; los conflictos de recepción/pago y validaciones se muestran sin asumir éxito.
 
 ## Compatibilidad y rollout
 
-1. Desplegar primero `add-multi-role-and-receiving` y confirmar roles múltiples/`receiving` y las rutas existentes contra una instancia.
-2. Desplegar migraciones y contratos de proveedores, relaciones, pagos, planificación, reporte y recepción atómica.
-3. Verificar autorización, shape, nullabilidad, mensajes y transacción real antes de habilitar el frontend.
-4. Comunicar el cambio operativo: una recepción confirmada ya carga stock; no se repite el ajuste manual para esas unidades.
+1. Desplegar el backend que contiene estos contratos y confirmar contra una instancia roles múltiples y `receiving`.
+2. Verificar autorización, shape, nullabilidad, mensajes y transacción real antes de habilitar el frontend.
+3. Comunicar el cambio operativo: una recepción confirmada ya carga stock; no se repite el ajuste manual para esas unidades.
 
 ## Criterio de desbloqueo frontend
 
-Una instancia accesible devuelve los contratos acordados, rechaza los permisos y estados inválidos con status/mensaje verificables y demuestra que una recepción exitosa crea movimientos y actualiza stock, mientras un fallo no cambia ni pedido ni stock.
+Una instancia accesible devuelve los contratos documentados, rechaza los permisos y estados inválidos con status/mensaje verificables y demuestra que una recepción exitosa crea movimientos y actualiza stock, mientras un fallo no cambia ni pedido ni stock.

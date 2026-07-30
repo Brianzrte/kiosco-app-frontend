@@ -3,7 +3,9 @@
 import {
   PointerEvent as ReactPointerEvent,
   KeyboardEvent,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -25,14 +27,11 @@ const MIN_LABEL_GAP_PX = 72;
  * back to 3 (0 / mid / max). */
 const COMPACT_PLOT_HEIGHT = 100;
 
-/** Smallest "clean" ceiling above `value` (0, or 1/2/5 × a power of ten). */
-function niceMax(value: number): number {
-  if (value <= 0) return 1;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const normalized = value / magnitude;
-  const niceNormalized =
-    normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
-  return niceNormalized * magnitude;
+/** 20% headroom above the series' own peak — e.g. a 200.000 peak gives a
+ * 240.000 ceiling — instead of rounding up to the next "nice" round number,
+ * which could leave the plot mostly empty above the real data. */
+function headroomMax(value: number): number {
+  return value <= 0 ? 1 : value * 1.2;
 }
 
 /**
@@ -50,15 +49,40 @@ export function LineChart({
   points: LinePoint[];
   formatValue: (y: number) => string;
   ariaLabel: string;
-  /** Chart height in the SVG's own units — width scales responsively regardless. */
+  /** Chart height in the SVG's own units — width scales responsively regardless.
+   * Used as the initial/fallback height; once the container is measured (e.g.
+   * stretched taller to match a sibling card), the real rendered height wins. */
   height?: number;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const plotHeight = height - PAD_TOP - PAD_BOTTOM;
+  // Lets the chart actually fill extra height a flex/grid parent stretches
+  // onto it (e.g. matching a taller sibling card) instead of rendering at a
+  // fixed size and leaving blank space below. `effectiveHeight` is kept in
+  // the same virtual unit system as `WIDTH` (chosen so the viewBox aspect
+  // ratio matches the container's real aspect ratio) so the plot scales
+  // uniformly on both axes — no stretched-looking text or markers.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width: boxWidth, height: boxHeight } = entry.contentRect;
+      if (boxWidth > 0 && boxHeight > 0) {
+        setMeasuredHeight((WIDTH * boxHeight) / boxWidth);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const effectiveHeight = measuredHeight ?? height;
+  const plotHeight = effectiveHeight - PAD_TOP - PAD_BOTTOM;
 
   const maxY = useMemo(
-    () => niceMax(Math.max(...points.map((p) => p.y), 0)),
+    () => headroomMax(Math.max(...points.map((p) => p.y), 0)),
     [points],
   );
 
@@ -134,10 +158,10 @@ export function LineChart({
   const active = activeIndex !== null ? points[activeIndex] : null;
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative h-full">
       <svg
-        viewBox={`0 0 ${WIDTH} ${height}`}
-        className="w-full"
+        viewBox={`0 0 ${WIDTH} ${effectiveHeight}`}
+        className="h-full w-full"
         role="img"
         aria-label={ariaLabel}
       >
@@ -168,7 +192,7 @@ export function LineChart({
             <text
               key={p.x}
               x={xFor(i)}
-              y={height - 6}
+              y={effectiveHeight - 6}
               textAnchor="middle"
               className="fill-text-secondary text-[14px]"
             >
@@ -221,7 +245,7 @@ export function LineChart({
               x1={xFor(activeIndex)}
               x2={xFor(activeIndex)}
               y1={PAD_TOP}
-              y2={height - PAD_BOTTOM}
+              y2={effectiveHeight - PAD_BOTTOM}
               stroke="var(--color-border-hover)"
               strokeWidth={1}
             />
@@ -263,7 +287,7 @@ export function LineChart({
           }`}
           style={{
             left: `${(xFor(activeIndex) / WIDTH) * 100}%`,
-            top: `${(yFor(active.y) / height) * 100}%`,
+            top: `${(yFor(active.y) / effectiveHeight) * 100}%`,
           }}
         >
           <p className="text-text-secondary">{active.xLabel}</p>

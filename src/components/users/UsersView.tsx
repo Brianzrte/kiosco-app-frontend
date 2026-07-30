@@ -289,7 +289,9 @@ function RoleBadges({
   return (
     <div className={`flex flex-wrap gap-1 ${className}`}>
       {roles.map((role) => (
-        <Badge key={role}>{ROLE_META[role].label}</Badge>
+        <Badge key={role} tone={ROLE_META[role].tone}>
+          {ROLE_META[role].label}
+        </Badge>
       ))}
     </div>
   );

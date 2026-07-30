@@ -1,5 +1,49 @@
 ## ADDED Requirements
 
+### Requirement: Purchasing hub prioritizes pending orders
+The frontend SHALL provide `/purchasing` as the shared operational hub for Admin, Inventory and Receiving. At desktop width it SHALL divide the main content vertically into a pending-order region occupying four fifths of the available width and an action panel occupying one fifth; below the desktop breakpoint it SHALL stack pending orders before actions. The pending region SHALL request only `PENDING` purchase orders, support backend filters by supplier and date range, and link each order to its detail.
+
+#### Scenario: Pending orders dominate the hub
+- **WHEN** an authorized user opens `/purchasing` at desktop width
+- **THEN** pending orders occupy the dominant four-fifths region and the action panel occupies the remaining fifth
+
+#### Scenario: Responsive hub
+- **WHEN** the hub is used below the desktop breakpoint
+- **THEN** pending orders appear before the action panel and no page-level horizontal overflow is required
+
+#### Scenario: Pending-order filters
+- **WHEN** the user changes supplier or date filters in the pending-order region
+- **THEN** the frontend sends the supported query values with `status=PENDING`, resets pagination to the first page, and distinguishes no filtered results from no pending orders
+
+### Requirement: Role-adaptive purchasing actions
+The purchasing hub SHALL present a panel with links to create a purchase order, view order history and manage suppliers. It SHALL render all three links only for Admin or Inventory and SHALL not render create or supplier-management controls for a user holding only Receiving. The history link SHALL be available to all roles authorized to list purchase orders.
+
+#### Scenario: Management user sees actions
+- **WHEN** an Admin or Inventory user opens the hub
+- **THEN** the panel contains Crear pedido, Historial de pedidos and Lista de proveedores
+
+#### Scenario: Receiving user sees only authorized actions
+- **WHEN** a Receiving-only user opens the hub
+- **THEN** the panel does not contain Crear pedido or Lista de proveedores and no request to a creation-only endpoint is made
+
+### Requirement: Purchase-order history is filterable and inspectable
+The frontend SHALL provide a paginated purchase-order history screen for users authorized to list orders. Its table SHALL show supplier, status, order date, receiving user and total, use `formatMoney()` for total, and let the user open an order detail. It SHALL support only the verified backend filters: supplier, date range and status values `PENDING` or `RECEIVED` (plus no status filter for all results); it SHALL not present an unsupported cancelled-status or global-text-search filter.
+
+#### Scenario: View filtered history
+- **WHEN** an authorized user applies a supplier, date range or supported status filter
+- **THEN** the frontend requests the server-paginated history with those filters and returns to page one
+
+#### Scenario: Inspect a historical order
+- **WHEN** the user activates a history row by pointer, Enter or Space
+- **THEN** the order detail opens and preserves access to its backend-authorized actions
+
+### Requirement: Purchase-order detail exposes backend item audit fields
+The frontend SHALL show purchase-order items using backend-provided requested and received quantities, non-delivery reason, free-text description and removal fields. It SHALL label an uncatalogued free-text item as pending catalog registration and a removed item as removed with its reason; it SHALL not manufacture a generic item-status field in the browser.
+
+#### Scenario: Added or rejected item is traceable
+- **WHEN** an order detail contains a free-text item or an item removed with a reason
+- **THEN** the item is visibly labelled pending catalog registration or removed, respectively, and the supplied reason remains visible
+
 ### Requirement: Supplier management preserves history
 The frontend SHALL let authorized users create, edit and deactivate suppliers, showing inactive suppliers in historical purchase data but excluding them from new-order choices. It SHALL not offer permanent deletion.
 
@@ -64,11 +108,11 @@ The frontend SHALL let Admin or Cashier register the one outstanding full paymen
 - **THEN** the backend message is shown inline and no success confirmation is shown
 
 #### Scenario: Invalid payment
-- **WHEN** the backend rejects a payment because of its amount, order status or balance
+- **WHEN** the backend rejects a payment because of its amount, order status or duplicate-payment state
 - **THEN** the backend message is shown inline and no success confirmation is shown
 
 ### Requirement: Supplier and purchasing states are explicit
-Every supplier, order, planning, payment and balance view SHALL render explicit loading, empty, error and success feedback. Errors SHALL retain entered form values, provide retry where applicable and surface the backend message.
+Every supplier, order, planning, payment and payment-state view SHALL render explicit loading, empty, error and success feedback. Errors SHALL retain entered form values, provide retry where applicable and surface the backend message.
 
 #### Scenario: Empty supplier list
 - **WHEN** no suppliers exist
@@ -95,4 +139,4 @@ Supplier and purchasing views SHALL be usable by keyboard, preserve managed dial
 
 #### Scenario: Mobile purchasing action
 - **WHEN** the view is used at mobile width
-- **THEN** the supplier, status, total or balance and primary action remain available without relying on color alone
+- **THEN** the supplier, status, total or payment state and primary action remain available without relying on color alone

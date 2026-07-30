@@ -174,7 +174,75 @@ export type ReturnList = { returns: Return[]; total: number };
 
 export type PurchaseOrderStatus = "PENDING" | "RECEIVED" | "CANCELLED";
 export type Supplier = { id: string; name: string; active: boolean };
-export type PurchaseOrderListItem = { id: string; supplier_name: string; ordered_at: string; total: string; status: PurchaseOrderStatus; has_uncatalogued_items: boolean };
+export type SuppliersList = { suppliers: Supplier[] };
+export type ProductSupplier = {
+  product_id: string;
+  supplier_id: string;
+  preferred: boolean;
+  replenishment_frequency_days?: number;
+};
+export type ProductSuppliersList = { suppliers: ProductSupplier[] };
+export type ReplenishmentSuggestion = {
+  product_id: string;
+  product_name: string;
+  supplier_id?: string;
+  suggested_quantity?: number;
+  explanation: string;
+};
+export type ReplenishmentSuggestionsList = {
+  suggestions: ReplenishmentSuggestion[];
+};
+export type PurchaseOrderPaymentMethod = "cash" | "transfer" | "account";
+export type PurchaseOrderPayment = {
+  id: string;
+  purchase_order_id: string;
+  amount: string;
+  method: "cash" | "transfer";
+  paid_at: string;
+  paid_by: string;
+};
+export type PurchaseOrderListItem = {
+  id: string;
+  supplier_name: string;
+  ordered_at: string;
+  total: string;
+  status: PurchaseOrderStatus;
+  received_at?: string;
+  received_by?: string;
+  has_uncatalogued_items: boolean;
+};
 export type PurchaseOrdersList = { purchase_orders: PurchaseOrderListItem[]; page: number; limit: number; total: number };
-export type PurchaseOrderItem = { id: string; product_id?: string; product_name?: string; description?: string; quantity: number; unit_cost: string; subtotal: string; removed_at?: string; removed_by?: string; removal_reason?: string };
-export type PurchaseOrder = { id: string; supplier_id: string; supplier_name: string; ordered_at: string; total: string; status: PurchaseOrderStatus; received_at?: string; received_by?: string; received_by_name?: string; payment_method?: "cash" | "transfer" | "account"; items: PurchaseOrderItem[] };
+export type PurchaseOrderItem = {
+  id: string;
+  product_id?: string;
+  product_name?: string;
+  description?: string;
+  quantity: number;
+  received_quantity: number;
+  non_delivery_reason?: string;
+  unit_cost: string;
+  subtotal: string;
+  removed_at?: string;
+  removed_by?: string;
+  removal_reason?: string;
+};
+export type PurchaseOrder = {
+  id: string;
+  supplier_id: string;
+  supplier_name: string;
+  ordered_at: string;
+  total: string;
+  status: PurchaseOrderStatus;
+  received_at?: string;
+  received_by?: string;
+  received_by_name?: string;
+  payment_method?: PurchaseOrderPaymentMethod;
+  items: PurchaseOrderItem[];
+};
+export type PurchasesBySupplierReport = {
+  investment: string;
+  purchase_order_count: number;
+  complete_delivery_count: number;
+  incomplete_delivery_count: number;
+  undelivered_products: number;
+};

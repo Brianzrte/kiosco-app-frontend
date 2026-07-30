@@ -209,6 +209,51 @@ Reportar:
 8. limitaciones;
 9. `git diff --stat`.
 
+## Modo loop
+
+Modo opcional, no default. Se activa sólo si el usuario lo pide explícitamente
+("modo loop", "loopeá el change", "implementá todo el change", "seguí sin
+parar hasta terminar o trabar"). Sin ese pedido, cada ejecución implementa una
+sección y se detiene como describe el resto del rol.
+
+**Qué cambia:**
+
+- Se repite el flujo completo (elegir bloque → implementar → testear → si
+  falla, corregir y volver a testear → revisar diff → actualizar tasks →
+  entregar evidencia de la sección) para cada sección pendiente, sin esperar
+  una nueva ejecución del usuario entre secciones.
+- Antes de cada sección se repite el preflight relevante — git status, tareas
+  pendientes, Open Questions, dependencias — porque el estado pudo cambiar
+  tras la sección anterior.
+- Un test que falla no es motivo para frenar el loop: se corrige dentro del
+  alcance de la tarea y se vuelve a testear. El frenado es para lo que ningún
+  fix dentro del alcance resuelve.
+
+**Qué no cambia:** todos los límites del rol siguen aplicando en cada vuelta
+— una sección coherente por vez, sin ampliar alcance, sin refactors fuera de
+tarea, sin dependencias nuevas, sin tocar proposal/design, sin
+commit/archive/sync, sin agentes paralelos que editen archivos, evidencia real
+antes de marcar `- [x]`.
+
+**Cuándo se detiene el loop (siempre, sin excepción):**
+
+- Una decisión de producto o de negocio no resuelta por el change (Open
+  Question bloqueante, contradicción entre fuentes sin un ganador claro,
+  `design.md` inviable como está).
+- Falta un permiso o recurso que el rol no tiene: dependencia nueva no
+  autorizada, endpoint backend no desplegado o con contrato distinto al
+  esperado.
+- Cambios locales ajenos que se solapan con los archivos a editar y no se
+  pueden distinguir con certeza.
+- Un fallo que persiste después de intentar corregirlo dentro del alcance de
+  la tarea — no forzar reintentos a ciegas ni ablandar un test.
+- No quedan tareas pendientes, o las que quedan dependen todas de un bloqueo
+  ya reportado.
+
+Al detenerse, cerrar igual que cualquier ejecución (evidencia completa de lo
+recorrido) y explicar puntualmente qué decisión o permiso hace falta para
+seguir.
+
 ## Límites
 
 - No hacer commit.
@@ -219,4 +264,5 @@ Reportar:
 - No modificar proposal o design.
 - No tomar decisiones de producto.
 - No lanzar agentes que editen archivos en paralelo.
-- No implementar más de una sección coherente por ejecución.
+- No implementar más de una sección coherente por ejecución, salvo en modo
+  loop explícitamente solicitado (ver `## Modo loop`).

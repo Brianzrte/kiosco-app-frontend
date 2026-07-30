@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -15,8 +15,9 @@ import { useLoad } from "@/lib/useLoad";
 import {
   buildMovementsQuery,
   buildStockQuery,
+  computeInventoryPageSize,
   computeTotalPages,
-  INVENTORY_PAGE_SIZE,
+  INVENTORY_DEFAULT_PAGE_SIZE,
   isRowLow,
   MOVEMENT_TYPE_LABELS,
 } from "@/lib/inventory";
@@ -28,7 +29,10 @@ import {
   StockListItem,
 } from "@/lib/types";
 
-const PAGE_SIZE = INVENTORY_PAGE_SIZE;
+// Space reserved below the list for the pagination bar (gap-6 + a "md"
+// Button row) plus the page's own bottom padding (layout.tsx's md:pb-8) —
+// so the fit calculation below doesn't push the pager itself off-screen.
+const RESERVED_BELOW_LIST_PX = 100;
 
 export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
   const [selectedItem, setSelectedItem] = useState<StockListItem | null>(null);
@@ -41,6 +45,8 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
   const [categoryId, setCategoryId] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(INVENTORY_DEFAULT_PAGE_SIZE);
+  const listRef = useRef<HTMLUListElement>(null);
 
   // Debounce: the backend does the filtering, so wait for the user to stop typing.
   useEffect(() => {
@@ -74,13 +80,43 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
   const fetcher = useCallback(
     () =>
       api<StockList>(
-        `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly, page, limit: PAGE_SIZE })}`,
+        `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly, page, limit: pageSize })}`,
       ),
-    [term, categoryId, lowStockOnly, page],
+    [term, categoryId, lowStockOnly, page, pageSize],
   );
   const { data, error, reload } = useLoad(fetcher);
   const rows = data?.items ?? null;
   const total = data?.total ?? 0;
+
+  // Fits the list to the screen instead of forcing a page scroll: measure
+  // the already-rendered rows' real height (not a guessed constant) plus
+  // how much viewport is left below them, then adjust how many rows the
+  // *next* fetch asks for. Re-measures on resize too, so a shorter/taller
+  // window (or rotating a tablet) adjusts the page size again.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !rows || rows.length === 0) return;
+    const rowCount = rows.length;
+
+    function recompute() {
+      const rect = el!.getBoundingClientRect();
+      const next = computeInventoryPageSize({
+        viewportHeight: window.innerHeight,
+        listTop: rect.top,
+        rowHeight: rect.height / rowCount,
+        reservedBelow: RESERVED_BELOW_LIST_PX,
+      });
+      if (next === pageSize) return;
+      // A pageSize change shifts what "page 1" even means (different
+      // offset math) — always land back on page 1, never a stale slice.
+      setPageSize(next);
+      setPage(1);
+    }
+
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [rows, pageSize]);
 
   // El backend decide qué es stock bajo (minimum_quantity > 0 AND quantity <
   // minimum_quantity); acá nunca se recalcula. En la vista "Todos" se pide
@@ -106,7 +142,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
     );
   }
 
-  const totalPages = computeTotalPages(total, PAGE_SIZE);
+  const totalPages = computeTotalPages(total, pageSize);
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,7 +191,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
             same convention as ProductsReportView's sort buttons — a filter
             toggle, not a section-switching tab (see StockPanel's Ajustar/
             Mínimo tabs below, which use the underline convention instead). */}
-        <div className="flex overflow-hidden rounded-app border border-border">
+        <div className="flex overflow-hidden rounded-app border border-border sm:ml-auto">
           <button
             type="button"
             onClick={() => selectLowStockOnly(false)}
@@ -199,7 +235,10 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         />
       ) : (
         <>
-          <ul className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+          <ul
+            ref={listRef}
+            className="overflow-hidden rounded-app border border-border bg-surface shadow-soft"
+          >
             {rows.map((item) => {
               const low = isLow(item);
               return (

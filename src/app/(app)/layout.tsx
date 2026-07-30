@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <ToastProvider>
       <Nav roles={session.roles} />
       <main
-        className={`mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-6 md:py-8 md:pb-8 ${hasBottomTabBar ? "pb-24" : "pb-6"}`}
+        className={`mx-auto w-full max-w-7xl flex-1 px-3 py-6 md:px-4 md:py-8 md:pb-8 ${hasBottomTabBar ? "pb-24" : "pb-6"}`}
       >
         <SectionTransition>{children}</SectionTransition>
       </main>

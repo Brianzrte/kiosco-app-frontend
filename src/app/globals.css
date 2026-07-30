@@ -1,32 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  /* Base — Mini Moni mauve/rose palette.
-     Interactive darks (#9c566c / #85485c) are derived from #c08497 to keep
-     white-on-primary text at WCAG AA; #c08497 itself is the visible accent.
-     --color-primary-active (visual-redesign, add-visual-redesign-tokens):
-     one step past primary-hover, for :active/pressed states — button press,
-     selected nav pill on click. --color-primary-light doubles as
+  /* Base — Mini Moni neutral-gray + violet accent (color-refactor, replaces
+     the mauve/rose palette: approved from 5 proposals, see
+     ai/skills/ux-ui-supervisor palette review). Interactive darks/lights are
+     a violet ramp (hover/active step down in lightness, light steps up),
+     not a tint of a different hue, so the accent stays the single
+     recognizable color across states. --color-primary-light doubles as
      "primary-subtle" (selected pill background, badge tint); no separate
      token was added for that role to avoid two names for one value. */
-  --color-primary: #9c566c;
-  --color-primary-hover: #85485c;
-  --color-primary-active: #6e3b49;
-  --color-primary-light: #f0d9e3;
-  --color-secondary: #c08497;
-  --color-secondary-hover: #9c566c;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-active: #5b21b6;
+  --color-primary-light: #ede9fe;
+  --color-secondary: #c4b5fd;
+  --color-secondary-hover: #7c3aed;
 
-  /* Pastels — categories, badges, cards, decorative only */
+  /* Pastels — categories, badges, cards, decorative only. Unchanged by the
+     color refactor: this is a separate categorical system (color-system.md,
+     "La paleta pastel del proyecto"), not a tint of --color-primary. */
   --color-pastel-pink: #dfb2c4;
   --color-pastel-peach: #ffdfba;
   --color-pastel-yellow: #ffffba;
   --color-pastel-green: #baffc9;
   --color-pastel-blue: #bae1ff;
-
-  /* Rose ramp — Mini Moni brand accents */
-  --color-rose-light: #f8edf1;
-  --color-rose: #e8c5d5;
-  --color-rose-strong: #85485c;
 
   /* Data palette — categorical series only (2+ simultaneous categories).
      Single-series charts use --color-primary instead. Validated with the
@@ -55,10 +52,10 @@
      post-sale confirmation panel, Badge and InventoryView deltas) or the
      candy-bright --color-pastel-green/--color-pastel-yellow (still used
      unchanged as decorative category colors in Badge/CategoriesView).
-     Derived in OKLCH, anchored to the brand's muted chroma (~0.045-0.085,
-     matching --color-border's C=0.045 and --color-primary's C=0.096 — see
-     ai/skills/ux-ui-supervisor/references/color-system.md, "Construir una
-     escala con OKLCH"), not generic saturated green/yellow/amber.
+     Deliberately muted/low-chroma (sage, tan, dusty blue) so they read as a
+     separate, subdued accent system next to the saturated violet
+     --color-primary now uses (color-refactor) — not generic saturated
+     green/yellow/amber, and not re-derived from --color-primary's chroma.
      --color-payment-cash and --color-confirm-sale share the same hue
      family (H≈145-148, sage/forest) at different lightness — confirm-sale
      reads as "cash, one step darker" rather than an unrelated third color.
@@ -69,38 +66,40 @@
   --color-payment-transfer: #b5dbee;
   --color-confirm-sale: #34653c;
 
-  /* Backgrounds — background/surface unchanged. surface-subtle/-hover/-raised
-     added (visual-redesign, add-visual-redesign-tokens) to give admin
-     screens depth without leaving the brand hue: a filter bar, table header
-     or dashboard shell needs a fill between "page background" and "white
-     card" (surface-subtle), a gentler row-hover than the strong-pink
-     surface-2 (surface-hover), and a lifted-off-the-page tone for sticky/
-     floating panels like the POS total card or an open dropdown
-     (surface-raised — pair with shadow-soft-lg, not a new shadow token). */
-  --color-background: #f8edf1;
+  /* Backgrounds — neutral gray with a barely-there violet lean (color-refactor),
+     not the previous rose tint. surface-subtle is a fill between "page
+     background" and "white card" (filter bars, table headers, dashboard
+     shells); surface-hover is a gentler row-hover than surface-2;
+     surface-raised is a lifted-off-the-page tone for sticky/floating panels
+     like the POS total card or an open dropdown (pair with shadow-soft-lg,
+     not a new shadow token). */
+  --color-background: #f8f8fb;
   --color-surface: #ffffff;
-  --color-surface-subtle: #fbf5f8;
-  --color-surface-2: #f0d9e3;
-  --color-surface-hover: #f6e9ee;
+  --color-surface-subtle: #fcfbfd;
+  --color-surface-2: #ece9f7;
+  --color-surface-hover: #f3f1f9;
   --color-surface-raised: #ffffff;
 
-  /* Text — primary/secondary/disabled unchanged. text-muted added
-     (visual-redesign, add-visual-redesign-tokens): a tier between secondary
-     and disabled for de-emphasized but still legible meta text (timestamps,
-     helper captions) that isn't actually a disabled control. */
-  --color-text-primary: #1f2937;
-  --color-text-secondary: #6b7280;
-  --color-text-muted: #8b93a1;
-  --color-text-disabled: #9ca3af;
+  /* Text — a near-black with the same subtle violet lean as the
+     backgrounds/borders (color-refactor), so text reads as part of the same
+     palette instead of a leftover neutral gray. Contrast against --color-surface
+     stays effectively unchanged (text-primary ≈ 16:1, was ≈ 15.7:1). text-muted
+     is a tier between secondary and disabled for de-emphasized but still
+     legible meta text (timestamps, helper captions) that isn't actually a
+     disabled control. */
+  --color-text-primary: #211f2b;
+  --color-text-secondary: #615e6e;
+  --color-text-muted: #736f85;
+  --color-text-disabled: #a6a2b3;
   --color-text-inverse: #ffffff;
 
-  /* Borders — border/border-hover unchanged. border-strong added
-     (visual-redesign, add-visual-redesign-tokens) for dividers that need to
-     read as a stronger structural line than the default card border: table
-     header underline, sidebar/section separators. */
-  --color-border: #e8c5d5;
-  --color-border-hover: #dfb2c4;
-  --color-border-strong: #c98fa8;
+  /* Borders — same violet lean as background/surface (color-refactor).
+     border-strong is for dividers that need to read as a stronger
+     structural line than the default card border: table header underline,
+     sidebar/section separators. */
+  --color-border: #dcd9e6;
+  --color-border-hover: #c9c5db;
+  --color-border-strong: #b3aec9;
 
   /* Shape */
   --radius-app: 12px;
@@ -190,6 +189,38 @@ body {
   animation: pop-in var(--motion-base) var(--ease-out);
 }
 
+/* Confirm-sale button: a one-shot pulse the moment the button flips from
+   disabled to enabled (cart + payment resolved). The color change alone
+   already carries the state; this is a decorative reinforcement, safe to
+   drop entirely under reduced motion. */
+@keyframes confirm-ready {
+  0% {
+    transform: scale(0.97);
+  }
+  60% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.confirm-ready {
+  animation: confirm-ready var(--motion-base) var(--ease-out);
+}
+
+/* Sale-confirmation checkmark: drawn with stroke-dashoffset. `pathLength=1`
+   on the <path> (see confirmedSale card) normalizes its length to 1 so the
+   dash values here don't depend on the actual path geometry. */
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.check-draw {
+  animation: check-draw var(--motion-slow) var(--ease-out) forwards;
+  animation-delay: var(--motion-fast);
+}
+
 /* Section entry transition: fades in, shifts up 4px. Exit is never animated. */
 @keyframes section-enter {
   0% {
@@ -203,6 +234,26 @@ body {
 }
 .section-enter {
   animation: section-enter var(--motion-base) var(--ease-out);
+}
+
+/* Login background ambience. Scoped to `/login` only — this is the one
+   screen in the app that isn't operational (visited once per session, no
+   repeat cost), so it's the deliberate exception to "no decorative motion"
+   in motion.md. Transform-only, low amplitude, disabled below under
+   reduced motion. Not expressed via MOTION.* because it's a continuous
+   ambient loop, not a discrete UI transition, and it has a single use site
+   (motion.md, "no se agrega un cuarto token salvo 2+ usos reales"). */
+@keyframes aurora-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, -4%) scale(1.05);
+  }
+}
+.aurora-blob {
+  animation: aurora-drift 14s var(--ease-standard) infinite;
 }
 
 :focus-visible {
@@ -223,5 +274,20 @@ body {
   .pop-in,
   .section-enter {
     animation: fade-only var(--motion-fast) linear;
+  }
+  /* Both are decorative flourishes layered on top of a signal that survives
+     unchanged elsewhere (button color, aria-live text) — dropped entirely
+     rather than fixed into a fade, per motion.md's "no elimina la única
+     señal" read literally: there IS another signal here, so removal is
+     safe. */
+  .confirm-ready {
+    animation: none;
+  }
+  .check-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .aurora-blob {
+    animation: none;
   }
 }

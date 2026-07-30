@@ -1,13 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
+import { MOTION } from "@/lib/motion";
 import {
   composeSplitPayment,
   getPaymentBalance,
@@ -18,11 +27,50 @@ import {
 import { Product, ProductList, Sale, Stock } from "@/lib/types";
 import {
   IconBarcode,
+  IconCalculator,
   IconCardPay,
   IconCash,
+  IconMinus,
+  IconPlus,
   IconSearch,
+  IconSplit,
+  IconTrash,
   IconTransfer,
+  IconX,
 } from "@/components/ui/icons";
+
+// Auto-dismiss delay for the post-sale confirmation panel. Not just a Toast
+// (4s): this one also shows the sale number, total and a "Ver detalle" link,
+// so it gets more time to read (~50ms/word floor, states-feedback.md) before
+// it clears itself. Never gates the next sale either way — closing early
+// (button, click outside) or scanning the next product both dismiss it.
+const CONFIRMED_SALE_AUTO_DISMISS_MS = 6000;
+
+// Shared panel transition for the "Dividir pago" / "Calcular vuelto" toggles
+// below: a button is replaced by a small panel (or vice versa), which is a
+// mount/unmount of a whole subtree — Motion's AnimatePresence territory
+// (motion.md, Paso 2), not a CSS transition. Entry uses ease-out; exit is
+// shorter and unanimated-feeling, per motion.md's entry/exit asymmetry.
+const panelTransition = {
+  initial: { opacity: 0, y: 4 },
+  animate: { opacity: 1, y: 0 },
+  // Exit carries its own (shorter, per motion.md's entry/exit asymmetry)
+  // transition — Motion reads a `transition` nested inside `exit` for the
+  // unmount leg specifically, separate from the `transition` prop below
+  // which governs the mount leg.
+  exit: {
+    opacity: 0,
+    y: 2,
+    transition: {
+      duration: MOTION.fast / 1000,
+      ease: [0.4, 0, 0.2, 1] as const,
+    },
+  },
+  transition: {
+    duration: MOTION.base / 1000,
+    ease: [0.16, 1, 0.3, 1] as const,
+  },
+};
 
 type CartLine = { product: Product; quantity: number };
 
@@ -37,13 +85,12 @@ const PAYMENT_LABELS: Record<SplitPaymentMethod, string> = {
 // dedicated --color-payment-* tokens (globals.css, "POS payment accents"),
 // not the generic --color-pastel-green/--color-pastel-yellow: those read as
 // unrelated candy-bright category colors sitting next to the brand's
-// mauve/rose palette. Transferencia uses the same muted blue family, not the
+// violet accent. Transferencia uses the same muted blue family, not the
 // raw --color-pastel-blue.
 const PAYMENT_SELECTED_STYLES: Record<SplitPaymentMethod, string> = {
   CASH: "border-payment-cash bg-payment-cash text-text-primary",
   CARD: "border-payment-card bg-payment-card text-text-primary",
-  TRANSFER:
-    "border-payment-transfer bg-payment-transfer text-text-primary",
+  TRANSFER: "border-payment-transfer bg-payment-transfer text-text-primary",
 };
 
 const PAYMENT_HOVER_STYLES: Record<SplitPaymentMethod, string> = {
@@ -68,6 +115,7 @@ const PAYMENT_ICONS: Record<SplitPaymentMethod, typeof IconCash> = {
 };
 
 export function PosView() {
+  const shouldReduceMotion = useReducedMotion();
   const scanRef = useRef<HTMLInputElement>(null);
   const splitAmountRef = useRef<HTMLInputElement>(null);
   const cashReceivedRef = useRef<HTMLInputElement>(null);
@@ -92,6 +140,7 @@ export function PosView() {
     total: string;
     saleNumber: number | null;
   } | null>(null);
+
   const [totalFlash, setTotalFlash] = useState(0);
   // manual search: lazy-loaded catalog, filtered client-side (no search endpoint yet)
   const [searchTerm, setSearchTerm] = useState("");
@@ -128,6 +177,27 @@ export function PosView() {
     // default focus handling on the clicked element
     requestAnimationFrame(() => scanRef.current?.focus());
   }
+
+  // Every way of dismissing the confirmation modal — auto-dismiss, the
+  // close button, "Nueva venta", or clicking the backdrop — ends with focus
+  // back on the scan field, not just wherever the dismissing click landed
+  // (pos-patterns.md: "el foco vuelve al campo de escaneo").
+  function dismissConfirmedSale() {
+    setConfirmedSale(null);
+    refocus();
+  }
+
+  // Auto-dismiss timer. The other dismissal paths (close button, "Nueva
+  // venta", click on the backdrop) are onClick handlers in the JSX below —
+  // all of them call dismissConfirmedSale() above.
+  useEffect(() => {
+    if (!confirmedSale) return;
+    const timer = setTimeout(
+      dismissConfirmedSale,
+      CONFIRMED_SALE_AUTO_DISMISS_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [confirmedSale]);
 
   async function scan(event: FormEvent) {
     event.preventDefault();
@@ -348,6 +418,23 @@ export function PosView() {
           ? "Resolvé el balance de pagos"
           : null;
 
+  // One-shot pulse the instant the sale becomes payable (disabled → enabled),
+  // not on every render while it stays enabled. The color/label already
+  // carry the state; this is a decorative reinforcement layered on top —
+  // see the `.confirm-ready` comment in globals.css for why it's safe to
+  // drop under reduced motion.
+  const [confirmReady, setConfirmReady] = useState(false);
+  const prevConfirmDisabledReason = useRef(confirmDisabledReason);
+  useEffect(() => {
+    const wasDisabled = prevConfirmDisabledReason.current;
+    prevConfirmDisabledReason.current = confirmDisabledReason;
+    if (wasDisabled && !confirmDisabledReason) {
+      setConfirmReady(true);
+      const timer = setTimeout(() => setConfirmReady(false), MOTION.base);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmDisabledReason]);
+
   async function confirmSale() {
     if (confirmDisabledReason || pending) return;
     setConfirmError(null);
@@ -398,7 +485,7 @@ export function PosView() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_20rem]">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_23rem]">
       <div className="flex flex-col gap-4">
         <form onSubmit={scan}>
           <label htmlFor="scan" className="mb-1.5 block text-sm font-medium">
@@ -524,61 +611,77 @@ export function PosView() {
           <EmptyState message="El carrito está vacío. Escaneá un producto para empezar la venta." />
         ) : (
           <Card className="p-0">
+            {/* Line order stays stable — no reorder animation, per
+                pos-patterns.md ("El carrito no usa AutoAnimate ni una layout
+                animation para reordenar"). Add/increment is signaled by
+                `.flash` alone (color, CSS, survives reduced motion); removal
+                has no layout animation, it just disappears. The <li> key
+                stays the product id so React reuses the DOM node on a
+                quantity bump instead of remounting it. */}
             <ul>
               {cart.map((line) => (
                 <li
-                  key={
-                    flash?.id === line.product.id
-                      ? `${line.product.id}-${flash.nonce}`
-                      : line.product.id
-                  }
-                  className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border px-4 py-3 last:border-b-0 md:px-5 ${
-                    flash?.id === line.product.id ? "flash" : ""
-                  }`}
+                  key={line.product.id}
+                  className="border-b border-border last:border-b-0"
                 >
-                  <div className="min-w-0 flex-1 basis-40">
-                    <p className="truncate font-medium">{line.product.name}</p>
-                    <p className="num text-sm text-text-secondary">
-                      {formatMoney(line.product.price)} c/u
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="secondary"
-                      iconOnly
-                      aria-label={`Restar uno a ${line.product.name}`}
-                      data-line-decrement={line.product.id}
-                      onClick={() =>
-                        setQuantity(line.product.id, line.quantity - 1)
-                      }
-                    >
-                      −
-                    </Button>
-                    <span className="num w-10 text-center font-medium">
-                      {line.quantity}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      iconOnly
-                      aria-label={`Sumar uno a ${line.product.name}`}
-                      onClick={() => incrementQuantity(line)}
-                    >
-                      +
-                    </Button>
-                  </div>
-                  <p className="num w-24 text-right font-semibold">
-                    {formatMoney(
-                      fromCents(toCents(line.product.price) * line.quantity),
-                    )}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    aria-label={`Quitar ${line.product.name}`}
-                    className="!text-error hover:!bg-error/10"
-                    onClick={() => setQuantity(line.product.id, 0)}
+                  <div
+                    key={
+                      flash?.id === line.product.id
+                        ? `flash-${flash.nonce}`
+                        : "static"
+                    }
+                    className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover md:px-5 ${
+                      flash?.id === line.product.id ? "flash" : ""
+                    }`}
                   >
-                    Quitar
-                  </Button>
+                    <div className="min-w-0 flex-1 basis-40">
+                      <p className="truncate font-medium">
+                        {line.product.name}
+                      </p>
+                      <p className="num text-sm text-text-secondary">
+                        {formatMoney(line.product.price)} c/u
+                      </p>
+                    </div>
+                    <div className="flex items-center rounded-app border border-border bg-surface">
+                      <button
+                        type="button"
+                        aria-label={`Restar uno a ${line.product.name}`}
+                        data-line-decrement={line.product.id}
+                        onClick={() =>
+                          setQuantity(line.product.id, line.quantity - 1)
+                        }
+                        className="flex size-9 items-center justify-center rounded-l-app text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                      >
+                        <IconMinus className="size-3.5" />
+                      </button>
+                      <span className="num flex h-9 w-10 items-center justify-center border-x border-border text-sm font-semibold">
+                        {line.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Sumar uno a ${line.product.name}`}
+                        onClick={() => incrementQuantity(line)}
+                        className="flex size-9 items-center justify-center rounded-r-app text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                      >
+                        <IconPlus className="size-3.5" />
+                      </button>
+                    </div>
+                    <p className="num w-24 text-right text-base font-semibold">
+                      {formatMoney(
+                        fromCents(toCents(line.product.price) * line.quantity),
+                      )}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Quitar ${line.product.name}`}
+                      className="gap-1.5 text-text-muted hover:!bg-error/10 hover:!text-error focus-visible:!text-error"
+                      onClick={() => setQuantity(line.product.id, 0)}
+                    >
+                      <IconTrash className="size-4" />
+                      Quitar
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -643,7 +746,9 @@ export function PosView() {
                   />
                   <span
                     className={`flex size-8 items-center justify-center rounded-tight ${
-                      payment === value ? "text-text-primary" : "text-text-secondary"
+                      payment === value
+                        ? "text-text-primary"
+                        : "text-text-secondary"
                     }`}
                   >
                     <PaymentIcon className="size-5" />
@@ -654,87 +759,126 @@ export function PosView() {
             })}
           </div>
 
-          {splitPayments ? (
-            <div className="mt-3 flex flex-col gap-3 rounded-app border border-border bg-surface-2 p-3">
-              <Input
-                ref={splitAmountRef}
-                label={`${PAYMENT_LABELS[splitPayments[0].method]} (importe)`}
-                value={splitPayments[0].amount}
-                onChange={(event) => updateSplitAmount(event.target.value)}
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-              />
-              <div className="rounded-app border border-border bg-surface px-3.5 py-2.5">
-                <p className="text-sm font-medium">
-                  {PAYMENT_LABELS[splitPayments[1].method]}
-                </p>
-                <p className="num mt-1 text-lg font-semibold">
-                  {splitPayments[1].amount
-                    ? formatMoney(splitPayments[1].amount)
-                    : "—"}
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                className="self-start"
-                onClick={() => setSplitPayments(null)}
+          <AnimatePresence mode="wait" initial={false}>
+            {splitPayments ? (
+              <motion.div
+                key="split-panel"
+                initial={panelTransition.initial}
+                animate={panelTransition.animate}
+                exit={panelTransition.exit}
+                transition={panelTransition.transition}
+                className="mt-3 flex flex-col gap-3 rounded-app border border-border bg-surface-2 p-3"
               >
-                Usar un solo medio
-              </Button>
-            </div>
-          ) : payment !== "TRANSFER" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              className="mt-3"
-              disabled={cart.length === 0}
-              onClick={startSplitPayment}
-            >
-              Dividir pago
-            </Button>
-          ) : null}
-
-          {cashPayment && (
-            <div className="mt-3">
-              {showCashChange ? (
-                <div className="flex flex-col gap-2 rounded-app border border-border bg-surface-2 p-3">
-                  <Input
-                    ref={cashReceivedRef}
-                    label="Efectivo entregado"
-                    value={cashReceived}
-                    onChange={(event) => setCashReceived(event.target.value)}
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                  />
-                  {cashChangeCents !== null && (
-                    <p
-                      className={`text-sm font-medium ${
-                        cashChangeCents >= 0 ? "text-success" : "text-warning"
-                      }`}
-                    >
-                      {cashChangeCents >= 0
-                        ? `Vuelto ${formatMoney(fromCents(cashChangeCents))}`
-                        : `Faltan ${formatMoney(fromCents(-cashChangeCents))}`}
-                    </p>
-                  )}
+                <Input
+                  ref={splitAmountRef}
+                  label={`${PAYMENT_LABELS[splitPayments[0].method]} (importe)`}
+                  value={splitPayments[0].amount}
+                  onChange={(event) => updateSplitAmount(event.target.value)}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                />
+                <div className="rounded-app border border-border bg-surface px-3.5 py-2.5">
+                  <p className="text-sm font-medium">
+                    {PAYMENT_LABELS[splitPayments[1].method]}
+                  </p>
+                  <p className="num mt-1 text-lg font-semibold">
+                    {splitPayments[1].amount
+                      ? formatMoney(splitPayments[1].amount)
+                      : "—"}
+                  </p>
                 </div>
-              ) : (
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => {
-                    setShowCashChange(true);
-                    requestAnimationFrame(() =>
-                      cashReceivedRef.current?.focus(),
-                    );
-                  }}
+                  className="self-start"
+                  onClick={() => setSplitPayments(null)}
                 >
-                  Calcular vuelto
+                  Usar un solo medio
                 </Button>
-              )}
+              </motion.div>
+            ) : payment !== "TRANSFER" ? (
+              <motion.div
+                key="split-button"
+                initial={panelTransition.initial}
+                animate={panelTransition.animate}
+                exit={panelTransition.exit}
+                transition={panelTransition.transition}
+              >
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3 gap-1.5"
+                  disabled={cart.length === 0}
+                  onClick={startSplitPayment}
+                >
+                  <IconSplit className="size-4" />
+                  Dividir pago
+                </Button>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          {cashPayment && (
+            <div className="mt-3">
+              <AnimatePresence mode="wait" initial={false}>
+                {showCashChange ? (
+                  <motion.div
+                    key="cash-change-panel"
+                    initial={panelTransition.initial}
+                    animate={panelTransition.animate}
+                    exit={panelTransition.exit}
+                    transition={panelTransition.transition}
+                    className="flex flex-col gap-2 rounded-app border border-border bg-surface-2 p-3"
+                  >
+                    <Input
+                      ref={cashReceivedRef}
+                      label="Efectivo entregado"
+                      value={cashReceived}
+                      onChange={(event) => setCashReceived(event.target.value)}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                    />
+                    {cashChangeCents !== null && (
+                      <p
+                        className={`text-sm font-medium ${
+                          cashChangeCents >= 0 ? "text-success" : "text-warning"
+                        }`}
+                      >
+                        {cashChangeCents >= 0
+                          ? `Vuelto ${formatMoney(fromCents(cashChangeCents))}`
+                          : `Faltan ${formatMoney(fromCents(-cashChangeCents))}`}
+                      </p>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="cash-change-button"
+                    initial={panelTransition.initial}
+                    animate={panelTransition.animate}
+                    exit={panelTransition.exit}
+                    transition={panelTransition.transition}
+                  >
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => {
+                        setShowCashChange(true);
+                        requestAnimationFrame(() =>
+                          cashReceivedRef.current?.focus(),
+                        );
+                      }}
+                    >
+                      <IconCalculator className="size-4" />
+                      Calcular vuelto
+                    </Button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </fieldset>
@@ -749,17 +893,19 @@ export function PosView() {
           </p>
         )}
 
-        <p
-          aria-live="polite"
-          aria-atomic="true"
-          className={`mb-2 rounded-app border px-3 py-2 text-center text-sm font-medium ${
-            hasBalancedPayments
-              ? "border-success/40 bg-success/10 text-text-primary"
-              : "border-warning/40 bg-warning/10 text-text-primary"
-          }`}
-        >
-          {balanceMessage}
-        </p>
+        {cart.length > 0 && (!hasBalancedPayments || splitPayments) && (
+          <p
+            aria-live="polite"
+            aria-atomic="true"
+            className={`mb-2 rounded-app border px-3 py-2 text-center text-sm font-medium ${
+              hasBalancedPayments
+                ? "border-success/40 bg-success/10 text-text-primary"
+                : "border-warning/40 bg-warning/10 text-text-primary"
+            }`}
+          >
+            {balanceMessage}
+          </p>
+        )}
 
         {confirmDisabledReason && (
           <p className="mb-2 text-center text-xs text-text-secondary">
@@ -768,7 +914,7 @@ export function PosView() {
         )}
         <Button
           variant="confirm"
-          className="w-full py-3.5 text-base"
+          className={`w-full py-3.5 text-base ${confirmReady ? "confirm-ready" : ""}`}
           disabled={!!confirmDisabledReason}
           pending={pending}
           pendingImmediate
@@ -778,56 +924,126 @@ export function PosView() {
         </Button>
       </Card>
 
-      {confirmedSale && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="pop-in fixed bottom-6 right-6 z-50 max-w-xs overflow-hidden rounded-app border border-success/30 bg-surface shadow-soft-lg"
-        >
-          <div className="flex items-center gap-2 bg-success/10 px-6 py-3">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 20 20"
-              fill="none"
-              aria-hidden="true"
-              focusable="false"
+      {/* Deliberately not a real a11y modal (no aria-modal, no focus trap):
+          pos-patterns.md requires that confirming a sale never blocks the
+          start of the next one, and confirmSale()'s refocus() already put
+          the cursor back in the scan field before this even mounts. The
+          backdrop only blocks the mouse — typing/scanning keeps working
+          right under it. role="status" (not "dialog") reflects that: this
+          announces a result, it doesn't ask for input. */}
+      <AnimatePresence>
+        {confirmedSale && (
+          <motion.div
+            key="confirmed-sale-backdrop"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4"
+            onClick={dismissConfirmedSale}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{
+              opacity: 0,
+              transition: {
+                duration: MOTION.fast / 1000,
+                ease: [0.4, 0, 0.2, 1] as const,
+              },
+            }}
+            transition={{ duration: MOTION.base / 1000 }}
+          >
+            <motion.div
+              role="status"
+              aria-live="polite"
+              onClick={(event) => event.stopPropagation()}
+              className="relative w-full max-w-sm overflow-hidden rounded-app border border-success/30 bg-surface-raised shadow-soft-lg"
+              initial={{
+                opacity: 0,
+                scale: shouldReduceMotion ? 1 : 0.96,
+              }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{
+                opacity: 0,
+                scale: shouldReduceMotion ? 1 : 0.98,
+                transition: {
+                  duration: MOTION.fast / 1000,
+                  ease: [0.4, 0, 0.2, 1] as const,
+                },
+              }}
+              transition={{
+                duration: MOTION.base / 1000,
+                ease: [0.16, 1, 0.3, 1] as const,
+              }}
             >
-              <circle
-                cx="10"
-                cy="10"
-                r="9"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M6 10.5L8.5 13L14 7.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-sm font-semibold text-success">
-              Venta confirmada
-            </p>
-          </div>
-          <div className="flex flex-col gap-1 px-6 py-5">
-            {confirmedSale.saleNumber !== null && (
-              <p className="num select-text text-3xl font-bold text-primary">
-                #{confirmedSale.saleNumber}
-              </p>
-            )}
-            <p className="num text-lg font-semibold">{confirmedSale.total}</p>
-            <Link
-              href={`/sales/${confirmedSale.id}`}
-              className="mt-2 text-sm font-medium text-primary hover:text-primary-hover"
-            >
-              Ver detalle →
-            </Link>
-          </div>
-        </div>
-      )}
+              <button
+                type="button"
+                aria-label="Cerrar"
+                onClick={dismissConfirmedSale}
+                className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-tight text-text-muted transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary"
+              >
+                <IconX className="size-4.5" />
+              </button>
+
+              <div className="flex flex-col items-center gap-4 px-8 pb-8 pt-10 text-center">
+                <span className="flex size-16 items-center justify-center rounded-full bg-success/12">
+                  <svg
+                    width="34"
+                    height="34"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <circle
+                      cx="10"
+                      cy="10"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      className="text-success"
+                    />
+                    {/* pathLength={1} normalizes the path's length to 1 so
+                        the stroke-dasharray/dashoffset draw trick
+                        (.check-draw, globals.css) doesn't need the actual
+                        SVG path length computed by hand. */}
+                    <path
+                      d="M6 10.5L8.5 13L14 7.5"
+                      pathLength={1}
+                      strokeDasharray={1}
+                      strokeDashoffset={1}
+                      className="check-draw text-success"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+
+                <div>
+                  <p className="text-base font-semibold text-success">
+                    Venta confirmada
+                  </p>
+                  {confirmedSale.saleNumber !== null && (
+                    <p className="num select-text text-5xl font-bold tracking-tight text-text-primary">
+                      #{confirmedSale.saleNumber}
+                    </p>
+                  )}
+                  <p className="num mt-1 text-xl font-semibold text-text-secondary">
+                    {confirmedSale.total}
+                  </p>
+                </div>
+
+                <div className="flex w-full flex-col gap-2">
+                  <Button onClick={dismissConfirmedSale}>Nueva venta</Button>
+                  <Link
+                    href={`/sales/${confirmedSale.id}`}
+                    className="text-sm font-medium text-primary hover:text-primary-hover"
+                  >
+                    Ver detalle →
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildMovementsQuery,
   buildStockQuery,
+  computeInventoryPageSize,
   computeTotalPages,
   isRowLow,
 } from "./inventory";
@@ -51,7 +52,13 @@ describe("buildStockQuery", () => {
 describe("buildMovementsQuery", () => {
   it("omits empty filters", () => {
     expect(
-      buildMovementsQuery({ productId: "", type: "", from: "", to: "", page: 1 }),
+      buildMovementsQuery({
+        productId: "",
+        type: "",
+        from: "",
+        to: "",
+        page: 1,
+      }),
     ).toBe("page=1");
   });
 
@@ -81,6 +88,65 @@ describe("computeTotalPages", () => {
     expect(computeTotalPages(21, 20)).toBe(2);
     expect(computeTotalPages(20, 20)).toBe(1);
     expect(computeTotalPages(41, 20)).toBe(3);
+  });
+});
+
+describe("computeInventoryPageSize", () => {
+  it("fits as many rows as the leftover viewport height allows", () => {
+    // 900 - 300 (listTop) - 100 (reserved) = 500px available / 50px rows = 10
+    expect(
+      computeInventoryPageSize({
+        viewportHeight: 900,
+        listTop: 300,
+        rowHeight: 50,
+        reservedBelow: 100,
+      }),
+    ).toBe(10);
+  });
+
+  it("clamps to 15 on a tall viewport, even if more rows would fit", () => {
+    expect(
+      computeInventoryPageSize({
+        viewportHeight: 3000,
+        listTop: 300,
+        rowHeight: 50,
+        reservedBelow: 100,
+      }),
+    ).toBe(15);
+  });
+
+  it("clamps to 5 on a very short viewport rather than force a scroll", () => {
+    expect(
+      computeInventoryPageSize({
+        viewportHeight: 500,
+        listTop: 300,
+        rowHeight: 50,
+        reservedBelow: 100,
+      }),
+    ).toBe(5);
+  });
+
+  it("returns the plain fit when it falls between the 5 and 15 clamps", () => {
+    // 900 - 300 - 100 = 500px available / 67px rows = 7 (not clamped)
+    expect(
+      computeInventoryPageSize({
+        viewportHeight: 900,
+        listTop: 300,
+        rowHeight: 67,
+        reservedBelow: 100,
+      }),
+    ).toBe(7);
+  });
+
+  it("falls back to the default when rowHeight isn't measurable yet", () => {
+    expect(
+      computeInventoryPageSize({
+        viewportHeight: 900,
+        listTop: 300,
+        rowHeight: 0,
+        reservedBelow: 100,
+      }),
+    ).toBe(15);
   });
 });
 

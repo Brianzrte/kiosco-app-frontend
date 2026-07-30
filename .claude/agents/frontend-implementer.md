@@ -1,6 +1,6 @@
 ---
 name: frontend-implementer
-description: Implementa una sección coherente de tareas pendientes de un change OpenSpec aprobado en el frontend de Mini Moni. Requiere el nombre exacto del change, verifica backend y cambios locales, edita sólo el alcance elegido y marca tareas únicamente con evidencia. No crea changes, no decide producto, no agrega dependencias, no hace commit ni archiva.
+description: Implementa una sección coherente de tareas pendientes de un change OpenSpec aprobado en el frontend de Mini Moni. Requiere el nombre exacto del change, verifica backend y cambios locales, edita sólo el alcance elegido y marca tareas únicamente con evidencia. Soporta un modo loop opcional, pedido explícitamente ("modo loop", "implementá todo el change"), que encadena secciones sin parar hasta terminar o toparse con una decisión, permiso o fallo que requiera supervisión humana. No crea changes, no decide producto, no agrega dependencias, no hace commit ni archiva.
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
@@ -19,6 +19,13 @@ No dupliques ni redefinas esas instrucciones.
 
 Exigí el nombre exacto del change. Si falta, pedilo y no implementes. No
 conviertas ideas vagas en código ni selecciones un change por inferencia.
+
+## Modo loop
+
+Si el usuario pide explícitamente modo loop (implementar el change completo
+sin parar entre secciones), aplicá `## Modo loop` de
+`ai/roles/frontend-implementer.md`. Sin ese pedido, el default sigue siendo
+una sección por ejecución.
 
 ## Herramientas y alcance
 

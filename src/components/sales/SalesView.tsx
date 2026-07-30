@@ -3,6 +3,7 @@
 import {
   FormEvent,
   KeyboardEvent,
+  RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -14,22 +15,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
-import {
-  IconCardPay,
-  IconCart,
-  IconCash,
-  IconChart,
-  IconSearch,
-  IconTransfer,
-  IconX,
-} from "@/components/ui/icons";
+import { IconSearch, IconX } from "@/components/ui/icons";
+import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
 import { computeTotalPages } from "@/lib/pagination";
 import { hasAnyRole } from "@/lib/roleAccess";
+import {
+  computeSalesPageSize,
+  paymentMethodTone,
+  SALES_DEFAULT_PAGE_SIZE,
+} from "@/lib/sales";
 import {
   buildSummaryQuery,
   normalizeByPaymentMethod,
@@ -45,7 +43,11 @@ import {
 } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 
-const PAGE_SIZE = 20;
+// The mobile shell reserves 96px for its bottom navigation. Together with
+// this list's gap to the pagination bar and the bar's controls, 160px keeps
+// the pager visible on both mobile and desktop layouts (whose bottom padding
+// is smaller).
+const RESERVED_BELOW_LIST_PX = 160;
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-AR", {
@@ -72,6 +74,7 @@ export function SalesView({ roles }: { roles: Role[] }) {
   const [saleNumberInput, setSaleNumberInput] = useState("");
   const [saleNumber, setSaleNumber] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(SALES_DEFAULT_PAGE_SIZE);
   const [cashClosingOpen, setCashClosingOpen] = useState(false);
   // Mobile-only: the number search starts collapsed behind a search-icon
   // trigger (see the form below) instead of a fixed field taking space
@@ -80,6 +83,8 @@ export function SalesView({ roles }: { roles: Role[] }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchExpanded = searchOpen || !!saleNumber;
   const saleNumberInputRef = useRef<HTMLInputElement>(null);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (searchOpen) saleNumberInputRef.current?.focus();
@@ -104,7 +109,7 @@ export function SalesView({ roles }: { roles: Role[] }) {
   const fetcher = useCallback(() => {
     const params = new URLSearchParams({
       status,
-      limit: String(PAGE_SIZE),
+      limit: String(pageSize),
       page: String(page),
     });
     if (cashierId) params.set("cashier_id", cashierId);
@@ -112,8 +117,39 @@ export function SalesView({ roles }: { roles: Role[] }) {
     if (to) params.set("to", to);
     if (saleNumber) params.set("sale_number", saleNumber);
     return api<OperationalSalesList>(`/sales?${params.toString()}`);
-  }, [cashierId, from, page, saleNumber, status, to]);
+  }, [cashierId, from, page, pageSize, saleNumber, status, to]);
   const { data, error, reload } = useLoad(fetcher);
+
+  useEffect(() => {
+    if (!data || data.items.length === 0) return;
+    const rows = data.items;
+
+    function recompute() {
+      const mobileRect = mobileListRef.current?.getBoundingClientRect();
+      const desktopRect = desktopListRef.current?.getBoundingClientRect();
+      const visibleRect =
+        mobileRect && mobileRect.height > 0
+          ? mobileRect
+          : desktopRect && desktopRect.height > 0
+            ? desktopRect
+            : null;
+      if (!visibleRect) return;
+
+      const next = computeSalesPageSize({
+        viewportHeight: window.innerHeight,
+        listTop: visibleRect.top,
+        rowHeight: visibleRect.height / rows.length,
+        reservedBelow: RESERVED_BELOW_LIST_PX,
+      });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    }
+
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   function updateStatus(nextStatus: SaleStatus) {
     setStatus(nextStatus);
@@ -303,11 +339,13 @@ export function SalesView({ roles }: { roles: Role[] }) {
             rows={data.items}
             cashierNames={cashierNames}
             showCashier={!isCashier}
+            mobileListRef={mobileListRef}
+            desktopListRef={desktopListRef}
           />
-          {computeTotalPages(data.total, PAGE_SIZE) > 1 && (
+          {computeTotalPages(data.total, pageSize) > 1 && (
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm text-text-secondary">
-                Página {page} de {computeTotalPages(data.total, PAGE_SIZE)} ·{" "}
+                Página {page} de {computeTotalPages(data.total, pageSize)} ·{" "}
                 {data.total} ventas
               </p>
               <div className="flex gap-3">
@@ -320,10 +358,10 @@ export function SalesView({ roles }: { roles: Role[] }) {
                 </Button>
                 <Button
                   variant="secondary"
-                  disabled={page >= computeTotalPages(data.total, PAGE_SIZE)}
+                  disabled={page >= computeTotalPages(data.total, pageSize)}
                   onClick={() =>
                     setPage((p) =>
-                      Math.min(computeTotalPages(data.total, PAGE_SIZE), p + 1),
+                      Math.min(computeTotalPages(data.total, pageSize), p + 1),
                     )
                   }
                 >
@@ -342,10 +380,14 @@ function SalesTable({
   rows,
   cashierNames,
   showCashier,
+  mobileListRef,
+  desktopListRef,
 }: {
   rows: OperationalSale[];
   cashierNames: Map<string, string>;
   showCashier: boolean;
+  mobileListRef: RefObject<HTMLUListElement | null>;
+  desktopListRef: RefObject<HTMLDivElement | null>;
 }) {
   const router = useRouter();
 
@@ -362,7 +404,7 @@ function SalesTable({
 
   return (
     <>
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {rows.map((sale) => (
           <li
             key={sale.id}
@@ -377,6 +419,21 @@ function SalesTable({
                 {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
               </p>
               <SaleStatusBadge status={sale.status} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-text-secondary">Medio de pago</span>
+              {sale.payments.length === 0 ? (
+                <span className="text-sm text-text-secondary">—</span>
+              ) : (
+                sale.payments.map((payment) => (
+                  <Badge
+                    key={payment.id}
+                    tone={paymentMethodTone(payment.method)}
+                  >
+                    {paymentMethodLabels[payment.method]}
+                  </Badge>
+                ))
+              )}
             </div>
             {/* Total gets the visual weight — it's what a cashier/admin
                 scans for first — set off by a divider from the secondary
@@ -405,12 +462,13 @@ function SalesTable({
           </li>
         ))}
       </ul>
-      <div className="hidden md:block">
+      <div ref={desktopListRef} className="hidden md:block">
         <Table>
           <thead>
             <tr>
               <Th>Número</Th>
               <Th>Estado</Th>
+              <Th>Medio de pago</Th>
               {showCashier && <Th>Cajero</Th>}
               <Th>
                 {rows[0]?.status === "confirmed" ? "Confirmada" : "Creada"}
@@ -433,6 +491,22 @@ function SalesTable({
                 </Td>
                 <Td>
                   <SaleStatusBadge status={sale.status} />
+                </Td>
+                <Td>
+                  {sale.payments.length === 0 ? (
+                    "—"
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sale.payments.map((payment) => (
+                        <Badge
+                          key={payment.id}
+                          tone={paymentMethodTone(payment.method)}
+                        >
+                          {paymentMethodLabels[payment.method]}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </Td>
                 {showCashier && (
                   <Td>
@@ -488,7 +562,7 @@ function DailySummaryCards() {
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={2} />;
 
-  return <SummaryCards data={data} />;
+  return <SummaryCards data={data} salesLabel="Ventas hoy" />;
 }
 
 /** Resumen operativo propio; el backend fija usuario y día de negocio. */
@@ -502,57 +576,7 @@ function CashierTodaySummaryCards() {
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={2} />;
 
-  return <SummaryCards data={data} />;
-}
-
-function SummaryCards({ data }: { data: SalesSummaryByPaymentMethod }) {
-  const byMethod = normalizeByPaymentMethod(data.by_payment_method);
-
-  return (
-    // A 3-column base keeps five compact tiles to two rows on phones. The
-    // fifth tile fills the remaining two columns until xl, where all five
-    // tiles fit in a single row. gap-2 on the smallest phones gives each
-    // ~110px-wide tile a little more content width for its money value
-    // (StatCard's "compact" size); md/xl keep the original gap.
-    <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 xl:grid-cols-5">
-      <StatCard
-        size="compact"
-        tone="summary-sales"
-        label="Ventas hoy"
-        value={data.total_sales}
-        icon={<IconCart className="size-4.5" />}
-      />
-      <StatCard
-        size="compact"
-        tone="summary-total"
-        label="Total facturado"
-        value={formatMoney(data.total_amount)}
-        icon={<IconChart className="size-4.5" />}
-      />
-      <StatCard
-        size="compact"
-        tone="payment-cash"
-        label="Efectivo"
-        value={formatMoney(byMethod.CASH.totalAmount)}
-        icon={<IconCash className="size-4.5" />}
-      />
-      <StatCard
-        size="compact"
-        tone="payment-card"
-        label="Tarjeta"
-        value={formatMoney(byMethod.CARD.totalAmount)}
-        icon={<IconCardPay className="size-4.5" />}
-      />
-      <StatCard
-        size="compact"
-        tone="payment-transfer"
-        className="col-span-2 xl:col-span-1"
-        label="Transferencia"
-        value={formatMoney(byMethod.TRANSFER.totalAmount)}
-        icon={<IconTransfer className="size-4.5" />}
-      />
-    </div>
-  );
+  return <SummaryCards data={data} salesLabel="Ventas hoy" />;
 }
 
 /** Mismo desglose que las cards, sobre un rango elegido — pensado para cerrar el turno. */

@@ -1,3 +1,5 @@
+import { computePageSize } from "./pagination";
+
 /**
  * Pure helpers for the inventory screen. Kept out of the component so the
  * query-building and low-stock logic can be unit tested without rendering.
@@ -8,7 +10,27 @@
  * backend's own `low_stock_only` filter results.
  */
 
-export const INVENTORY_PAGE_SIZE = 20;
+/** Page size before the viewport has been measured once (first paint). */
+export const INVENTORY_DEFAULT_PAGE_SIZE = 15;
+// Not 10: on a short viewport, flooring at 10 rows can outgrow the space
+// that's actually available and force back the very page scroll this is
+// meant to avoid — avoiding the scroll wins over hitting a target count.
+export const INVENTORY_MIN_PAGE_SIZE = 5;
+export const INVENTORY_MAX_PAGE_SIZE = 15;
+
+export function computeInventoryPageSize(opts: {
+  viewportHeight: number;
+  listTop: number;
+  rowHeight: number;
+  reservedBelow: number;
+}): number {
+  return computePageSize({
+    ...opts,
+    min: INVENTORY_MIN_PAGE_SIZE,
+    max: INVENTORY_MAX_PAGE_SIZE,
+    fallback: INVENTORY_DEFAULT_PAGE_SIZE,
+  });
+}
 
 export const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   SALE: "Venta",

@@ -12,6 +12,7 @@ import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { Product, Role } from "@/lib/types";
 import { ProductForm } from "./ProductForm";
+import { ProductSuppliersPanel } from "./ProductSuppliersPanel";
 
 export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
   const router = useRouter();
@@ -80,6 +81,8 @@ export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
       />
 
       <ProductForm product={product} />
+
+      <ProductSuppliersPanel productId={id} />
 
       <Dialog
         open={confirmOpen}

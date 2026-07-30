@@ -21,6 +21,8 @@ const paymentLabels = {
   transfer: "Transferencia",
   account: "Cuenta corriente",
 } as const;
+type ReceptionDraft = Record<string, { quantity: string; reason: string }>;
+
 export function ReceivingDetailView({ id }: { id: string }) {
   const toast = useToast();
   const fetcher = useCallback(
@@ -28,20 +30,46 @@ export function ReceivingDetailView({ id }: { id: string }) {
     [id],
   );
   const { data: order, error, reload } = useLoad(fetcher);
+  const activeItems = order?.items.filter((item) => !item.removed_at) ?? [];
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [payment, setPayment] = useState<keyof typeof paymentLabels | "">("");
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<PurchaseOrderItem | null>(null);
   const [reason, setReason] = useState("");
+  const [receptionItems, setReceptionItems] = useState<ReceptionDraft>({});
   async function receive() {
     if (!payment) return;
+    const items = Object.entries(receptionItems).map(([itemId, item]) => ({
+      item_id: itemId,
+      received_quantity: Number(item.quantity),
+      non_delivery_reason: item.reason.trim() || undefined,
+    }));
+    if (
+      items.length === 0 ||
+      items.some(
+        (item) =>
+          !Number.isInteger(item.received_quantity) || item.received_quantity < 0,
+      )
+    ) {
+      setFormError("Ingresá una cantidad entregada válida para cada ítem activo.");
+      return;
+    }
+    if (
+      activeItems.some((item) => {
+        const receipt = receptionItems[item.id];
+        return Number(receipt?.quantity) < item.quantity && !receipt?.reason.trim();
+      })
+    ) {
+      setFormError("Indicá un motivo para cada entrega incompleta.");
+      return;
+    }
     setPending(true);
     setFormError(null);
     try {
       await api(`/purchase-orders/${id}/receive`, {
         method: "POST",
-        body: { payment_method: payment },
+        body: { payment_method: payment, items },
       });
       toast("success", "Pedido recibido");
       setReceiveOpen(false);
@@ -76,13 +104,34 @@ export function ReceivingDetailView({ id }: { id: string }) {
   if (!order) return <LoadingState />;
   const editable = order.status === "PENDING";
   const receivedBy = order.received_by_name ?? order.received_by;
+
+  function openReception() {
+    setReceptionItems(
+      Object.fromEntries(
+        activeItems.map((item) => [item.id, { quantity: String(item.quantity), reason: "" }]),
+      ),
+    );
+    setFormError(null);
+    setReceiveOpen(true);
+  }
+
+  function updateReceptionItem(
+    itemId: string,
+    field: "quantity" | "reason",
+    value: string,
+  ) {
+    setReceptionItems((current) => ({
+      ...current,
+      [itemId]: { ...current[itemId], [field]: value },
+    }));
+  }
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/receiving"
+        href="/purchasing"
         className="text-sm font-medium text-primary hover:text-primary-hover"
       >
-        ← Volver a recepción
+        ← Volver a compras
       </Link>
       <PageHeader
         title={`Pedido de ${order.supplier_name}`}
@@ -102,7 +151,9 @@ export function ReceivingDetailView({ id }: { id: string }) {
         <thead>
           <tr>
             <Th>Producto</Th>
-            <Th>Cantidad</Th>
+            <Th className="text-right">Solicitada</Th>
+            <Th className="text-right">Recibida</Th>
+            <Th>Diferencias</Th>
             <Th>Costo</Th>
             <Th>Subtotal</Th>
             {editable && <Th>Acción</Th>}
@@ -129,7 +180,17 @@ export function ReceivingDetailView({ id }: { id: string }) {
                     </p>
                   )}
                 </Td>
-                <Td className="num">{item.quantity}</Td>
+                <Td className="num text-right">{item.quantity}</Td>
+                <Td className="num text-right">{item.received_quantity}</Td>
+                <Td>
+                  {item.non_delivery_reason ? (
+                    <p className="text-xs no-underline">
+                      Motivo: {item.non_delivery_reason}
+                    </p>
+                  ) : (
+                    <span className="text-text-secondary">—</span>
+                  )}
+                </Td>
                 <Td className="num">{formatMoney(item.unit_cost)}</Td>
                 <Td className="num">{formatMoney(item.subtotal)}</Td>
                 {editable && (
@@ -192,10 +253,7 @@ export function ReceivingDetailView({ id }: { id: string }) {
       {editable && (
         <div className="flex justify-end">
           <Button
-            onClick={() => {
-              setReceiveOpen(true);
-              setFormError(null);
-            }}
+            onClick={openReception}
           >
             Confirmar recepción
           </Button>
@@ -209,8 +267,37 @@ export function ReceivingDetailView({ id }: { id: string }) {
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm text-text-secondary">
-            Se registrarán tu usuario, la fecha y hora de recepción.
+            Se registrarán tu usuario, la fecha y hora, las cantidades entregadas,
+            los movimientos de stock y el cierre del pedido.
           </p>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-sm font-medium text-text-secondary">Entrega real</h2>
+            {activeItems.map((item) => {
+              const draft = receptionItems[item.id] ?? { quantity: "", reason: "" };
+              return (
+                <div key={item.id} className="grid gap-3 rounded-app border border-border p-3 md:grid-cols-[minmax(0,1fr)_9rem]">
+                  <div>
+                    <p className="font-medium">{item.product_name ?? item.description}</p>
+                    <p className="text-sm text-text-secondary">Solicitada: {item.quantity}</p>
+                  </div>
+                  <Input
+                    label="Cantidad recibida"
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={draft.quantity}
+                    onChange={(event) => updateReceptionItem(item.id, "quantity", event.target.value)}
+                  />
+                  <Input
+                    label="Motivo de diferencia (opcional)"
+                    value={draft.reason}
+                    onChange={(event) => updateReceptionItem(item.id, "reason", event.target.value)}
+                    className="md:col-span-2"
+                  />
+                </div>
+              );
+            })}
+          </div>
           <Select
             label="Método de pago"
             value={payment}

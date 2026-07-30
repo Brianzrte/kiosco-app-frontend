@@ -4,14 +4,17 @@ import { useCallback, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
-import { IconCart, IconChart } from "@/components/ui/icons";
 import { LineChart } from "@/components/reports/charts/LineChart";
 import { ReportNavCard } from "@/components/reports/ReportNavCard";
+import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney, fromCents, toCents } from "@/lib/money";
+import {
+  buildSummaryQuery,
+  SalesSummaryByPaymentMethod,
+} from "@/lib/salesSummary";
 import {
   comparePeriods,
   fillDailySeries,
@@ -21,7 +24,7 @@ import {
   type PeriodComparison,
 } from "@/lib/reports";
 
-type SalesSummary = { total_sales: number; total_amount: string };
+const TOP_PRODUCTS_LIMIT = 5;
 
 type DailySummary = {
   total_sales: number;
@@ -78,7 +81,7 @@ export function ReportsView() {
 
       <SalesSummarySection key={`s-${from}-${to}`} from={from} to={to} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
         <DailyRevenueSection key={`d-${from}-${to}`} from={from} to={to} />
         <TopProductsCard key={`t-${from}-${to}`} from={from} to={to} />
       </div>
@@ -90,7 +93,10 @@ export function ReportsView() {
 
 function SalesSummarySection({ from, to }: { from: string; to: string }) {
   const fetcher = useCallback(
-    () => api<SalesSummary>(`/reports/sales/summary?from=${from}&to=${to}`),
+    () =>
+      api<SalesSummaryByPaymentMethod>(
+        `/reports/sales/summary?${buildSummaryQuery({ from, to })}`,
+      ),
     [from, to],
   );
   const { data: summary, error, reload } = useLoad(fetcher);
@@ -105,20 +111,7 @@ function SalesSummarySection({ from, to }: { from: string; to: string }) {
       ) : summary === null ? (
         <ListSkeleton rows={3} />
       ) : summary.total_sales > 0 ? (
-        <div className="grid max-w-xl grid-cols-2 gap-3 sm:gap-4">
-          <StatCard
-            size="compact"
-            label="Ventas"
-            value={summary.total_sales}
-            icon={<IconCart className="size-4.5" />}
-          />
-          <StatCard
-            size="compact"
-            label="Total facturado"
-            value={formatMoney(String(summary.total_amount))}
-            icon={<IconChart className="size-4.5" />}
-          />
-        </div>
+        <SummaryCards data={summary} />
       ) : (
         <EmptyState message="No hay ventas en el período seleccionado." />
       )}
@@ -161,10 +154,18 @@ function ComparisonStat({
 
   const rounded = Math.round(Math.abs(comparison.percent));
   const sign = comparison.percent >= 0 ? "+" : "−";
+  // Sign reflects the raw percent, not the rounded display value, so a
+  // small negative (e.g. -0.3%, rounds to "0%") still reads as red.
+  const signColor =
+    comparison.percent > 0
+      ? "text-success"
+      : comparison.percent < 0
+        ? "text-error"
+        : "text-text-primary";
 
   return (
     <div>
-      <p className="num text-3xl font-semibold text-text-primary">
+      <p className={`num text-3xl font-semibold ${signColor}`}>
         {sign}
         {rounded}%
       </p>
@@ -191,7 +192,7 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
   );
   const previousFetcher = useCallback(
     () =>
-      api<SalesSummary>(
+      api<SalesSummaryByPaymentMethod>(
         `/reports/sales/summary?from=${previousRange.from}&to=${previousRange.to}`,
       ),
     [previousRange],
@@ -218,7 +219,7 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
   }, [data, previousData, previousError]);
 
   return (
-    <section>
+    <section className="flex flex-col">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
         Evolución diaria de ingresos
       </h2>
@@ -229,12 +230,14 @@ function DailyRevenueSection({ from, to }: { from: string; to: string }) {
       ) : data.total_sales === 0 ? (
         <EmptyState message="No hay ventas en el período seleccionado." />
       ) : (
-        <Card>
+        // flex-1: stretches to match TopProductsCard's height (5 items) in
+        // the shared grid row instead of leaving the two cards misaligned.
+        <Card className="flex-1">
           {/* Below sm (640px) a 3-col split squeezes the 640-unit-wide SVG
               chart into ~1/3 of a phone screen — unreadable axis labels.
               Stack chart above comparison instead; the divider becomes a
               top border instead of a left border once stacked. */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="grid h-full grid-cols-1 gap-6 sm:grid-cols-3">
             <div className="sm:col-span-2">
               <LineChart
                 ariaLabel="Ingresos por día"
@@ -268,14 +271,14 @@ function TopProductsCard({ from, to }: { from: string; to: string }) {
   const fetcher = useCallback(
     () =>
       api<{ products: TopProduct[] }>(
-        `/reports/products/top?from=${from}&to=${to}&limit=3`,
+        `/reports/products/top?from=${from}&to=${to}&limit=${TOP_PRODUCTS_LIMIT}`,
       ).then((data) => data?.products ?? []),
     [from, to],
   );
   const { data: rows, error, reload } = useLoad(fetcher);
 
   return (
-    <section>
+    <section className="flex flex-col">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
         Productos más vendidos
       </h2>
@@ -286,7 +289,7 @@ function TopProductsCard({ from, to }: { from: string; to: string }) {
       ) : rows.length === 0 ? (
         <EmptyState message="No hay productos vendidos en el período." />
       ) : (
-        <Card>
+        <Card className="flex-1">
           <ul className="divide-y divide-border">
             {rows.map((p, index) => (
               <li

@@ -181,9 +181,14 @@ export function ProductsView() {
                     className="transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover"
                   >
                     <Td>
+                      {/* Black by default, like the row-as-button pattern in
+                          UsersView/SuppliersView and the mobile card above —
+                          the row's own hover:bg-surface-hover already signals
+                          "clickable", so the name doesn't need link-blue on
+                          top of it. */}
                       <Link
                         href={`/products/${p.id}`}
-                        className="font-medium text-primary hover:text-primary-hover"
+                        className="font-medium text-text-primary hover:text-primary"
                       >
                         {p.name}
                       </Link>

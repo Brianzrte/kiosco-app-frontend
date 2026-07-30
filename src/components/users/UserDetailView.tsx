@@ -141,7 +141,9 @@ export function UserDetailView({
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
         {user.roles.map((role) => (
-          <Badge key={role}>{ROLE_META[role].label}</Badge>
+          <Badge key={role} tone={ROLE_META[role].tone}>
+            {ROLE_META[role].label}
+          </Badge>
         ))}
         <span>Alta: {formatDate(user.created_at)}</span>
       </div>

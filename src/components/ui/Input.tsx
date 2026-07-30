@@ -16,8 +16,13 @@ export const Input = forwardRef<
     error?: string;
     /** Decorative leading icon (e.g. a search glyph). Purely visual — the field's accessible name still comes from `label`/`aria-label`, never from the icon. */
     icon?: ReactNode;
+    /** Interactive trailing control (e.g. the password show/hide toggle). Unlike `icon`, this can be a real button — it isn't marked aria-hidden. */
+    endAdornment?: ReactNode;
   }
->(function Input({ label, error, icon, className = "", id, ...props }, ref) {
+>(function Input(
+  { label, error, icon, endAdornment, className = "", id, ...props },
+  ref,
+) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   return (
@@ -39,9 +44,14 @@ export const Input = forwardRef<
         <input
           ref={ref}
           id={inputId}
-          className={`${fieldClass} ${icon ? "pl-9" : ""}`}
+          className={`${fieldClass} ${icon ? "pl-9" : ""} ${endAdornment ? "pr-11" : ""}`}
           {...props}
         />
+        {endAdornment && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2">
+            {endAdornment}
+          </span>
+        )}
       </div>
       {error && <p className="mt-1.5 text-sm text-error">{error}</p>}
     </div>

@@ -1,3 +1,12 @@
-import { ReceivingDetailView } from "@/components/receiving/ReceivingDetailView";
+import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/roles";
-export default async function ReceivingDetailPage({ params }: { params: Promise<{ id: string }> }) { await requireRole(["receiving", "admin"]); const { id } = await params; return <ReceivingDetailView id={id} />; }
+
+export default async function ReceivingDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  await requireRole(["cashier", "receiving", "inventory", "admin"]);
+  const { id } = await params;
+  redirect(`/purchasing/${id}`);
+}
