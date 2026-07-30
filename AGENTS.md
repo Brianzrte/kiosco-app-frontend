@@ -29,10 +29,12 @@ strict, Tailwind v4, Vitest. Repositorio separado del backend Go en
    `ai/skills/implement-nextjs-change/SKILL.md`. La skill
    `.claude/skills/frontend-kiosco-app/SKILL.md` es sólo un alias de
    compatibilidad para Claude Code y no es fuente canónica.
-5. **No agregues dependencias.** El runtime es `next`, `react`, `react-dom` y
-   nada más. Agregar una —incluida cualquier herramienta de testing— es una
-   decisión que se levanta al usuario y se registra en el `design.md` de un
-   change.
+5. **No agregues dependencias.** El runtime es `next`, `react`, `react-dom`,
+   más dos excepciones ya aprobadas para motion — `motion` y
+   `@formkit/auto-animate` (ver
+   `ai/skills/ux-ui-supervisor/references/motion.md`) — y nada más. Agregar
+   cualquier otra —incluida cualquier herramienta de testing— es una decisión
+   que se levanta al usuario y se registra en el `design.md` de un change.
 6. **No llames al backend directamente.** Todo pasa por `api<T>()` →
    `/api/backend/[...path]` → backend. El token vive en una cookie httpOnly y
    nunca llega a JS del navegador.

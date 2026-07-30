@@ -2,7 +2,7 @@
 
 ## Primitivos vs semánticos
 
-- **Primitivo**: un color con su nombre físico — `#9c566c`, `rose-500`. Dice
+- **Primitivo**: un color con su nombre físico — `#7c3aed`, `violet-600`. Dice
   qué es, no para qué sirve.
 - **Semántico**: un token con nombre de rol — `primary`, `danger`, `surface`,
   `border`. Dice para qué sirve, y por eso se puede cambiar el valor sin tocar
@@ -41,28 +41,45 @@ info              información neutra
 focus             indicador de foco
 ```
 
-Mapa contra los tokens reales de este proyecto (`globals.css`):
+Mapa contra los tokens reales de este proyecto (`globals.css`). Palette:
+violeta neutro-gris, no la rose/mauve anterior — si algo cita `#9c566c`,
+`#85485c` o `#f8edf1`, está desactualizado:
 
 | Rol | Token del proyecto | Nota |
 |---|---|---|
-| `background` | `--color-background` `#f8edf1` | rosa muy claro, no blanco |
+| `background` | `--color-background` `#f8f8fb` | gris con lean violeta apenas perceptible, no blanco |
 | `surface` | `--color-surface` `#ffffff` | |
-| `surface-subtle` | `--color-surface-2` `#f0d9e3` | ojo con el texto encima |
-| `surface-raised` | — | **no existe**; hoy se resuelve con `surface` + `shadow-soft-lg` |
-| `text-primary` | `--color-text-primary` `#1f2937` | |
-| `text-secondary` | `--color-text-secondary` `#6b7280` | |
-| `text-disabled` | `--color-text-disabled` `#9ca3af` | |
-| `border` | `--color-border` `#e8c5d5` | |
-| `border-strong` | `--color-border-hover` `#dfb2c4` | nombrado por interacción, se usa como refuerzo |
-| `primary` | `--color-primary` `#9c566c` | |
-| `primary-hover` | `--color-primary-hover` `#85485c` | |
-| `primary-active` | — | **no existe**; hoy `primary-hover` cubre ambos |
-| `success` / `warning` / `danger` / `info` | `--color-success` `#22c55e`, `--color-warning` `#f59e0b`, `--color-error` `#ef4444`, `--color-info` `#0ea5e9` | el rol `danger` se llama `error` acá |
+| `surface-subtle` | `--color-surface-2` `#ece9f7` | fill de zebra/header de tabla |
+| `surface-subtle` (variante intermedia) | `--color-surface-subtle` `#fcfbfd` | entre `background` y card blanca — barras de filtro, shells de dashboard |
+| `surface-hover` | `--color-surface-hover` `#f3f1f9` | hover de fila, más suave que `surface-2` |
+| `surface-raised` | `--color-surface-raised` `#ffffff` | superficie elevada (popover, panel flotante); se combina con `shadow-soft-lg`, no un shadow nuevo |
+| `text-primary` | `--color-text-primary` `#211f2b` | |
+| `text-secondary` | `--color-text-secondary` `#615e6e` | |
+| `text-muted` | `--color-text-muted` `#736f85` | escalón entre secondary y disabled — metadatos, timestamps aún legibles |
+| `text-disabled` | `--color-text-disabled` `#a6a2b3` | |
+| `text-inverse` | `--color-text-inverse` `#ffffff` | texto sobre fondo `primary`/oscuro |
+| `border` | `--color-border` `#dcd9e6` | |
+| `border-hover` | `--color-border-hover` `#c9c5db` | |
+| `border-strong` | `--color-border-strong` `#b3aec9` | divisor con más peso estructural: header de tabla, separador de sidebar |
+| `primary` | `--color-primary` `#7c3aed` | |
+| `primary-hover` | `--color-primary-hover` `#6d28d9` | |
+| `primary-active` | `--color-primary-active` `#5b21b6` | presionado, un escalón más oscuro que hover |
+| `primary-light` | `--color-primary-light` `#ede9fe` | dobla como "primary-subtle": fondo de pill seleccionado, tinte de badge |
+| `success` / `warning` / `danger` / `info` | `--color-success` `#22c55e`, `--color-warning` `#f59e0b`, `--color-error` `#ef4444`, `--color-info` `#0ea5e9` | el rol `danger` se llama `error` acá; tintes "subtle" no son tokens nuevos, se hacen con el modificador de opacidad de Tailwind (`bg-success/15`, `border-success/40`) |
 | `focus` | reutiliza `--color-primary` | en `:focus-visible` |
 
-**Los huecos (`surface-raised`, `primary-active`) se señalan cuando un diseño
-los necesita; no se agregan por completitud.** Agregar un token es extender el
-design system: se justifica por al menos dos usos reales.
+**Paleta de pago** (dedicada, no reutiliza `primary` ni los pasteles
+decorativos): `--color-payment-cash #c3ddc2`, `--color-payment-card #e5d2b0`,
+`--color-payment-transfer #b5dbee`, `--color-confirm-sale #34653c`. Tonos
+mudos/desaturados a propósito, exclusivos de los chips de método de pago y del
+botón de confirmar venta en `PosView` — no confundir con `--color-success`
+(sigue usándose sin cambios en `Toast`, `Badge`, deltas de `InventoryView`) ni
+con `--color-pastel-green`/`--color-pastel-yellow` (categorías, sin cambios).
+
+Los huecos anteriores (`surface-raised`, `primary-active`) ya se llenaron: no
+quedan roles mínimos sin token hoy. Si aparece uno nuevo, se señala cuando un
+diseño lo necesita y se justifica por al menos dos usos reales antes de
+agregarlo — no se agrega por completitud.
 
 ## Contraste WCAG
 
@@ -168,9 +185,10 @@ teclado es un caso real, no teórico.
 #BAE1FF   azul
 ```
 
-En `globals.css` viven como `--color-pastel-pink` (hoy `#dfb2c4`, ajustado a la
-marca), `--color-pastel-peach`, `--color-pastel-yellow`, `--color-pastel-green`,
-`--color-pastel-blue`.
+En `globals.css` viven como `--color-pastel-pink` (`#dfb2c4`), `--color-pastel-peach`,
+`--color-pastel-yellow`, `--color-pastel-green`, `--color-pastel-blue` —
+**sin cambios por el color-refactor de marca**: son un sistema categórico
+separado del acento violeta, no un tinte de `--color-primary`.
 
 Todos tienen luminancia muy alta (`L` ≈ 0.90–0.96 en OKLCH). De ahí salen todas
 las reglas:
@@ -196,11 +214,13 @@ las reglas:
   ciclar (`ui-system.md`).
 
 **El CTA principal necesita una variante con contraste suficiente.** Es
-exactamente lo que ya hizo el proyecto: `primary #9c566c` y `primary-hover
-#85485c` son derivados oscurecidos de `secondary #c08497` para sostener texto
-blanco en AA. Si se quisiera un CTA pastel, habría que oscurecer el pastel hasta
-`L` ≈ 0.55 — momento en el que deja de ser pastel. La respuesta correcta es usar
-el pastel como **acento alrededor** del CTA, no como su fondo.
+exactamente lo que ya hace el proyecto: `primary #7c3aed`, `primary-hover
+#6d28d9` y `primary-active #5b21b6` son una rampa violeta que se oscurece en
+cada paso de interacción — no un tinte derivado de otro hue — así el CTA
+sostiene texto blanco en AA en sus tres estados. Si se quisiera un CTA pastel,
+habría que oscurecer el pastel hasta `L` ≈ 0.55 — momento en el que deja de ser
+pastel. La respuesta correcta es usar el pastel como **acento alrededor** del
+CTA, no como su fondo.
 
 **Ninguna adopción de esta paleta reemplaza los tokens actuales.** Este skill no
 cambia la paleta del proyecto por su cuenta: si una pantalla necesita un color

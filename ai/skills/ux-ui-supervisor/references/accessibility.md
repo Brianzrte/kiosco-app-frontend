@@ -24,10 +24,13 @@ Cómo medir: DevTools → Elements → Accessibility → *Contrast*, o el color 
 de Chrome, que reporta el ratio y marca AA/AAA. Un hallazgo de contraste **cita
 el ratio medido**, no la impresión.
 
-En este repo: `text-text-secondary` (`#6b7280`) sobre `surface` (`#ffffff`) da
-≈ 4.8:1 → válido para body. Sobre `surface-2` (`#f0d9e3`) baja a ≈ 4.1:1 → **no
-válido** para texto normal. Ese es el error de contraste más frecuente acá:
-texto secundario sobre superficie pastel.
+En este repo: `text-text-secondary` (`#615e6e`) sobre `surface` (`#ffffff`) da
+≈ 6.3:1 → válido para body. Sobre `surface-2` (`#ece9f7`) baja a ≈ 5.3:1 →
+sigue siendo válido, pero el margen se reduce. **No asumir que el margen se
+sostiene sobre cualquier fondo**: cada pastel o superficie nueva se mide contra
+el texto real que va encima, no se asume por analogía con este par. Ese es el
+error de contraste más frecuente acá: texto secundario sobre una superficie
+clara sin medir el par real.
 
 ### Foco visible (2.4.7 / 2.4.11 Focus Not Obscured)
 

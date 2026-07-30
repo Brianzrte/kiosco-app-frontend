@@ -13,13 +13,20 @@ Describe la arquitectura **vigente**. Autoridad: el código en `src/`.
 | Vitest | `environment: node`, `include: src/**/*.test.ts` | `vitest.config.ts` |
 | ESLint | `eslint-config-next` (core-web-vitals + typescript) | `eslint.config.mjs` |
 
-**Dependencias de runtime: `next`, `react`, `react-dom`. Nada más.** Todo lo
-demás es `devDependencies`. No hay query library, ni state library, ni UI
-library, ni chart library, ni date library, ni librería de formularios. Los
-gráficos son SVG escrito a mano en `src/components/reports/charts/`.
+**Dependencias de runtime: `next`, `react`, `react-dom`, más dos excepciones ya
+resueltas — `motion` y `@formkit/auto-animate`** (ver
+`ai/skills/ux-ui-supervisor/references/motion.md`, "Estado de dependencias en
+este proyecto"). No hay query library, ni state library, ni UI library, ni
+chart library, ni date library, ni librería de formularios ni de iconos. Los
+gráficos son SVG escrito a mano en `src/components/reports/charts/`; los
+iconos son SVG escrito a mano en `src/components/ui/icons.tsx`.
 
-Agregar una dependencia de runtime es **una decisión que se levanta al usuario
-y se registra en el `design.md` de un change**, no algo que se resuelve al paso.
+Agregar **cualquier otra** dependencia de runtime es **una decisión que se
+levanta al usuario y se registra en el `design.md` de un change**, no algo que
+se resuelve al paso. `motion` y `@formkit/auto-animate` ya están aprobadas: no
+hace falta volver a levantar esa decisión para usarlas, sólo respetar la
+jerarquía de mecanismos (CSS → Motion → AutoAnimate → excepcional) de
+`motion.md`.
 
 ## Mapa de `src/`
 
