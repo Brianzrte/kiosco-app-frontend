@@ -10,7 +10,7 @@ Este cambio extiende ese circuito con gestión y planificación para Admin/Inven
 
 - Gestionar proveedores sin borrar historial y asociarlos a productos con un proveedor preferido.
 - Permitir pedidos manuales y revisar sugerencias generadas por backend antes de crear un pedido.
-- Registrar pagos conciliables contra una o varias órdenes y mostrar el saldo devuelto por backend.
+- Registrar el único pago total pendiente de un pedido recibido y mostrar su estado devuelto por backend.
 - Hacer que la recepción refleje la entrega real y actualice stock de forma transaccional.
 - Ofrecer un reporte agregado y de sólo lectura para evaluar compras y cumplimiento por proveedor.
 
@@ -28,7 +28,7 @@ Este cambio extiende ese circuito con gestión y planificación para Admin/Inven
 2. El mismo rol crea un pedido manual o abre una sugerencia del backend, revisa sus ítems y crea un pedido pendiente.
 3. Recepción abre el pedido pendiente, registra faltantes con motivo o ítems adicionales y declara las cantidades realmente entregadas.
 4. Al confirmar, el backend cierra el pedido y aplica los movimientos de entrada de stock en una sola transacción; la UI relee el pedido y muestra éxito.
-5. Un usuario autorizado registra pagos contra pedidos recibidos y revisa el saldo resultante.
+5. Admin o Cashier registra el único pago total de un pedido recibido a cuenta corriente.
 6. Admin consulta por rango el reporte agregado por proveedor.
 
 ## UI states
@@ -52,9 +52,9 @@ Desactivar conserva pedidos y reportes históricos y evita elegir al proveedor e
 
 El backend usa stock actual, ventas, frecuencia y relación producto–proveedor para entregar una sugerencia explicable. La UI permite revisarla y convertirla en pedido, pero no ejecuta la fórmula ni crea pedidos automáticos. Así se conserva el control humano y se evita usar listas paginadas para calcular negocio.
 
-### 4. Pagos independientes y saldo devuelto por backend
+### 4. Un pago total por pedido devuelto por backend
 
-Un pago guarda monto decimal, fecha y medio, y puede asociarse a una o varias órdenes recibidas. El backend valida asociaciones y saldos y devuelve el saldo resultante. El método de pago registrado al recibir no reemplaza estos movimientos contables: puede expresar pago al contado o cuenta corriente, pero no resuelve pagos parciales posteriores.
+Cada pedido admite a lo sumo un pago total. Recibir con efectivo o transferencia lo registra en la misma transacción; recibir a cuenta corriente deja el pedido pendiente. Admin o Cashier puede registrar después el único pago total, con monto decimal y método efectivo o transferencia. El backend valida estado, monto y unicidad; la UI no calcula saldos ni distribuye pagos entre pedidos.
 
 ### 5. Recepción transaccional con stock
 
@@ -113,5 +113,4 @@ Si el frontend se revierte, el backend debe mantener las rutas de lectura existe
 
 - Qué campos de contacto o fiscales expone Supplier.
 - Qué datos por relación producto–proveedor y política precisa de safety stock/frecuencia define backend.
-- Si `inventory` recibe autorización para registrar pagos; hasta confirmarlo, la UI no expone esa acción a dicho rol.
-- Medio de pago y reglas de conciliación exactas que exponga backend.
+- No quedan preguntas abiertas sobre pagos: Inventory no registra pagos; Admin y Cashier registran un único pago total con efectivo o transferencia.

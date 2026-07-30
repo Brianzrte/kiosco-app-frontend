@@ -6,7 +6,7 @@ El kiosco sólo puede consultar compras históricas: no puede administrar provee
 
 - Agregar gestión de proveedores con alta, edición, desactivación y preservación de historial, además de asociaciones producto–proveedor con uno preferido.
 - Agregar gestión de pedidos de compra: creación manual, sugerencias de reposición revisables, detalle y ajustes antes de recibir.
-- Agregar pagos a proveedores con monto, fecha, medio, asociación a una o varias órdenes y saldo para conciliación.
+- Agregar un único pago total por pedido recibido, con monto decimal, fecha y medio de pago.
 - Modificar la recepción para que confirme cantidades reales, preserve motivos de faltantes e ítems no catalogados, y actualice stock y movimientos de forma atómica al cerrar el pedido.
 - Ampliar el reporte de compras con desempeño agregado por proveedor: inversión, pedidos, entregas completas/incompletas e ítems no entregados.
 - Agregar las entradas de navegación y gates de rol correspondientes. El rol interno es `receiving`; no se crea un portal ni un rol externo de proveedor.

@@ -3,7 +3,7 @@
 - [ ] 0.1 Confirmar contra una instancia real que `add-frontend-user-roles-and-receiving` está desplegado, incluidos roles múltiples y `receiving`; evidencia: login, router y respuestas reales.
 - [ ] 0.2 Confirmar en backend real los contratos de proveedores, asociaciones, sugerencias, pagos, reporte y recepción atómica de `backend-request.md`; evidencia: método, path, roles, shape, nullabilidad y status.
 - [ ] 0.3 Verificar una recepción exitosa y una fallida contra backend real: la primera actualiza stock/movimientos y cierra el pedido; la segunda no persiste estado parcial.
-- [ ] 0.4 Resolver y documentar el permiso de `inventory` para pagos antes de exponer la acción en UI.
+- [x] 0.4 Documentado: Inventory no registra pagos; Admin y Cashier pueden registrar un único pago total por pedido recibido a cuenta corriente.
 
 ## 1. Tipos, helpers y navegación
 
@@ -31,7 +31,7 @@
 
 ## 5. Pagos, saldos y reportes
 
-- [ ] 5.1 Implementar registro y consulta de pagos/asignaciones/saldos para los roles autorizados por backend; prueba manual: pago parcial, múltiples órdenes, saldo excedido y mensajes inline.
+- [ ] 5.1 Implementar registro del único pago total pendiente por pedido para Admin/Cashier; prueba manual: pago completo, pago parcial rechazado, segundo pago rechazado y mensajes inline.
 - [ ] 5.2 Ampliar `/reports/purchases` con el agregado de desempeño por proveedor; inspección: Admin-only, rangos `YYYY-MM-DD`, `formatMoney()` y ninguna reagrupación desde filas paginadas.
 - [ ] 5.3 Verificar loading, vacío, error, reintento y responsive de pagos y reporte; prueba manual: estado no comunicado sólo por color.
 

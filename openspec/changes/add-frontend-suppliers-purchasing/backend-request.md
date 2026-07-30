@@ -43,9 +43,9 @@ El backend define fórmula, horizonte de ventas, stock de seguridad, tratamiento
 
 ### 3. Pagos a proveedor y conciliación
 
-Se necesita registrar pagos con fecha, monto decimal, medio de pago y una o varias asignaciones a pedidos `RECEIVED`. El backend debe validar monto positivo, pedido elegible, suma de asignaciones y que no se exceda el saldo; guardar auditoría; devolver asignaciones y saldos por pedido/proveedor. Los montos viajan como strings decimales y errores como `{ message }`.
+Se requiere a lo sumo un pago total por pedido `RECEIVED`: efectivo o transferencia al recibir lo crean en la misma transacción; cuenta corriente queda pendiente hasta que Admin o Cashier registra luego el único pago completo. El backend valida monto positivo e igual al total final, pedido elegible y unicidad; guarda auditoría y devuelve el pago. Los montos viajan como strings decimales y errores como `{ message }`.
 
-Definir paths, métodos, enum de medios, permisos y respuestas. Admin debe poder operar y leer; confirmar expresamente si Inventory también puede registrar pagos. Un `409` o `422` debe distinguir conflicto concurrente de pago y validación de saldo según corresponda.
+El contrato desplegado es `POST /purchase-orders/{id}/payment`, con `amount` decimal y `payment_method` `cash` o `transfer`; Admin y Cashier pueden llamarlo. Un segundo pago responde `409` y un monto distinto del total responde `422`. Inventory no registra pagos.
 
 ### 4. Reporte agregado por proveedor
 

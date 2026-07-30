@@ -52,16 +52,16 @@ The frontend SHALL display backend-generated replenishment suggestions that acco
 - **WHEN** the backend reports that a product lacks planning data
 - **THEN** the frontend displays the backend-provided reason and does not guess a quantity or supplier
 
-### Requirement: Supplier payments and balances
-The frontend SHALL let a backend-authorized user register a supplier payment with a date, decimal-string amount, payment method and one or more received purchase orders, then display the backend-returned balance for reconciliation. It SHALL not allow the browser to calculate or alter balances.
+### Requirement: One full payment per purchase order
+The frontend SHALL let Admin or Cashier register the one outstanding full payment of a received purchase order paid on account, using a decimal-string amount and `cash` or `transfer`. It SHALL display the backend-returned payment and SHALL not calculate balances or distribute a payment across orders.
 
-#### Scenario: Register a partial payment
-- **WHEN** an authorized user records a payment smaller than the outstanding balance of an order
-- **THEN** the returned remaining balance is displayed after the payment is recorded
+#### Scenario: Register the outstanding full payment
+- **WHEN** an authorized user records an amount equal to the final total of an account purchase order
+- **THEN** the backend-confirmed payment is displayed after it is recorded
 
-#### Scenario: Allocate payment across orders
-- **WHEN** an authorized user associates a payment with more than one received order
-- **THEN** the backend-confirmed allocations and balances are shown
+#### Scenario: Partial or duplicate payment
+- **WHEN** the backend rejects a partial amount or a second payment
+- **THEN** the backend message is shown inline and no success confirmation is shown
 
 #### Scenario: Invalid payment
 - **WHEN** the backend rejects a payment because of its amount, order status or balance
