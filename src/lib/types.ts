@@ -59,6 +59,26 @@ export type OperationalSalesList = {
   total: number;
 };
 
+export type CashierShiftSummary = {
+  total_sales: number;
+  total_amount: string;
+  total_cash: string;
+  total_card: string;
+  total_transfer: string;
+};
+
+export type CashClosing = {
+  id: string;
+  cashier_id: string;
+  from: string;
+  to: string;
+  expected_cash: string;
+  counted_cash: string;
+  difference: string;
+  notes?: string | null;
+  closed_at: string;
+};
+
 export type Product = {
   id: string;
   sku: string;

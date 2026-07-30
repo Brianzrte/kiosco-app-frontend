@@ -7,8 +7,10 @@ import { Role } from "@/lib/types";
 import { navItemsFor } from "@/lib/nav";
 import { ROLE_META } from "@/lib/roleMeta";
 import { MobileNavDrawer } from "@/components/shell/MobileNavDrawer";
+import { CashierShiftClosingModal } from "@/components/shell/CashierShiftClosingModal";
 import {
   IconBox,
+  IconCash,
   IconCart,
   IconChart,
   IconHistory,
@@ -44,6 +46,7 @@ export function Nav({ roles }: { roles: Role[] }) {
   const isActive = useActiveCheck();
   const items = navItemsFor(roles);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cashClosingOpen, setCashClosingOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   // nav-mobile-admin-drawer: `admin` sees all 8 NAV_ITEMS (product decision
@@ -115,6 +118,18 @@ export function Nav({ roles }: { roles: Role[] }) {
           <span className="ml-auto hidden rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-text-secondary md:ml-0 md:inline-block">
             {roles.map((role) => ROLE_META[role].label).join(" · ")}
           </span>
+          {isCashier && (
+            <button
+              type="button"
+              aria-label="Cerrar caja"
+              title="Cerrar caja"
+              onClick={() => setCashClosingOpen(true)}
+              className="ml-auto flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 lg:gap-1.5 lg:px-3"
+            >
+              <IconCash className="size-4 shrink-0" />
+              <span className="hidden lg:inline">Cerrar caja</span>
+            </button>
+          )}
           {useDrawerNav && (
             <button
               ref={menuTriggerRef}
@@ -189,6 +204,9 @@ export function Nav({ roles }: { roles: Role[] }) {
             })}
           </ul>
         </nav>
+      )}
+      {cashClosingOpen && (
+        <CashierShiftClosingModal onClose={() => setCashClosingOpen(false)} />
       )}
     </>
   );

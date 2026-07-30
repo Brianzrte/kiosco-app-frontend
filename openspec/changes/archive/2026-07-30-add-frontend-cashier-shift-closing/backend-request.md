@@ -1,5 +1,10 @@
 # Pedido a backend: cierre de caja del cajero (resumen escoped + persistencia)
 
+> **Resuelto — 2026-07-30.** Implementado y archivado en backend como
+> `2026-07-30-add-cashier-shift-closings` (commit `8ee044b`). El efectivo
+> esperado se recalcula exclusivamente en el servidor; el request real no
+> acepta `expected_cash`.
+
 > Este archivo es un **prompt para la sesión de backend** (skill `go-backend`). Pegar tal cual o adaptar. Generado desde el frontend porque el cajero necesita cerrar su turno dejando un registro, y hoy no existe ni el dato agregado que necesita ni ningún lugar donde guardarlo.
 
 ## Contexto
@@ -69,7 +74,7 @@ Response propuesta: `201` con el registro creado, incluyendo `id`.
 
 ## Checklist de verificación sugerida
 
-- [ ] `GET /sales/summary?from=...&to=...` responde `200` a un Cashier con sus propios totales, ignorando cualquier `cashier_id` enviado
-- [ ] Un Cashier sin ventas confirmadas en el rango recibe ceros, no error
-- [ ] `POST /cash-closings` persiste el registro con `difference` calculado por el backend y devuelve `201` + `id`
-- [ ] `GET /cash-closings`/`GET /cash-closings/{id}` responden sólo a Admin (`403` para otros roles salvo, si se decide, que el propio cajero vea los suyos)
+- [x] `GET /sales/summary?from=...&to=...` responde `200` a un Cashier con sus propios totales, ignorando cualquier `cashier_id` enviado
+- [x] Un Cashier sin ventas confirmadas en el rango recibe ceros, no error
+- [x] `POST /cash-closings` persiste el registro con `difference` calculado por el backend y devuelve `201` + `id`
+- [x] `GET /cash-closings`/`GET /cash-closings/{id}` responden sólo a Admin (`403` para otros roles salvo, si se decide, que el propio cajero vea los suyos)
