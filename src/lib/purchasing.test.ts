@@ -5,6 +5,7 @@ import {
   purchaseOrderStatusLabel,
   purchasePaymentMethodLabel,
   supplierLabel,
+  toOrderedAtPayload,
 } from "./purchasing";
 
 describe("buildPurchaseOrdersQuery", () => {
@@ -68,7 +69,17 @@ describe("purchasing display labels", () => {
   it("uses Spanish labels without changing backend values", () => {
     expect(purchaseOrderStatusLabel("PENDING")).toBe("Pendiente");
     expect(purchasePaymentMethodLabel("account")).toBe("Cuenta corriente");
-    expect(supplierLabel({ id: "supplier-1", name: "Mayorista", active: true })).toBe("Mayorista");
-    expect(supplierLabel({ id: "supplier-1", name: "Mayorista", active: false })).toBe("Mayorista (inactivo)");
+    expect(
+      supplierLabel({ id: "supplier-1", name: "Mayorista", active: true }),
+    ).toBe("Mayorista");
+    expect(
+      supplierLabel({ id: "supplier-1", name: "Mayorista", active: false }),
+    ).toBe("Mayorista (inactivo)");
+  });
+});
+
+describe("toOrderedAtPayload", () => {
+  it("appends midnight UTC to a YYYY-MM-DD date input", () => {
+    expect(toOrderedAtPayload("2026-07-30")).toBe("2026-07-30T00:00:00Z");
   });
 });

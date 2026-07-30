@@ -55,3 +55,8 @@ export function purchasePaymentMethodLabel(
 export function supplierLabel(supplier: Supplier): string {
   return supplier.active ? supplier.name : `${supplier.name} (inactivo)`;
 }
+
+/** `<input type="date">` returns YYYY-MM-DD; the backend requires RFC3339. */
+export function toOrderedAtPayload(dateInput: string): string {
+  return `${dateInput}T00:00:00Z`;
+}
