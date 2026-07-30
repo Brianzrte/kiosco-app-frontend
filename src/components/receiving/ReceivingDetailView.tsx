@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -83,24 +84,20 @@ export function ReceivingDetailView({ id }: { id: string }) {
       >
         ← Volver a recepción
       </Link>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
-            Pedido de {order.supplier_name}
-          </h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(
-              new Date(order.ordered_at),
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title={`Pedido de ${order.supplier_name}`}
+        description={new Intl.DateTimeFormat("es-AR", {
+          dateStyle: "long",
+        }).format(new Date(order.ordered_at))}
+        titleAdornment={
           <Badge tone={editable ? "warning" : "success"}>
             {statusLabel(order.status)}
           </Badge>
-          {editable && <AddPurchaseOrderItemForm orderId={id} onAdded={reload} />}
-        </div>
-      </div>
+        }
+        actions={
+          editable && <AddPurchaseOrderItemForm orderId={id} onAdded={reload} />
+        }
+      />
       <Table>
         <thead>
           <tr>

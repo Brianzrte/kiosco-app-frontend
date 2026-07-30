@@ -214,6 +214,17 @@ export function IconX(props: IconProps) {
   );
 }
 
+export function IconUserOff(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20c0-3.3 2.7-6 6-6 1.5 0 2.9.5 4 1.4" />
+      <path d="M15 15l6 6" />
+      <path d="M21 15l-6 6" />
+    </Icon>
+  );
+}
+
 export function IconMenu(props: IconProps) {
   return (
     <Icon {...props}>

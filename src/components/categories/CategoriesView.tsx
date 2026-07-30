@@ -193,7 +193,7 @@ export function CategoriesView() {
                       />
                     </div>
                   ) : (
-                    <span className="min-w-0 flex-1 truncate font-medium">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
                       {c.name}
                     </span>
                   )}

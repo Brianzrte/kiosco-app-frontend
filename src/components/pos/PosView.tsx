@@ -40,10 +40,16 @@ const PAYMENT_LABELS: Record<SplitPaymentMethod, string> = {
 // mauve/rose palette. Transferencia uses the same muted blue family, not the
 // raw --color-pastel-blue.
 const PAYMENT_SELECTED_STYLES: Record<SplitPaymentMethod, string> = {
-  CASH: "border-payment-cash bg-payment-cash text-text-primary hover:bg-payment-cash/80",
-  CARD: "border-payment-card bg-payment-card text-text-primary hover:bg-payment-card/80",
+  CASH: "border-payment-cash bg-payment-cash text-text-primary",
+  CARD: "border-payment-card bg-payment-card text-text-primary",
   TRANSFER:
-    "border-payment-transfer bg-payment-transfer text-text-primary hover:bg-payment-transfer/80",
+    "border-payment-transfer bg-payment-transfer text-text-primary",
+};
+
+const PAYMENT_HOVER_STYLES: Record<SplitPaymentMethod, string> = {
+  CASH: "hover:border-payment-cash hover:bg-payment-cash/30",
+  CARD: "hover:border-payment-card hover:bg-payment-card/30",
+  TRANSFER: "hover:border-payment-transfer hover:bg-payment-transfer/30",
 };
 
 const PAYMENT_OPTIONS = [
@@ -621,10 +627,10 @@ export function PosView() {
               return (
                 <label
                   key={value}
-                  className={`flex cursor-pointer flex-col items-center gap-1 rounded-app border px-2 py-3 text-center text-sm font-medium transition-[background-color,border-color,color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+                  className={`group flex cursor-pointer flex-col items-center gap-1 rounded-app border px-2 py-3 text-center text-sm font-medium transition-[background-color,border-color,color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
                     payment === value
                       ? PAYMENT_SELECTED_STYLES[value]
-                      : "border-border text-text-secondary hover:border-border-hover hover:bg-surface-hover"
+                      : `border-border text-text-secondary ${PAYMENT_HOVER_STYLES[value]}`
                   }`}
                 >
                   <input
@@ -635,7 +641,13 @@ export function PosView() {
                     onChange={() => selectPaymentMethod(value)}
                     className="sr-only"
                   />
-                  <PaymentIcon className="size-5" />
+                  <span
+                    className={`flex size-8 items-center justify-center rounded-tight ${
+                      payment === value ? "text-text-primary" : "text-text-secondary"
+                    }`}
+                  >
+                    <PaymentIcon className="size-5" />
+                  </span>
                   {label}
                 </label>
               );

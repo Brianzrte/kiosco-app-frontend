@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
@@ -50,7 +51,7 @@ export function ProductsReportView() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Reporte de productos</h1>
+      <PageHeader title="Reporte de productos" />
 
       <div className="flex flex-wrap items-end gap-3">
         <Input

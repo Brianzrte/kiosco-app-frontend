@@ -52,6 +52,13 @@ Reglas:
 | `Spinner` | `ui/Spinner.tsx` | `className` para color/tamaño |
 | Estados | `ui/states.tsx` | `LoadingState`, `Skeleton`, `ListSkeleton({ rows })`, `EmptyState({ message, action })`, `ErrorState({ error, onRetry })` |
 
+## Jerarquía de subtítulos
+
+Los `<h2>` siguen tres niveles según su contexto: un dashboard o reporte denso
+usa `text-xs font-semibold uppercase tracking-wide text-text-muted` como
+eyebrow; una subsección de detalle usa `text-sm font-medium text-text-secondary`;
+el título principal de un diálogo modal usa `text-lg font-semibold`.
+
 ## Cuándo extender un primitive
 
 **Estilo ad-hoc en una pantalla es un defecto.** Si a un primitive le falta una

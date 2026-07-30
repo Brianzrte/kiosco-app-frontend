@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { IconUserOff } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
@@ -192,13 +193,17 @@ function UsersList({
                 <UserStatus active={user.active} />
                 {user.active && (
                   <Button
-                    variant="danger"
+                    variant="ghost"
+                    iconOnly
+                    className="border border-error/40 !text-error hover:!bg-error/10"
+                    aria-label={`Desactivar ${user.username}`}
+                    title="Desactivar"
                     onClick={(event) => {
                       event.stopPropagation();
                       onDeactivate(user);
                     }}
                   >
-                    Desactivar
+                    <IconUserOff className="size-4.5" />
                   </Button>
                 )}
               </div>
@@ -242,13 +247,18 @@ function UsersList({
                 <Td>
                   {user.active && (
                     <Button
-                      variant="danger"
+                      variant="ghost"
+                      iconOnly
+                      size="sm"
+                      className="border border-error/40 !text-error hover:!bg-error/10"
+                      aria-label={`Desactivar ${user.username}`}
+                      title="Desactivar"
                       onClick={(event) => {
                         event.stopPropagation();
                         onDeactivate(user);
                       }}
                     >
-                      Desactivar
+                      <IconUserOff className="size-4" />
                     </Button>
                   )}
                 </Td>

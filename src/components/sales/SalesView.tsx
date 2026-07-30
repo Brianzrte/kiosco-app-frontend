@@ -4,7 +4,9 @@ import {
   FormEvent,
   KeyboardEvent,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -20,7 +22,9 @@ import {
   IconCart,
   IconCash,
   IconChart,
+  IconSearch,
   IconTransfer,
+  IconX,
 } from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
@@ -69,6 +73,17 @@ export function SalesView({ roles }: { roles: Role[] }) {
   const [saleNumber, setSaleNumber] = useState("");
   const [page, setPage] = useState(1);
   const [cashClosingOpen, setCashClosingOpen] = useState(false);
+  // Mobile-only: the number search starts collapsed behind a search-icon
+  // trigger (see the form below) instead of a fixed field taking space
+  // above the filters. Expanded automatically whenever a search is active
+  // so the active query and "Limpiar búsqueda" stay visible.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchExpanded = searchOpen || !!saleNumber;
+  const saleNumberInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen) saleNumberInputRef.current?.focus();
+  }, [searchOpen]);
 
   // GET /users es admin-only: el Cajero nunca lo pide (403 esperado). No
   // hace falta el selector de cajero para ese rol — hay uno solo, él mismo.
@@ -119,6 +134,7 @@ export function SalesView({ roles }: { roles: Role[] }) {
   function clearNumberSearch() {
     setSaleNumberInput("");
     setSaleNumber("");
+    setSearchOpen(false);
     setPage(1);
   }
 
@@ -148,11 +164,28 @@ export function SalesView({ roles }: { roles: Role[] }) {
 
       {!isCashier && cashClosingOpen && <CashClosingTool />}
 
+      {/* Mobile-only trigger: replaces the fixed search form with a single
+          icon button until the cashier/admin actually wants to search by
+          number, freeing that space above the filters on phones. Desktop
+          (md:) keeps the form visible via the `hidden md:flex` below. */}
+      {!searchExpanded && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setSearchOpen(true)}
+          className="w-fit gap-2 md:hidden"
+        >
+          <IconSearch className="size-4" />
+          Buscar por número de venta
+        </Button>
+      )}
+
       <form
         onSubmit={searchByNumber}
-        className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface p-4 shadow-soft"
+        className={`${searchExpanded ? "flex" : "hidden"} flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3 md:flex`}
       >
         <Input
+          ref={saleNumberInputRef}
           label="Buscar por número de venta"
           type="text"
           inputMode="numeric"
@@ -168,6 +201,18 @@ export function SalesView({ roles }: { roles: Role[] }) {
         {saleNumber && (
           <Button type="button" variant="secondary" onClick={clearNumberSearch}>
             Limpiar búsqueda
+          </Button>
+        )}
+        {!saleNumber && (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            aria-label="Cerrar buscador"
+            onClick={() => setSearchOpen(false)}
+            className="md:hidden"
+          >
+            <IconX className="size-4" />
           </Button>
         )}
       </form>
@@ -325,42 +370,38 @@ function SalesTable({
             onKeyDown={(event) => handleRowKeyDown(event, sale.id)}
             tabIndex={0}
             role="button"
-            className="cursor-pointer rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
+            className="flex cursor-pointer flex-col gap-3 rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="num text-lg font-semibold">
-                  {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
-                </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="num text-base font-semibold text-text-primary">
+                {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
+              </p>
+              <SaleStatusBadge status={sale.status} />
+            </div>
+            {/* Total gets the visual weight — it's what a cashier/admin
+                scans for first — set off by a divider from the secondary
+                cajero/fecha column, which stays smaller and muted. */}
+            <div className="flex items-end justify-between gap-3 border-t border-border pt-3">
+              <div className="flex min-w-0 flex-col gap-0.5">
                 {showCashier && (
-                  <p className="mt-1 text-sm text-text-secondary">
+                  <p className="truncate text-sm text-text-secondary">
                     {cashierNames.get(sale.cashier_id) ??
                       "Cajero no disponible"}
                   </p>
                 )}
-              </div>
-              <SaleStatusBadge status={sale.status} />
-            </div>
-            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt className="text-text-secondary">
-                  {sale.status === "confirmed" ? "Confirmada" : "Creada"}
-                </dt>
-                <dd>
+                <p className="text-xs text-text-muted">
+                  {sale.status === "confirmed" ? "Confirmada" : "Creada"}{" "}
                   {formatDate(
                     sale.status === "confirmed"
                       ? sale.confirmed_at!
                       : sale.created_at,
                   )}
-                </dd>
+                </p>
               </div>
-              <div>
-                <dt className="text-text-secondary">Total</dt>
-                <dd className="num font-medium">
-                  {sale.total ? formatMoney(sale.total) : "Sin confirmar"}
-                </dd>
-              </div>
-            </dl>
+              <p className="num shrink-0 text-lg font-semibold text-text-primary">
+                {sale.total ? formatMoney(sale.total) : "Sin confirmar"}
+              </p>
+            </div>
           </li>
         ))}
       </ul>
@@ -468,38 +509,44 @@ function SummaryCards({ data }: { data: SalesSummaryByPaymentMethod }) {
   const byMethod = normalizeByPaymentMethod(data.by_payment_method);
 
   return (
-    // Base grid-cols-2 (not 1): a phone-width stack of 5 full-height tiles
-    // pushed the actual sales table below the fold — see the "compact"
-    // StatCard note. The 5th tile spans both columns up to md (3-col),
-    // where it would otherwise be the lone tile on its own row.
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
+    // A 3-column base keeps five compact tiles to two rows on phones. The
+    // fifth tile fills the remaining two columns until xl, where all five
+    // tiles fit in a single row. gap-2 on the smallest phones gives each
+    // ~110px-wide tile a little more content width for its money value
+    // (StatCard's "compact" size); md/xl keep the original gap.
+    <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 xl:grid-cols-5">
       <StatCard
         size="compact"
+        tone="summary-sales"
         label="Ventas hoy"
         value={data.total_sales}
         icon={<IconCart className="size-4.5" />}
       />
       <StatCard
         size="compact"
+        tone="summary-total"
         label="Total facturado"
         value={formatMoney(data.total_amount)}
         icon={<IconChart className="size-4.5" />}
       />
       <StatCard
         size="compact"
+        tone="payment-cash"
         label="Efectivo"
         value={formatMoney(byMethod.CASH.totalAmount)}
         icon={<IconCash className="size-4.5" />}
       />
       <StatCard
         size="compact"
+        tone="payment-card"
         label="Tarjeta"
         value={formatMoney(byMethod.CARD.totalAmount)}
         icon={<IconCardPay className="size-4.5" />}
       />
       <StatCard
         size="compact"
-        className="col-span-2 md:col-span-1"
+        tone="payment-transfer"
+        className="col-span-2 xl:col-span-1"
         label="Transferencia"
         value={formatMoney(byMethod.TRANSFER.totalAmount)}
         icon={<IconTransfer className="size-4.5" />}

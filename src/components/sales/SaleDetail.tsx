@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
@@ -104,35 +105,34 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
         <ListSkeleton rows={4} />
       ) : (
         <>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="num text-2xl font-semibold">
-                {sale.sale_number == null
-                  ? "Venta sin número"
-                  : `#${sale.sale_number}`}
-              </h1>
-              <p className="mt-1 text-sm text-text-secondary">
-                {formatDate(
-                  sale.status === "confirmed"
-                    ? sale.confirmed_at!
-                    : sale.created_at,
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
+          <PageHeader
+            title={
+              sale.sale_number == null
+                ? "Venta sin número"
+                : `#${sale.sale_number}`
+            }
+            titleClassName="num"
+            description={formatDate(
+              sale.status === "confirmed"
+                ? sale.confirmed_at!
+                : sale.created_at,
+            )}
+            titleAdornment={
               <Badge tone={sale.status === "confirmed" ? "success" : "warning"}>
                 {statusLabel(sale.status)}
               </Badge>
-              {canRegisterReturn && (
+            }
+            actions={
+              canRegisterReturn && (
                 <Button
                   variant="secondary"
                   onClick={() => setReturnFormOpen(true)}
                 >
                   Registrar devolución
                 </Button>
-              )}
-            </div>
-          </div>
+              )
+            }
+          />
 
           <section>
             <h2 className="mb-3 text-sm font-medium text-text-secondary">

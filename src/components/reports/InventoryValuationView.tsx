@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useCallback } from "react";
-import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorState, ListSkeleton } from "@/components/ui/states";
+import { StatCard } from "@/components/ui/StatCard";
+import { IconBox, IconCash, IconChart } from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
@@ -26,8 +28,29 @@ const GROUPS: { key: keyof ValuationResponse; title: string }[] = [
   { key: "total", title: "Total" },
 ];
 
+const valuationMetrics = (group: ValuationGroup) => [
+  {
+    label: "Costo total",
+    value: formatMoney(group.total_cost),
+    icon: <IconCash className="size-4.5" />,
+  },
+  {
+    label: "Valor de venta total",
+    value: formatMoney(group.total_sale_value),
+    icon: <IconChart className="size-4.5" />,
+  },
+  {
+    label: "Productos",
+    value: String(group.product_count),
+    icon: <IconBox className="size-4.5" />,
+  },
+];
+
 export function InventoryValuationView() {
-  const fetcher = useCallback(() => api<ValuationResponse>("/inventory/valuation"), []);
+  const fetcher = useCallback(
+    () => api<ValuationResponse>("/inventory/valuation"),
+    [],
+  );
   const { data, error, reload } = useLoad(fetcher);
 
   return (
@@ -41,38 +64,27 @@ export function InventoryValuationView() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Valorización de inventario</h1>
+      <PageHeader title="Valorización de inventario" />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : data === null ? (
         <ListSkeleton rows={3} />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-6">
           {GROUPS.map(({ key, title }) => {
             const group = data[key];
             return (
-              <Card key={key}>
-                <p className="text-sm font-medium text-text-secondary">
+              <section key={key}>
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-muted">
                   {title}
-                </p>
-                <p className="mt-3 text-sm text-text-secondary">
-                  Costo total
-                </p>
-                <p className="num text-2xl font-semibold text-text-primary">
-                  {formatMoney(group.total_cost)}
-                </p>
-                <p className="mt-3 text-sm text-text-secondary">
-                  Valor de venta total
-                </p>
-                <p className="num text-2xl font-semibold text-text-primary">
-                  {formatMoney(group.total_sale_value)}
-                </p>
-                <p className="num mt-3 text-sm text-text-secondary">
-                  {group.product_count} producto
-                  {group.product_count === 1 ? "" : "s"}
-                </p>
-              </Card>
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {valuationMetrics(group).map((metric) => (
+                    <StatCard key={metric.label} size="compact" {...metric} />
+                  ))}
+                </div>
+              </section>
             );
           })}
         </div>

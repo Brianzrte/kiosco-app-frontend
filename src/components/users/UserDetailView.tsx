@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { ApiError, api } from "@/lib/api";
@@ -79,13 +80,18 @@ export function UserDetailView({
   const selectedRoles = draftRoles ?? user.roles;
   const isCurrentUser = user.username === currentUsername;
   const isRemovingOwnAdmin =
-    isCurrentUser && user.roles.includes("admin") && !selectedRoles.includes("admin");
+    isCurrentUser &&
+    user.roles.includes("admin") &&
+    !selectedRoles.includes("admin");
 
   async function saveRoles() {
     setRolesError(null);
     setRolesPending(true);
     try {
-      await api(`/users/${id}/roles`, { method: "PUT", body: { roles: selectedRoles } });
+      await api(`/users/${id}/roles`, {
+        method: "PUT",
+        body: { roles: selectedRoles },
+      });
       toast("success", "Roles actualizados");
       setConfirmRoleChange(false);
       setDraftRoles(null);
@@ -117,19 +123,21 @@ export function UserDetailView({
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">{user.username}</h1>
+      <PageHeader
+        title={user.username}
+        titleAdornment={
           <Badge tone={user.active ? "success" : "neutral"}>
             {user.active ? "Activo" : "Inactivo"}
           </Badge>
-        </div>
-        {user.active && (
-          <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-            Desactivar usuario
-          </Button>
-        )}
-      </div>
+        }
+        actions={
+          user.active && (
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+              Desactivar usuario
+            </Button>
+          )
+        }
+      />
 
       <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
         {user.roles.map((role) => (
@@ -139,7 +147,9 @@ export function UserDetailView({
       </div>
 
       <Card>
-        <h2 className="text-lg font-semibold">Credenciales</h2>
+        <h2 className="text-sm font-medium text-text-secondary">
+          Credenciales
+        </h2>
         <dl className="mt-4 grid gap-4 text-sm md:grid-cols-2">
           <div>
             <dt className="text-text-secondary">Usuario</dt>
@@ -147,11 +157,14 @@ export function UserDetailView({
           </div>
           <div>
             <dt className="text-text-secondary">Contraseña</dt>
-            <dd className="mt-1 font-medium">No se puede editar desde la aplicación.</dd>
+            <dd className="mt-1 font-medium">
+              No se puede editar desde la aplicación.
+            </dd>
           </div>
         </dl>
         <p className="mt-4 text-sm text-text-secondary">
-          El backend no expone un flujo para cambiar el usuario ni la contraseña.
+          El backend no expone un flujo para cambiar el usuario ni la
+          contraseña.
         </p>
       </Card>
 
@@ -164,9 +177,17 @@ export function UserDetailView({
             El usuario debe conservar al menos un rol.
           </p>
         )}
-        {rolesError && <p role="alert" className="mt-3 text-sm text-error">{rolesError}</p>}
+        {rolesError && (
+          <p role="alert" className="mt-3 text-sm text-error">
+            {rolesError}
+          </p>
+        )}
         <div className="mt-5 flex justify-end">
-          <Button onClick={submitRoles} disabled={selectedRoles.length === 0} pending={rolesPending}>
+          <Button
+            onClick={submitRoles}
+            disabled={selectedRoles.length === 0}
+            pending={rolesPending}
+          >
             {rolesPending ? "Guardando roles…" : "Guardar roles"}
           </Button>
         </div>
@@ -219,11 +240,20 @@ export function UserDetailView({
       >
         <div className="flex flex-col gap-5">
           <p className="text-sm text-text-secondary">
-            Al quitarte el rol Administrador vas a perder el acceso a las secciones de administración.
+            Al quitarte el rol Administrador vas a perder el acceso a las
+            secciones de administración.
           </p>
-          {rolesError && <p role="alert" className="text-sm text-error">{rolesError}</p>}
+          {rolesError && (
+            <p role="alert" className="text-sm text-error">
+              {rolesError}
+            </p>
+          )}
           <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setConfirmRoleChange(false)} disabled={rolesPending}>
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmRoleChange(false)}
+              disabled={rolesPending}
+            >
               Cancelar
             </Button>
             <Button onClick={saveRoles} pending={rolesPending}>
@@ -266,16 +296,40 @@ function ProfileForm({ user, onSaved }: { user: User; onSaved: () => void }) {
   return (
     <Card>
       <form onSubmit={submit} className="flex flex-col gap-5">
-        <h2 className="text-lg font-semibold">Datos de perfil</h2>
+        <h2 className="text-sm font-medium text-text-secondary">
+          Datos de perfil
+        </h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <Input label="Nombre" value={firstName} onChange={(event) => setFirstName(event.target.value)} />
-          <Input label="Apellido" value={lastName} onChange={(event) => setLastName(event.target.value)} />
-          <Input label="Teléfono" value={phone} onChange={(event) => setPhone(event.target.value)} />
-          <Input label="Dirección" value={address} onChange={(event) => setAddress(event.target.value)} />
+          <Input
+            label="Nombre"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
+          />
+          <Input
+            label="Apellido"
+            value={lastName}
+            onChange={(event) => setLastName(event.target.value)}
+          />
+          <Input
+            label="Teléfono"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
+          />
+          <Input
+            label="Dirección"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+          />
         </div>
-        {error && <p role="alert" className="text-sm text-error">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-error">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end">
-          <Button type="submit" pending={pending}>{pending ? "Guardando…" : "Guardar perfil"}</Button>
+          <Button type="submit" pending={pending}>
+            {pending ? "Guardando…" : "Guardar perfil"}
+          </Button>
         </div>
       </form>
     </Card>

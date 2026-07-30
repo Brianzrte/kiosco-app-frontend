@@ -4,10 +4,18 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import {
+  IconCardPay,
+  IconCart,
+  IconCash,
+  IconChart,
+  IconTransfer,
+} from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney, fromCents, toCents } from "@/lib/money";
@@ -108,9 +116,7 @@ export function SalesReportView() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Reporte de ventas</h1>
-      </div>
+      <PageHeader title="Reporte de ventas" />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-wrap gap-2">
@@ -161,20 +167,37 @@ export function SalesReportView() {
 function SummaryTiles({ days }: { days: DailyBreakdownRow[] }) {
   const summary = summarizeDays(days);
   const tiles = [
-    { label: "Ventas", value: String(summary.totalSales) },
-    { label: "Total facturado", value: formatMoney(summary.totalAmount) },
-    { label: "Efectivo", value: formatMoney(summary.cash) },
-    { label: "Tarjeta", value: formatMoney(summary.card) },
-    { label: "Transferencia", value: formatMoney(summary.transfer) },
+    {
+      label: "Ventas",
+      value: String(summary.totalSales),
+      icon: <IconCart className="size-4.5" />,
+    },
+    {
+      label: "Total facturado",
+      value: formatMoney(summary.totalAmount),
+      icon: <IconChart className="size-4.5" />,
+    },
+    {
+      label: "Efectivo",
+      value: formatMoney(summary.cash),
+      icon: <IconCash className="size-4.5" />,
+    },
+    {
+      label: "Tarjeta",
+      value: formatMoney(summary.card),
+      icon: <IconCardPay className="size-4.5" />,
+    },
+    {
+      label: "Transferencia",
+      value: formatMoney(summary.transfer),
+      icon: <IconTransfer className="size-4.5" />,
+    },
   ];
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
       {tiles.map((tile) => (
-        <Card key={tile.label}>
-          <p className="text-sm text-text-secondary">{tile.label}</p>
-          <p className="num mt-1 text-2xl font-semibold">{tile.value}</p>
-        </Card>
+        <StatCard key={tile.label} size="compact" {...tile} />
       ))}
     </div>
   );

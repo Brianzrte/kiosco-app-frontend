@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
@@ -95,7 +96,7 @@ export function PurchasesReportView() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-semibold tracking-tight text-text-primary">Compras a proveedores</h1>
+      <PageHeader title="Compras a proveedores" />
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex gap-2">

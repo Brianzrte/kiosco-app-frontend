@@ -97,15 +97,17 @@ export function Nav({ roles }: { roles: Role[] }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-label={item.label}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-1.5 rounded-app px-3 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] ${
+                  title={item.label}
+                  className={`flex items-center gap-0 rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] 2xl:gap-1.5 2xl:px-3 ${
                     active
                       ? "bg-primary-light text-primary"
                       : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
                   }`}
                 >
                   {ItemIcon && <ItemIcon className="size-4 shrink-0" />}
-                  {item.label}
+                  <span className="hidden 2xl:inline">{item.label}</span>
                 </Link>
               );
             })}
@@ -128,12 +130,14 @@ export function Nav({ roles }: { roles: Role[] }) {
           )}
           <button
             onClick={logout}
-            className={`ml-auto items-center gap-1.5 rounded-app px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex ${
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className={`ml-auto items-center gap-0 rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex 2xl:gap-1.5 2xl:px-3 ${
               useDrawerNav ? "hidden" : "flex"
             }`}
           >
             <IconLogout className="size-4 shrink-0" />
-            <span className="hidden md:inline">Cerrar sesión</span>
+            <span className="hidden 2xl:inline">Cerrar sesión</span>
           </button>
         </div>
       </header>
@@ -149,7 +153,9 @@ export function Nav({ roles }: { roles: Role[] }) {
       ) : (
         /* Mobile: fixed bottom tab bar, thumb-reachable. Only rendered for
            roles without `admin` (cashier, inventory, receiving — 2 items
-           each): admin uses the drawer above instead. */
+           each): admin uses the drawer above instead. Icons render at size-5
+           here vs. size-4 on the desktop nav above — a deliberately larger
+           touch target for the finger-driven tab bar, not a drift. */
         <nav
           aria-label="Secciones"
           className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-soft-lg md:hidden"

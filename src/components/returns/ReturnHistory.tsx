@@ -73,7 +73,7 @@ export function ReturnHistory({
                     {ret.reason}
                   </p>
                 </div>
-                <p className="num text-sm font-semibold">
+                <p className="num text-lg font-semibold">
                   {formatMoney(ret.total_amount)}
                 </p>
               </div>

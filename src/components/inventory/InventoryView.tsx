@@ -151,6 +151,10 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
             ))}
           </Select>
         )}
+        {/* Segmented control: filled background marks the active option,
+            same convention as ProductsReportView's sort buttons — a filter
+            toggle, not a section-switching tab (see StockPanel's Ajustar/
+            Mínimo tabs below, which use the underline convention instead). */}
         <div className="flex overflow-hidden rounded-app border border-border">
           <button
             type="button"
@@ -208,7 +212,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                   }`}
                 >
                   <div className="min-w-0 flex-1 basis-40">
-                    <p className="truncate font-medium">{item.name}</p>
+                    <p className="truncate text-sm font-medium">{item.name}</p>
                     <p className="data text-xs text-text-secondary">
                       {item.sku}
                     </p>
@@ -219,7 +223,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                     <>
                       {low && <Badge tone="warning">Stock bajo</Badge>}
                       <p
-                        className={`num w-24 text-right text-lg font-semibold ${
+                        className={`num w-24 text-right text-sm font-semibold ${
                           low ? "text-warning" : ""
                         }`}
                       >
@@ -236,7 +240,6 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                     {canPlanStock && (
                       <Button
                         variant="ghost"
-                        className="min-h-11 md:min-h-9"
                         onClick={() =>
                           setHistoryRequest({
                             productId: item.product_id,
@@ -249,7 +252,6 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                     )}
                     <Button
                       variant="secondary"
-                      className="min-h-11 md:min-h-9"
                       onClick={() => setSelectedItem(item)}
                     >
                       {item.initialized ? "Ajustar" : "Inicializar"}
@@ -377,6 +379,10 @@ function StockPanel({
         {isLow && <Badge tone="warning">Stock bajo</Badge>}
       </div>
 
+      {/* Underline tabs: switches between two content sections in the same
+          panel, distinct from the "Todos"/"Stock bajo" segmented filter
+          above — a section switcher and a filter toggle read differently on
+          purpose, so they don't share an active-state style. */}
       <div className="flex gap-1 border-b border-border">
         <button
           type="button"

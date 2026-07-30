@@ -206,7 +206,7 @@ export function LineChart({
                   x={textX}
                   y={yFor(p.y) - 10}
                   textAnchor={anchor}
-                  className="fill-text-primary text-[15px] font-medium"
+                  className="fill-text-primary text-xs font-medium"
                 >
                   {formatValue(p.y)}
                 </text>

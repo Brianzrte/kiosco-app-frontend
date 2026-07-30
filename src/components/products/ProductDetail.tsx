@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
@@ -54,27 +55,29 @@ export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-text-primary">{product.name}</h1>
-          {product.active ? (
+      <PageHeader
+        title={product.name}
+        titleAdornment={
+          product.active ? (
             <Badge tone="success">Activo</Badge>
           ) : (
             <Badge tone="neutral">Inactivo</Badge>
-          )}
-        </div>
-        {product.active ? (
-          <Button variant="secondary" onClick={() => setConfirmOpen(true)}>
-            Desactivar producto
-          </Button>
-        ) : (
-          roles.includes("admin") && (
-            <Button variant="primary" onClick={activate} pending={pending}>
-              {pending ? "Activando…" : "Activar producto"}
-            </Button>
           )
-        )}
-      </div>
+        }
+        actions={
+          product.active ? (
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+              Desactivar producto
+            </Button>
+          ) : (
+            roles.includes("admin") && (
+              <Button variant="primary" onClick={activate} pending={pending}>
+                {pending ? "Activando…" : "Activar producto"}
+              </Button>
+            )
+          )
+        }
+      />
 
       <ProductForm product={product} />
 
@@ -95,7 +98,7 @@ export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
           >
             Cancelar
           </Button>
-          <Button variant="primary" onClick={deactivate} pending={pending}>
+          <Button variant="danger" onClick={deactivate} pending={pending}>
             {pending ? "Desactivando…" : "Desactivar"}
           </Button>
         </div>
