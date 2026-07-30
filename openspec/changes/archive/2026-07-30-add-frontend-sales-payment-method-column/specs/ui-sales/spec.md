@@ -60,7 +60,7 @@ The sales list's payment-method column SHALL render each sale's payment method(s
 - **WHEN** a sale confirmed before the payments migration is displayed
 - **THEN** it shows its single migrated payment without any error or placeholder
 
-#### Scenario: Per-sale payment stays plain text outside the list column
+#### Scenario: Per-sale payment stays plain text
 - **WHEN** an individual sale's payment method is shown in a sale's detail view or a return's line
 - **THEN** it is rendered in plain text with no color coding, regardless of payment method
 
