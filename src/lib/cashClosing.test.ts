@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cashDifference, isCountedCash } from "./cashClosing";
+import {
+  cashDifference,
+  isCountedCash,
+  reconciliationStatusLabel,
+  reconciliationStatusTone,
+} from "./cashClosing";
 
 describe("cash closing amounts", () => {
   it("accepts non-negative decimal strings with up to two fraction digits", () => {
@@ -18,5 +23,22 @@ describe("cash closing amounts", () => {
 
   it("does not calculate a difference for invalid input", () => {
     expect(cashDifference("100.00", "100.001")).toBeNull();
+  });
+
+  it("maps every backend reconciliation status to accessible display text", () => {
+    expect(reconciliationStatusLabel("IN_PROGRESS")).toBe("Caja en curso");
+    expect(reconciliationStatusLabel("CLOSED")).toBe("Cierre registrado");
+    expect(reconciliationStatusLabel("REQUIRES_UPDATE")).toBe(
+      "Pendiente de actualizar",
+    );
+    expect(reconciliationStatusLabel("UNCLOSED")).toBe("Sin cerrar");
+    expect(reconciliationStatusLabel("NO_ACTIVITY")).toBe("Sin actividad");
+  });
+
+  it("uses semantic tones without deriving business status", () => {
+    expect(reconciliationStatusTone("CLOSED")).toBe("success");
+    expect(reconciliationStatusTone("IN_PROGRESS")).toBe("warning");
+    expect(reconciliationStatusTone("UNCLOSED")).toBe("error");
+    expect(reconciliationStatusTone("NO_ACTIVITY")).toBe("neutral");
   });
 });

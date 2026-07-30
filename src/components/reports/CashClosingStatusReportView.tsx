@@ -1,0 +1,199 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Table, Td, Th } from "@/components/ui/Table";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { api } from "@/lib/api";
+import {
+  reconciliationStatusLabel,
+  reconciliationStatusTone,
+} from "@/lib/cashClosing";
+import { formatMoney } from "@/lib/money";
+import { computeTotalPages } from "@/lib/pagination";
+import { today } from "@/lib/reports";
+import { DailyCashClosingStatusList } from "@/lib/types";
+import { useLoad } from "@/lib/useLoad";
+
+const PAGE_SIZE = 20;
+
+function firstOfMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function formatBusinessDate(value: string): string {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function formatClosingTime(value: string | null): string {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function AmountCell({ value }: { value: string | null }) {
+  return <>{value === null ? "—" : formatMoney(value)}</>;
+}
+
+export function CashClosingStatusReportView() {
+  const [from, setFrom] = useState(firstOfMonth());
+  const [to, setTo] = useState(today());
+  const [page, setPage] = useState(1);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Link
+        href="/reports"
+        className="text-sm font-medium text-primary hover:text-primary-hover"
+      >
+        ← Volver a reportes
+      </Link>
+
+      <PageHeader
+        title="Conciliación de caja"
+        description="Revisá los cierres diarios de cada cajero y los que requieren actualización."
+      />
+
+      <div className="flex flex-wrap items-end gap-3">
+        <Input
+          label="Desde"
+          type="date"
+          value={from}
+          onChange={(event) => {
+            setFrom(event.target.value);
+            setPage(1);
+          }}
+        />
+        <Input
+          label="Hasta"
+          type="date"
+          value={to}
+          onChange={(event) => {
+            setTo(event.target.value);
+            setPage(1);
+          }}
+        />
+      </div>
+
+      <CashClosingStatusTable
+        key={`${from}-${to}-${page}`}
+        from={from}
+        to={to}
+        page={page}
+        onPageChange={setPage}
+      />
+    </div>
+  );
+}
+
+function CashClosingStatusTable({
+  from,
+  to,
+  page,
+  onPageChange,
+}: {
+  from: string;
+  to: string;
+  page: number;
+  onPageChange: (page: number) => void;
+}) {
+  const fetcher = useCallback(
+    () =>
+      api<DailyCashClosingStatusList>(
+        `/cash-closings/daily-status?from=${from}&to=${to}&page=${page}&limit=${PAGE_SIZE}`,
+      ),
+    [from, to, page],
+  );
+  const { data, error, reload } = useLoad(fetcher);
+
+  if (error) return <ErrorState error={error} onRetry={reload} />;
+  if (data === null) return <ListSkeleton rows={6} />;
+  if (data.items.length === 0) {
+    return (
+      <EmptyState message="No hubo actividad de caja en el período seleccionado." />
+    );
+  }
+
+  const totalPages = computeTotalPages(data.total, PAGE_SIZE);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Table>
+        <thead>
+          <tr>
+            <Th>Fecha</Th>
+            <Th>Cajero</Th>
+            <Th>Estado</Th>
+            <Th className="text-right">Ventas</Th>
+            <Th className="text-right">Efectivo esperado</Th>
+            <Th className="text-right">Contado</Th>
+            <Th className="text-right">Diferencia</Th>
+            <Th className="text-right">Último cierre</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.items.map((item) => (
+            <tr key={`${item.business_date}-${item.cashier_id}`}>
+              <Td className="num whitespace-nowrap">
+                {formatBusinessDate(item.business_date)}
+              </Td>
+              <Td className="font-medium">{item.cashier_username}</Td>
+              <Td>
+                <Badge tone={reconciliationStatusTone(item.status)}>
+                  {reconciliationStatusLabel(item.status)}
+                </Badge>
+              </Td>
+              <Td className="num text-right">
+                {item.total_sales} · {formatMoney(item.total_amount)}
+              </Td>
+              <Td className="num text-right">
+                <AmountCell value={item.expected_cash} />
+              </Td>
+              <Td className="num text-right">
+                <AmountCell value={item.counted_cash} />
+              </Td>
+              <Td className="num text-right font-medium">
+                <AmountCell value={item.difference} />
+              </Td>
+              <Td className="num text-right">
+                {formatClosingTime(item.latest_closing?.closed_at ?? null)}
+              </Td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm text-text-secondary">
+            Página {page} de {totalPages} · {data.total} cierres diarios
+          </p>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              disabled={page <= 1}
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

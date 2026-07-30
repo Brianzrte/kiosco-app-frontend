@@ -343,6 +343,11 @@ function ReportNavCards() {
           title="Compras a proveedores"
           description="Pedidos realizados a proveedores, por fecha y estado."
         />
+        <ReportNavCard
+          href="/reports/cash-closings"
+          title="Conciliación de caja"
+          description="Cierres diarios, diferencias y estados por cajero."
+        />
       </div>
     </section>
   );

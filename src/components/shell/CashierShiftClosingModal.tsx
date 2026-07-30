@@ -24,8 +24,10 @@ function currentShiftRange(): ShiftRange {
 
 export function CashierShiftClosingModal({
   onClose,
+  onSaved,
 }: {
   onClose: () => void;
+  onSaved: () => void;
 }) {
   const toast = useToast();
   const range = useMemo(() => currentShiftRange(), []);
@@ -62,6 +64,7 @@ export function CashierShiftClosingModal({
         },
       });
       toast("success", "Cierre de caja registrado");
+      onSaved();
       onClose();
     } catch (e) {
       const message =

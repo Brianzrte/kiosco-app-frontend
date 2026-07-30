@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
+import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
 import { MOTION } from "@/lib/motion";
 import {
@@ -458,6 +459,7 @@ export function PosView() {
       const confirmed = await api<Sale>(`/sales/${sale.id}/confirm`, {
         method: "POST",
       });
+      window.dispatchEvent(new Event(CASH_CLOSING_STATUS_CHANGED));
       // No toast here: el panel de confirmación de abajo ya es la
       // confirmación (con número y total) y comparte la esquina con el
       // toast — dos "Venta confirmada" superpuestos en el mismo lugar.

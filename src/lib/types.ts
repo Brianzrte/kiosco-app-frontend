@@ -79,6 +79,43 @@ export type CashClosing = {
   closed_at: string;
 };
 
+export type CashClosingReconciliationStatus =
+  | "NO_ACTIVITY"
+  | "IN_PROGRESS"
+  | "UNCLOSED"
+  | "CLOSED"
+  | "REQUIRES_UPDATE";
+
+export type CashClosingStatus = {
+  business_date: string;
+  status: CashClosingReconciliationStatus;
+  latest_closing: CashClosing | null;
+  sales_after_latest_closing: number;
+  cash_after_latest_closing: string;
+};
+
+export type DailyCashClosingStatusItem = {
+  business_date: string;
+  cashier_id: string;
+  cashier_username: string;
+  status: CashClosingReconciliationStatus;
+  total_sales: number;
+  total_amount: string;
+  expected_cash: string | null;
+  counted_cash: string | null;
+  difference: string | null;
+  sales_after_latest_closing: number;
+  cash_after_latest_closing: string;
+  latest_closing: CashClosing | null;
+};
+
+export type DailyCashClosingStatusList = {
+  items: DailyCashClosingStatusItem[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
 export type Product = {
   id: string;
   sku: string;
