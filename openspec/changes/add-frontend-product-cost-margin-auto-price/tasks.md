@@ -1,21 +1,21 @@
 ## 1. Pure pricing helpers (`src/lib/`)
 
-- [ ] 1.1 Agregar a `src/lib/products.ts` (o a un módulo puro equivalente
+- [x] 1.1 Agregar a `src/lib/products.ts` (o a un módulo puro equivalente
       bajo `src/lib/`) una función `computeSalePriceFromCost(cost: string,
       percent: number): string | null` que devuelva el precio de venta como
       string decimal (`cost × (1 + percent/100)`, redondeado al centavo con
       `Math.round` sobre `toCents`/`fromCents` de `lib/money.ts`), y `null`
       cuando `cost` no sea un número positivo válido o `percent` no sea un
       número finito.
-- [ ] 1.2 Agregar una función `computePercentFromPrices(cost: string, price:
+- [x] 1.2 Agregar una función `computePercentFromPrices(cost: string, price:
       string): number | null` que devuelva `((price − cost) / cost) × 100`
       redondeado a un entero, y `null` cuando `cost` no sea un número
       positivo válido.
-- [ ] 1.3 Agregar una función `computeMarginAmount(cost: string, price:
+- [x] 1.3 Agregar una función `computeMarginAmount(cost: string, price:
       string): string | null` que devuelva `price − cost` como string
       decimal vía `subtractMoney`/`fromCents`/`toCents`, y `null` cuando
       `cost` o `price` no sean números válidos.
-- [ ] 1.4 (Prueba automatizada) Crear/extender `src/lib/products.test.ts` con
+- [x] 1.4 (Prueba automatizada) Crear/extender `src/lib/products.test.ts` con
       casos: costo positivo + porcentaje entero da el precio esperado;
       costo/porcentaje producen redondeo correcto al centavo (caso que no
       cae en un múltiplo exacto); costo `0`/vacío/no numérico devuelve
@@ -26,54 +26,54 @@
 
 ## 2. `ProductForm` — estado y campo de porcentaje
 
-- [ ] 2.1 Agregar al estado local de `ProductForm` un campo `marginPercent`
+- [x] 2.1 Agregar al estado local de `ProductForm` un campo `marginPercent`
       (string o number, a criterio de implementación) inicializado en `"30"`
       para alta, y para edición inicializado con
       `computePercentFromPrices(product.cost, product.unit_type === "pesable"
       ? product.price_per_kg : product.price)`, cayendo a `"30"` cuando esa
       función devuelva `null`.
-- [ ] 2.2 Renderizar un `Input` de porcentaje con label "% de ganancia" en la
+- [x] 2.2 Renderizar un `Input` de porcentaje con label "% de ganancia" en la
       misma grilla `sm:grid-cols-2` que ya usan costo y precio, sin romper el
       layout existente en mobile (320px) ni desktop.
-- [ ] 2.3 Al cambiar el costo: si `marginPercent` es un número válido, llamar
+- [x] 2.3 Al cambiar el costo: si `marginPercent` es un número válido, llamar
       a `computeSalePriceFromCost` y, si no devuelve `null`, actualizar el
       campo de precio activo (`price` o `price_per_kg` según `unit_type`); si
       devuelve `null` (costo vacío/`0`/inválido), no tocar el precio.
-- [ ] 2.4 Al cambiar `marginPercent`: mismo recálculo que 2.3, usando el
+- [x] 2.4 Al cambiar `marginPercent`: mismo recálculo que 2.3, usando el
       costo actual.
-- [ ] 2.5 Al cambiar el precio activo directamente (edición manual): llamar a
+- [x] 2.5 Al cambiar el precio activo directamente (edición manual): llamar a
       `computePercentFromPrices` con el costo actual y actualizar
       `marginPercent` con el resultado cuando no sea `null`; si es `null`
       (costo vacío/`0`/inválido), dejar `marginPercent` sin cambios.
-- [ ] 2.6 Confirmar por inspección que el payload construido en `submit`
+- [x] 2.6 Confirmar por inspección que el payload construido en `submit`
       sigue siendo exactamente `{ sku, barcode, name, category_id, unit_type,
       price, price_per_kg, cost }` y que `marginPercent` nunca se agrega al
       objeto enviado.
 
 ## 3. `ProductForm` — texto de margen derivado
 
-- [ ] 3.1 Renderizar, junto al campo de precio activo, un texto derivado con
+- [x] 3.1 Renderizar, junto al campo de precio activo, un texto derivado con
       el resultado de `computeMarginAmount` y `computePercentFromPrices`
       (formateados con `formatMoney`), por ejemplo
       `Margen: $ 375,00 (30%)`, sólo cuando ambas funciones devuelvan un
       valor no nulo; omitir el texto por completo en caso contrario (costo
       vacío/`0`/inválido).
-- [ ] 3.2 Asociar el texto de margen al campo de precio con
+- [x] 3.2 Asociar el texto de margen al campo de precio con
       `aria-describedby`, siguiendo el mismo patrón que
       `product-sku-help`/`aria-describedby="product-sku-help"` ya usado para
       el SKU.
-- [ ] 3.3 Marcar el contenedor del texto de margen con `role="status"` y
+- [x] 3.3 Marcar el contenedor del texto de margen con `role="status"` y
       `aria-live="polite"`, igual que el bloque de ayuda de SKU, para que los
       lectores de pantalla anuncien los recálculos sin robar el foco.
-- [ ] 3.4 Confirmar por inspección que un margen negativo se muestra con el
+- [x] 3.4 Confirmar por inspección que un margen negativo se muestra con el
       signo `-` como parte del texto (monto y porcentaje), sin depender
       únicamente de una clase de color para comunicarlo.
 
 ## 4. Verificación
 
-- [ ] 4.1 `npm run lint`
-- [ ] 4.2 `npm test`
-- [ ] 4.3 `npm run build` (el change no toca `page.tsx` ni `route.ts`, pero sí
+- [x] 4.1 `npm run lint`
+- [x] 4.2 `npm test`
+- [x] 4.3 `npm run build` (el change no toca `page.tsx` ni `route.ts`, pero sí
       tipos y un componente compartido; correr build igual para detectar
       errores de tipos no visibles en lint)
 - [ ] 4.4 (Prueba manual) Alta de producto `unitario`: cargar costo, ver que
