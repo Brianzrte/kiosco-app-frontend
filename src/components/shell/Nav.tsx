@@ -90,7 +90,7 @@ export function Nav({ roles }: { roles: Role[] }) {
   return (
     <>
       <header className="border-b border-border bg-surface shadow-soft">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-3 py-3 md:gap-6 md:px-4">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-3 md:gap-3 md:px-4">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <span className="flex size-8 items-center justify-center rounded-tight bg-primary text-sm font-bold text-text-inverse">
               M
@@ -99,7 +99,7 @@ export function Nav({ roles }: { roles: Role[] }) {
               Mini Moni
             </span>
           </Link>
-          <nav className="hidden flex-1 items-center gap-1 md:flex">
+          <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex xl:gap-0">
             {items.map((item) => {
               const ItemIcon = NAV_ICONS[item.href];
               const active = isActive(item.href);
@@ -110,7 +110,7 @@ export function Nav({ roles }: { roles: Role[] }) {
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
-                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] xl:gap-1.5 xl:px-3 ${
+                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] xl:gap-1 xl:px-2 xl:text-xs ${
                     active
                       ? "bg-primary-light text-primary"
                       : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
@@ -122,7 +122,7 @@ export function Nav({ roles }: { roles: Role[] }) {
               );
             })}
           </nav>
-          <span className="ml-auto hidden rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-text-secondary md:ml-0 md:inline-block">
+          <span className="ml-auto hidden shrink-0 rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-text-secondary md:ml-0 md:inline-block">
             {roles.map((role) => ROLE_META[role].label).join(" · ")}
           </span>
           {isCashier && (
@@ -150,7 +150,7 @@ export function Nav({ roles }: { roles: Role[] }) {
             onClick={logout}
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
-            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex xl:gap-1.5 xl:px-3 ${
+            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex xl:gap-1 xl:px-2 xl:text-xs ${
               useDrawerNav ? "hidden" : "flex"
             }`}
           >

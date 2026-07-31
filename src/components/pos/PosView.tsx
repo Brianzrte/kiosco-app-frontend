@@ -629,12 +629,13 @@ export function PosView() {
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_23rem]">
       <div className={`flex flex-col gap-4 ${cart.length > 0 ? "pb-28 md:pb-0" : ""}`}>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <form onSubmit={scan}>
           <label htmlFor="scan" className="mb-1.5 block text-sm font-medium">
             Escaneá o ingresá un código de barras
           </label>
           <div className="relative">
-            <IconBarcode className="pointer-events-none absolute left-5 top-1/2 size-6 -translate-y-1/2 text-primary/70" />
+            <IconBarcode className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-primary/70" />
             <input
               id="scan"
               ref={scanRef}
@@ -643,7 +644,7 @@ export function PosView() {
               autoFocus
               autoComplete="off"
               placeholder="Código de barras"
-              className="data w-full rounded-app border-2 border-border bg-surface py-4 pl-14 pr-5 text-lg shadow-soft placeholder:font-sans placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
+              className="data h-12 w-full rounded-app border-2 border-border bg-surface pl-12 pr-4 text-base shadow-soft placeholder:font-sans placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
             />
           </div>
         </form>
@@ -678,7 +679,7 @@ export function PosView() {
                     ? `pos-search-result-${searchResults[activeResultIndex].id}`
                     : undefined
                 }
-                className="w-full rounded-app border border-border bg-surface py-2.5 pl-9 pr-4 shadow-soft placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
+                className="h-11 w-full rounded-app border border-border bg-surface pl-9 pr-4 shadow-soft placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
               />
             </div>
           </form>
@@ -739,6 +740,7 @@ export function PosView() {
               )}
             </ul>
           )}
+        </div>
         </div>
 
         {scanError && (
@@ -810,7 +812,11 @@ export function PosView() {
                         ? `flash-${flash.nonce}`
                         : "static"
                     }
-                    className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] md:px-5 ${
+                    className={`${
+                      line.product.unit_type === "unitario"
+                        ? "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:gap-x-3 lg:px-4"
+                        : "flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 lg:px-4"
+                    } transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] ${
                       flash?.id === line.product.id ? "flash" : ""
                     }`}
                   >
@@ -865,7 +871,7 @@ export function PosView() {
                         </Button>
                       </div>
                     )}
-                    <p className="num w-24 text-right text-base font-semibold">
+                    <p className="num w-24 justify-self-end text-right text-base font-semibold">
                       {formatMoney(effectiveLinePrice(
                         line.calculatedPrice ?? fromCents(toCents(line.product.price) * line.quantity),
                         line.actualPrice,
