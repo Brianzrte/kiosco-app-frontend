@@ -186,7 +186,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   return (
     <section className="flex flex-col gap-6">
       <PageHeader
-        title="Compras y recepción"
+        title="Proveedores"
         description="Revisá los pedidos pendientes de proveedores."
       />
       <div className="grid gap-6 lg:grid-cols-5">
