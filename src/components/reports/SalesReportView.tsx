@@ -12,8 +12,10 @@ import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
-import { formatMoney, fromCents, toCents } from "@/lib/money";
-import { computeTotalPages, pageWindow } from "@/lib/pagination";
+import { formatMoney } from "@/lib/money";
+import { computeTotalPages } from "@/lib/pagination";
+import { buildSummaryQuery } from "@/lib/salesSummary";
+import type { SalesSummaryByPaymentMethod } from "@/lib/salesSummary";
 import { addDays, presetRange, today, type RangePreset } from "@/lib/reports";
 
 type PaymentBreakdown = { method: string; total_amount: string };
@@ -29,7 +31,12 @@ type DailyBreakdownRow = {
   by_payment_method: PaymentBreakdown[];
   cashiers: CashierBreakdown[];
 };
-type DailyBreakdownResponse = { days: DailyBreakdownRow[] };
+type DailyBreakdownResponse = {
+  days: DailyBreakdownRow[];
+  page: number;
+  limit: number;
+  total: number;
+};
 
 /** Amount for `method` on `row`, zero when the backend didn't report it —
  * columns must stay aligned across rows (ui-reports-detail). */
@@ -40,39 +47,14 @@ function amountFor(row: DailyBreakdownRow, method: string): string {
   );
 }
 
-/**
- * Range totals for the summary cards, summed from `days` — the same
- * complete (non-paginated) backend-aggregated rows already fetched for the
- * table, never from a raw or paginated sales listing.
- */
-function summarizeDays(days: DailyBreakdownRow[]) {
-  let totalSales = 0;
-  let totalCents = 0;
-  let cashCents = 0;
-  let cardCents = 0;
-  let transferCents = 0;
-  for (const day of days) {
-    totalSales += day.total_sales;
-    totalCents += toCents(day.total_amount);
-    cashCents += toCents(amountFor(day, "CASH"));
-    cardCents += toCents(amountFor(day, "CARD"));
-    transferCents += toCents(amountFor(day, "TRANSFER"));
-  }
-  return {
-    totalSales,
-    totalAmount: fromCents(totalCents),
-    cash: fromCents(cashCents),
-    card: fromCents(cardCents),
-    transfer: fromCents(transferCents),
-  };
-}
-
 function formatDayLabel(isoDate: string): string {
   const [year, month, day] = isoDate.split("-");
   return `${day}/${month}/${year}`;
 }
 
 type DayPreset = "today" | "yesterday";
+type SalesPreset = DayPreset | RangePreset;
+const DAILY_PAGE_SIZE = 20;
 
 const DAY_PRESETS: { key: DayPreset; label: string }[] = [
   { key: "today", label: "Hoy" },
@@ -93,12 +75,7 @@ function firstOfMonth(): string {
 export function SalesReportView() {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(today());
-
-  function applyDayPreset(key: DayPreset) {
-    const day = key === "today" ? today() : addDays(today(), -1);
-    setFrom(day);
-    setTo(day);
-  }
+  const [activePreset, setActivePreset] = useState<SalesPreset | null>("month");
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,41 +90,90 @@ export function SalesReportView() {
 
       <PageHeader title="Reporte de ventas" />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-wrap gap-2">
-          {DAY_PRESETS.map((preset) => (
-            <Button
-              key={preset.key}
-              type="button"
-              variant="secondary"
-              onClick={() => applyDayPreset(preset.key)}
-            >
-              {preset.label}
-            </Button>
-          ))}
-          {RANGE_PRESETS.map((preset) => (
-            <Button
-              key={preset.key}
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                const range = presetRange(preset.key);
-                setFrom(range.from);
-                setTo(range.to);
-              }}
-            >
-              {preset.label}
-            </Button>
-          ))}
-        </div>
-        <CollapsibleFilters activeFilterCount={1}>
-          <Input compact label="Desde" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          <Input compact label="Hasta" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </CollapsibleFilters>
-      </div>
-
-      <SalesReportContent key={`${from}-${to}`} from={from} to={to} />
+      <SalesReportContent
+        key={`${from}-${to}`}
+        from={from}
+        to={to}
+        activePreset={activePreset}
+        onFromChange={(value) => {
+          setFrom(value);
+          setActivePreset(null);
+        }}
+        onToChange={(value) => {
+          setTo(value);
+          setActivePreset(null);
+        }}
+        onPresetChange={(key) => {
+          if (key === "today" || key === "yesterday") {
+            const day = key === "today" ? today() : addDays(today(), -1);
+            setFrom(day);
+            setTo(day);
+          } else {
+            const range = presetRange(key);
+            setFrom(range.from);
+            setTo(range.to);
+          }
+          setActivePreset(key);
+        }}
+      />
     </div>
+  );
+}
+
+function SalesReportFilters({
+  from,
+  to,
+  activePreset,
+  onFromChange,
+  onToChange,
+  onPresetChange,
+}: {
+  from: string;
+  to: string;
+  activePreset: SalesPreset | null;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+  onPresetChange: (key: SalesPreset) => void;
+}) {
+  return (
+    <CollapsibleFilters activeFilterCount={activePreset === null ? 1 : 0}>
+      <div className="flex flex-wrap gap-2">
+        {DAY_PRESETS.map((preset) => (
+          <Button
+            key={preset.key}
+            type="button"
+            variant={activePreset === preset.key ? "primary" : "secondary"}
+            onClick={() => onPresetChange(preset.key)}
+          >
+            {preset.label}
+          </Button>
+        ))}
+        {RANGE_PRESETS.map((preset) => (
+          <Button
+            key={preset.key}
+            type="button"
+            variant={activePreset === preset.key ? "primary" : "secondary"}
+            onClick={() => onPresetChange(preset.key)}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+      <Input
+        compact
+        label="Desde"
+        type="date"
+        value={from}
+        onChange={(e) => onFromChange(e.target.value)}
+      />
+      <Input
+        compact
+        label="Hasta"
+        type="date"
+        value={to}
+        onChange={(e) => onToChange(e.target.value)}
+      />
+    </CollapsibleFilters>
   );
 }
 
@@ -155,61 +181,102 @@ function CashierPills({ cashiers }: { cashiers: CashierBreakdown[] }) {
   if (cashiers.length === 0) {
     return <span className="text-sm text-text-secondary">—</span>;
   }
+  const visibleCashiers = cashiers.slice(0, 3);
+  const remainingCashiers = cashiers.slice(3);
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {cashiers.map((c) => (
+      {visibleCashiers.map((c) => (
         <Badge key={c.cashier_id} tone={pastelFor(c.cashier_id)}>
           {c.cashier_name}
         </Badge>
       ))}
+      {remainingCashiers.length > 0 && (
+        <Badge
+          tone="neutral"
+          title={`Más cajeros: ${remainingCashiers.map((c) => c.cashier_name).join(", ")}`}
+          aria-label={`Más cajeros: ${remainingCashiers.map((c) => c.cashier_name).join(", ")}`}
+        >
+          ...
+        </Badge>
+      )}
     </div>
   );
 }
 
-function SalesReportContent({ from, to }: { from: string; to: string }) {
+function SalesReportContent({
+  from,
+  to,
+  activePreset,
+  onFromChange,
+  onToChange,
+  onPresetChange,
+}: {
+  from: string;
+  to: string;
+  activePreset: SalesPreset | null;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+  onPresetChange: (key: SalesPreset) => void;
+}) {
   const [page, setPage] = useState(1);
-  const fetcher = useCallback(
-    () =>
+  const fetcher = useCallback(async () => {
+    const [breakdown, summary] = await Promise.all([
       api<DailyBreakdownResponse>(
-        `/reports/sales/daily-breakdown?from=${from}&to=${to}`,
+        `/reports/sales/daily-breakdown?from=${from}&to=${to}&page=${page}&limit=${DAILY_PAGE_SIZE}`,
       ),
-    [from, to],
-  );
+      api<SalesSummaryByPaymentMethod>(
+        `/reports/sales/summary?${buildSummaryQuery({ from, to })}`,
+      ),
+    ]);
+    return { ...breakdown, summary };
+  }, [from, page, to]);
   const { data, error, reload } = useLoad(fetcher);
-  const days = data?.days ?? null;
-  const pageSize = 25;
-  const totalPages = days ? computeTotalPages(days.length, pageSize) : 1;
-  const visibleDays = days ? pageWindow(days, page, pageSize) : [];
 
-  if (error) return <ErrorState error={error} onRetry={reload} />;
-  if (days === null) return <ListSkeleton rows={6} />;
-  if (days.length === 0) {
+  const filters = (
+    <SalesReportFilters
+      from={from}
+      to={to}
+      activePreset={activePreset}
+      onFromChange={onFromChange}
+      onToChange={onToChange}
+      onPresetChange={onPresetChange}
+    />
+  );
+
+  if (error) {
     return (
-      <EmptyState message="No hay ventas confirmadas en el período seleccionado." />
+      <div className="flex flex-col gap-6">
+        <ErrorState error={error} onRetry={reload} />
+        {filters}
+      </div>
+    );
+  }
+  if (data === null) {
+    return (
+      <div className="flex flex-col gap-6">
+        <ListSkeleton rows={6} />
+        {filters}
+      </div>
+    );
+  }
+  if (data.total === 0) {
+    return (
+      <div className="flex flex-col gap-6">
+        <EmptyState message="No hay ventas confirmadas en el período seleccionado." />
+        {filters}
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      {(() => {
-        const summary = summarizeDays(days);
-        return (
-          <SummaryCards
-            data={{
-              total_sales: summary.totalSales,
-              total_amount: summary.totalAmount,
-              by_payment_method: [
-                { method: "CASH", sale_count: 0, total_amount: summary.cash },
-                { method: "CARD", sale_count: 0, total_amount: summary.card },
-                { method: "TRANSFER", sale_count: 0, total_amount: summary.transfer },
-              ],
-            }}
-          />
-        );
-      })()}
+      <SummaryCards data={data.summary} />
+
+      {filters}
 
       <ul className="flex flex-col gap-3 md:hidden">
-        {visibleDays.map((day) => (
+        {data.days.map((day) => (
           <li key={day.date} className="rounded-app border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
               <p className="font-medium">{formatDayLabel(day.date)}</p>
@@ -236,7 +303,7 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
           </tr>
         </thead>
         <tbody>
-          {visibleDays.map((day) => (
+          {data.days.map((day) => (
             <tr key={day.date}>
               <Td className="num">{formatDayLabel(day.date)}</Td>
               <Td className="num text-right font-medium">
@@ -259,12 +326,14 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
         </tbody>
       </Table>
       </div>
-      {totalPages > 1 && (
+      {computeTotalPages(data.total, DAILY_PAGE_SIZE) > 1 && (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-text-secondary">Página {page} de {totalPages} · {days.length} días</p>
+          <p className="text-sm text-text-secondary">
+            Página {data.page} de {computeTotalPages(data.total, DAILY_PAGE_SIZE)} · {data.total} días
+          </p>
           <div className="flex gap-2">
-            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</Button>
-            <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Siguiente</Button>
+            <Button variant="secondary" disabled={data.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</Button>
+            <Button variant="secondary" disabled={data.page >= computeTotalPages(data.total, DAILY_PAGE_SIZE)} onClick={() => setPage((value) => Math.min(computeTotalPages(data.total, DAILY_PAGE_SIZE), value + 1))}>Siguiente</Button>
           </div>
         </div>
       )}
