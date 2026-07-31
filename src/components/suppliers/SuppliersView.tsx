@@ -24,6 +24,7 @@ import { api, ApiError } from "@/lib/api";
 import { computeTotalPages, pageWindow } from "@/lib/pagination";
 import { Supplier, SuppliersList } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
+import { useViewportPageSize } from "@/lib/useViewportPageSize";
 
 type DialogState = "create" | "edit" | "deactivate" | null;
 
@@ -58,7 +59,11 @@ export function SuppliersView() {
       supplier.name.toLocaleLowerCase("es-AR").includes(term),
     );
   }, [suppliers, search]);
-  const pageSize = 25;
+  const { pageSize, mobileListRef, desktopListRef } = useViewportPageSize({
+    itemCount: filtered.length,
+    onPageReset: () => setPage(1),
+    defaultPageSize: 15,
+  });
   const totalPages = computeTotalPages(filtered.length, pageSize);
   const visibleSuppliers = pageWindow(filtered, page, pageSize);
 
@@ -177,7 +182,7 @@ export function SuppliersView() {
       ) : (
         <>
           <div className="md:hidden">
-            <ul className="flex flex-col gap-3">
+            <ul ref={mobileListRef} className="flex flex-col gap-3">
               {visibleSuppliers.map((supplier) => (
                 <SupplierCard
                   key={supplier.id}
@@ -192,7 +197,7 @@ export function SuppliersView() {
               ))}
             </ul>
           </div>
-          <div className="hidden md:block">
+          <div ref={desktopListRef} className="hidden md:block">
             <Table>
               <thead>
                 <tr>

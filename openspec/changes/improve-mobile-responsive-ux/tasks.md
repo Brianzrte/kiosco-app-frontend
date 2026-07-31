@@ -76,11 +76,23 @@
 - [x] 10.1 Remove the "Cierre de caja" button and `CashClosingTool` component from `SalesView.tsx`, with no relocation and no replacement control or screen.
 - [ ] 10.2 Manual test: confirm `/sales` no longer offers any control leading to the removed tool, and that `CashierReconciliationIndicator`/`CashierShiftClosingModal` (the unrelated cashier shift-closing feature) are completely unaffected — still present for role `cashier`, still absent for other roles.
 
-## 11. Verification
+## 11. P1 — Notebook density audit for the complete non-POS flow
+
+- [ ] 11.1 Build the browser audit matrix for every non-POS route: `/login`; shell and cashier shift closing; `/sales` and `/sales/[id]`; `/products`, `/products/new`, `/products/[id]`, `/categories`; `/inventory`; `/purchasing`, `/purchasing/history`, `/purchasing/new`, `/purchasing/[id]`, `/purchasing/suppliers`, `/suppliers`, `/receiving` and `/receiving/[id]`; `/reports`, `/reports/sales`, `/reports/products`, `/reports/purchases`, `/reports/cash-closings`, `/reports/inventory-valuation`; and `/users`, `/users/new`, `/users/[id]`. Evidence: one recorded result per route and viewport; POS is explicitly excluded because it is closed.
+- [ ] 11.2 In `SaleDetail`, replace the duplicated cell/content vertical padding with an explicit compact table density governed by the shared UI kit, preserving semantic headers, numeric alignment, corrected-price explanation, long-name wrapping and all required item/payment data. Evidence: code inspection plus rendered row measurements at 1024×768 and 1366×768.
+- [ ] 11.3 Audit and apply only scoped size/overflow fixes to login, authenticated shell, mobile navigation drawer and cashier shift-closing modal. Evidence: keyboard and visual pass at 360×800, 1024×768 and 1366×768, with no change to role or mutation behavior.
+- [ ] 11.4 Audit and apply only scoped size/overflow fixes to sales list, sale detail and return history/form, excluding POS. Evidence: list/detail/return flow completes at 360×800, 1024×768 and 1366×768; primary actions remain reachable and no table or dialog produces accidental page overflow.
+- [ ] 11.5 Audit and apply only scoped size/overflow fixes to products list/detail/create, categories and inventory, excluding the already-closed POS. Evidence: search/filter/form/stock-history flows at 360×800, 1024×768 and 1366×768; tables, dialogs and comboboxes preserve their required data and actions.
+- [ ] 11.6 Audit and apply only scoped size/overflow fixes to purchasing hub/history/create/detail, suppliers and receiving redirects/detail. Evidence: create/history/receive/supplier flows at 360×800, 1024×768 and 1366×768; role-gated actions remain visible or absent as specified.
+- [ ] 11.7 Audit and apply only scoped size/overflow fixes to reports hub, sales, products, purchases, cash-closings and inventory valuation. Evidence: filters, summaries, tables/cards, charts and pagination at 360×800, 1024×768 and 1366×768; no critical metric or action is clipped.
+- [ ] 11.8 Audit and apply only scoped size/overflow fixes to users list/detail/create. Evidence: admin list and form flows at 360×800, 1024×768 and 1366×768; labels, validation and submit actions remain reachable.
+- [ ] 11.9 Run the complete browser pass through Chrome DevTools MCP from a clean session, recording viewport, route, scroll dimensions, visible primary action, and any remaining finding. A route is not marked visually verified from static code inspection alone.
+
+## 12. Verification
 
 - [x] 11.1 `npm run lint` (passes with the pre-existing `PosView.tsx` exhaustive-deps warning.)
 - [x] 11.2 `npm test` (124 tests passed.)
 - [x] 11.3 `npm run build` (successful with network access for the existing Google Fonts.)
-- [ ] 11.4 Manual regression pass across the nine touched screens (`/sales`, `/products`, `/inventory`, `/purchasing`, `/purchasing/history`, `/suppliers`, `/reports/sales`, `/reports/products`, `/reports/purchases`, `/reports/cash-closings`) at 360×800, 768×1024, 1024×768, 1280×800, and 1366×768, confirming no unintended change to layout at `md`/`lg`/`xl`/`2xl` outside the header breakpoint itself.
-- [ ] 11.5 Backend-real check: re-confirm against a running local backend instance that `GET /api/v1/reports/sales/daily-breakdown`, `GET /suppliers`, and `GET /purchase-orders` still behave exactly as verified in task 0.1, since this change's pagination work assumes their current (non-)support for query-level pagination.
-- [ ] 11.6 Sync specs and archive this change — **not executed here**; requires explicit user decision after implementation and review.
+- [ ] 12.4 Manual regression pass across the touched non-POS screens and the new sale-detail density behavior at 360×800, 768×1024, 1024×768, 1280×800, and 1366×768, confirming no unintended change to layout at `md`/`lg`/`xl`/`2xl` outside the approved fixes. POS is excluded from this pass.
+- [ ] 12.5 Backend-real check: re-confirm against a running local backend instance that `GET /api/v1/reports/sales/daily-breakdown`, `GET /suppliers`, and `GET /purchase-orders` still behave exactly as verified in task 0.1, since this change's pagination work assumes their current (non-)support for query-level pagination.
+- [ ] 12.6 Sync specs and archive this change — **not executed here**; requires explicit user decision after implementation and review.

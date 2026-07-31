@@ -40,3 +40,18 @@ For an Admin, below the `md` breakpoint the sale-number search (governed by "Fin
 #### Scenario: Secondary filters are collapsed by default on mobile for Admin
 - **WHEN** an Admin views the sales list below the `md` breakpoint
 - **THEN** status, cashier, and date-range filters are reachable inside a collapsed group, not expanded by default, and no aggregate figure or the list itself requires scrolling past them to see the first result
+
+### Requirement: Sale detail remains compact on notebook viewports
+The sale detail view SHALL preserve all sale items, quantities or weights, prices, subtotals, payments, status, sale number and relevant date required by this capability. At desktop and tablet breakpoints, the item table SHALL use a compact, consistent row density appropriate for 1024×768 and 1366×768 notebook viewports, without duplicated vertical padding between the table cell and its content. Compactness SHALL NOT remove data, reduce body text below the design-system legibility floor, or replace semantic table headers with a visually styled non-table structure.
+
+#### Scenario: Detail fits a notebook viewport proportionally
+- **WHEN** an Admin or authorized cashier opens a sale detail at 1024×768 or 1366×768
+- **THEN** the item table remains readable, its columns stay aligned, and no row is enlarged by duplicated container/content padding
+
+#### Scenario: Detail data remains complete after compaction
+- **WHEN** a sale contains multiple items, corrected prices, or multiple payments
+- **THEN** every required value and its semantic label remains available, with corrected prices still distinguishable by strike-through plus non-colour text or accessible explanation
+
+#### Scenario: Long product names do not break the compact table
+- **WHEN** an item has a long product name or a return-status badge
+- **THEN** the product column wraps or applies an explicit complete-content strategy without overlapping numeric columns or producing page-level horizontal overflow

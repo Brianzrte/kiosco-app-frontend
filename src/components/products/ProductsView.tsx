@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -15,6 +15,10 @@ import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
 import { computeTotalPages } from "@/lib/pagination";
+import {
+  computeProductsPageSize,
+  PRODUCTS_DEFAULT_PAGE_SIZE,
+} from "@/lib/products";
 import { CategoryList, ProductList } from "@/lib/types";
 
 function productPrice(product: ProductList["products"][number]): string {
@@ -23,6 +27,11 @@ function productPrice(product: ProductList["products"][number]): string {
     : formatMoney(product.price);
 }
 
+// Desktop only needs the layout's bottom padding plus a small breathing room
+// below the pager; reserving the larger mobile allowance leaves an avoidable
+// blank band at the bottom of notebook viewports.
+const RESERVED_BELOW_LIST_PX = 56;
+
 export function ProductsView() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -30,7 +39,9 @@ export function ProductsView() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(PRODUCTS_DEFAULT_PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   const fetcher = useCallback(
     () => {
@@ -48,12 +59,43 @@ export function ProductsView() {
         ),
       ]);
     },
-    [activeFilter, categoryFilter, page, search],
+    [activeFilter, categoryFilter, page, pageSize, search],
   );
   const { data, error, reload } = useLoad(fetcher);
   const productPage = data?.[0] ?? null;
   const products = productPage?.products ?? null;
   const categories = useMemo(() => data?.[1] ?? [], [data]);
+
+  useEffect(() => {
+    if (!productPage || productPage.products.length === 0) return;
+    const productsOnPage = productPage.products;
+
+    function recompute() {
+      const mobileRect = mobileListRef.current?.getBoundingClientRect();
+      const desktopRect = desktopListRef.current?.getBoundingClientRect();
+      const visibleRect =
+        mobileRect && mobileRect.height > 0
+          ? mobileRect
+          : desktopRect && desktopRect.height > 0
+            ? desktopRect
+            : null;
+      if (!visibleRect) return;
+
+      const next = computeProductsPageSize({
+        viewportHeight: window.innerHeight,
+        listTop: visibleRect.top,
+        rowHeight: visibleRect.height / productsOnPage.length,
+        reservedBelow: RESERVED_BELOW_LIST_PX,
+      });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    }
+
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [pageSize, productPage]);
 
   const categoryName = useMemo(
     () => new Map(categories.map((c) => [c.id, c.name])),
@@ -115,7 +157,7 @@ export function ProductsView() {
       ) : (
         <>
           {/* Mobile: one card per product */}
-          <ul className="flex flex-col gap-3 md:hidden">
+          <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
             {products.map((p) => (
               <li key={p.id}>
                 <Link
@@ -150,7 +192,7 @@ export function ProductsView() {
           </ul>
 
           {/* Desktop: table */}
-          <div className="hidden md:block">
+          <div ref={desktopListRef} className="hidden md:block">
             <Table>
               <thead>
                 <tr>

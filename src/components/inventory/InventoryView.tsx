@@ -688,6 +688,9 @@ function MovementHistorySection({
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   function updateFilter(update: () => void) {
     update();
@@ -706,13 +709,30 @@ function MovementHistorySection({
   const fetcher = useCallback(
     () =>
       api<MovementList>(
-        `/inventory/movements?${buildMovementsQuery({ productId, type, from, to, page })}`,
+        `/inventory/movements?${buildMovementsQuery({ productId, type, from, to, page, limit: pageSize })}`,
       ),
-    [productId, type, from, to, page],
+    [productId, type, from, to, page, pageSize],
   );
   const { data, error, reload } = useLoad(fetcher);
   const rows = data?.items ?? null;
-  const totalPages = data ? computeTotalPages(data.total, data.limit) : 1;
+  const totalPages = data ? computeTotalPages(data.total, pageSize) : 1;
+
+  useEffect(() => {
+    if (!data || data.items.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = Math.min(15, Math.max(5, Math.floor((window.innerHeight - rect.top - 56) / (rect.height / data.items.length))));
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -769,7 +789,7 @@ function MovementHistorySection({
         <EmptyState message="No hay movimientos registrados con estos filtros." />
       ) : (
         <>
-          <ul className="flex flex-col gap-3 md:hidden">
+          <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
             {rows.map((row) => (
               <li key={row.id} className="rounded-app border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -805,7 +825,7 @@ function MovementHistorySection({
               </li>
             ))}
           </ul>
-          <div className="hidden md:block">
+          <div ref={desktopListRef} className="hidden md:block">
             <Table>
               <thead>
                 <tr>

@@ -6,7 +6,6 @@ import { ReturnForm } from "@/components/returns/ReturnForm";
 import { ReturnHistory } from "@/components/returns/ReturnHistory";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -156,26 +155,27 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             }
           />
 
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:items-stretch lg:gap-6">
           <section>
             <h2 className="mb-3 text-sm font-medium text-text-secondary">
               Ítems
             </h2>
-            <ul className="flex flex-col gap-3 md:hidden">
+            <ul className="flex flex-col gap-2 md:hidden">
               {sale.items.map((item) => {
                 const availability = availabilityByItemId.get(item.id);
                 const fullyReturned = !!availability && availability.alreadyReturned > 0 && availability.available === 0;
                 const partiallyReturned = !!availability && availability.alreadyReturned > 0 && availability.available > 0;
                 return (
-                  <li key={item.id} className="rounded-app border border-border bg-surface p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className={`min-w-0 font-medium ${fullyReturned ? "text-text-secondary line-through decoration-error decoration-2" : ""}`}>{item.product_name}</p>
+                <li key={item.id} className="rounded-app border border-border bg-surface p-3">
+                  <div className="flex items-start justify-between gap-3">
+                      <p className={`min-w-0 text-sm font-medium ${fullyReturned ? "text-text-secondary line-through decoration-error decoration-2" : ""}`}>{item.product_name}</p>
                       {fullyReturned && <Badge tone="error">Devuelto</Badge>}
                       {partiallyReturned && <Badge tone="error">{availability.alreadyReturned} de {itemQuantityLabel(item)} devuelto</Badge>}
                     </div>
-                    <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                    <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
                       <div><dt className="text-text-secondary">{item.weight ? "Peso" : "Cantidad"}</dt><dd className="num">{itemQuantityLabel(item)}</dd></div>
                       <div><dt className="text-text-secondary">{item.weight ? "Precio cobrado" : "Precio unitario"}</dt><dd className="num">{itemPrice(item)}</dd></div>
-                      <div><dt className="text-text-secondary">Subtotal</dt><dd className="num text-lg font-semibold">{formatMoney(item.subtotal)}</dd></div>
+                      <div><dt className="text-text-secondary">Subtotal</dt><dd className="num font-semibold">{formatMoney(item.subtotal)}</dd></div>
                     </dl>
                   </li>
                 );
@@ -185,10 +185,10 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             <Table>
               <thead>
                 <tr>
-                  <Th className="w-2/5">Producto</Th>
-                  <Th className="text-right">Cantidad / peso</Th>
-                  <Th className="text-right">Precio</Th>
-                  <Th className="text-right">Subtotal</Th>
+                  <Th compact className="w-2/5">Producto</Th>
+                  <Th compact className="text-right">Cantidad / peso</Th>
+                  <Th compact className="text-right">Precio</Th>
+                  <Th compact className="text-right">Subtotal</Th>
                 </tr>
               </thead>
               <tbody>
@@ -207,8 +207,8 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                     : "";
                   return (
                     <tr key={item.id}>
-                      <Td className={`font-medium ${struck}`}>
-                        <span className="inline-flex flex-wrap items-center gap-2 py-2">
+                      <Td compact className={`font-medium ${struck}`}>
+                        <span className="inline-flex flex-wrap items-center gap-2">
                           {item.product_name}
                           {fullyReturned && (
                             <Badge tone="error" className="no-underline">
@@ -223,16 +223,16 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                           )}
                         </span>
                       </Td>
-                      <Td className={`num text-right ${struck}`}>
-                        <span className="block py-2">{itemQuantityLabel(item)}</span>
+                      <Td compact className={`num text-right ${struck}`}>
+                        <span className="block">{itemQuantityLabel(item)}</span>
                       </Td>
-                      <Td className={`num text-right ${struck}`}>
-                        <span className="block py-2">
+                      <Td compact className={`num text-right ${struck}`}>
+                        <span className="block">
                           {itemPrice(item)}
                         </span>
                       </Td>
-                      <Td className={`num text-right font-medium ${struck}`}>
-                        <span className="block py-2 text-lg font-semibold">
+                      <Td compact className={`num text-right font-medium ${struck}`}>
+                        <span className="block font-semibold">
                           {formatMoney(item.subtotal)}
                         </span>
                       </Td>
@@ -244,38 +244,39 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             </div>
           </section>
 
+          <aside className="flex flex-col gap-4 lg:h-full">
           <section>
             <h2 className="mb-3 text-sm font-medium text-text-secondary">
-              Pagos
+              Detalle
             </h2>
-            {sale.payments.length === 0 ? (
-              <Card>
-                <p className="text-sm text-text-secondary">
-                  Todavía no se registró ningún pago para esta venta.
-                </p>
-              </Card>
-            ) : (
-              <ul className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
-                {sale.payments.map((payment) => (
-                  <li
-                    key={payment.id}
-                    className="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0"
-                  >
-                    <span>
-                      {paymentMethodLabels[payment.method] ?? payment.method}
-                    </span>
-                    {sale.payments.length > 1 && (
-                      <span className="num font-medium">
-                        {formatMoney(payment.amount)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <dl className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+              <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3">
+                <dt className="text-sm text-text-secondary">Medio de pago</dt>
+                <dd className="text-right text-sm font-medium">
+                  {sale.payments.length === 0 ? (
+                    <span className="text-text-secondary">Sin pago registrado</span>
+                  ) : (
+                    sale.payments.map((payment) => (
+                      <div key={payment.id}>
+                        {paymentMethodLabels[payment.method] ?? payment.method}
+                        {sale.payments.length > 1 && (
+                          <span className="num ml-2 font-normal text-text-secondary">
+                            {formatMoney(payment.amount)}
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 px-4 py-3">
+                <dt className="text-sm text-text-secondary">Cantidad de productos</dt>
+                <dd className="num text-sm font-medium">{sale.items.length}</dd>
+              </div>
+            </dl>
           </section>
 
-          <div className="flex flex-col gap-2 rounded-app bg-primary-hover px-4 py-3 text-text-inverse">
+          <div className="mt-auto flex flex-col gap-2 rounded-app bg-primary-hover px-4 py-3 text-text-inverse">
             {netTotal !== null ? (
               <>
                 <div className="flex items-center justify-between text-sm text-text-inverse/80">
@@ -290,7 +291,7 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                 </div>
                 <div className="flex items-center justify-between border-t border-text-inverse/20 pt-2">
                   <span className="text-sm font-medium">
-                    Total neto de la venta
+                    Total
                   </span>
                   <span className="num text-xl font-semibold">
                     {formatMoney(netTotal)}
@@ -299,12 +300,14 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
               </>
             ) : (
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total de la venta</span>
+                <span className="text-sm font-medium">Total</span>
                 <span className="num text-xl font-semibold">
                   {formatMoney(sale.total)}
                 </span>
               </div>
             )}
+          </div>
+          </aside>
           </div>
 
           {sale.status === "confirmed" &&

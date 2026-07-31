@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useCallback, useState } from "react";
+import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -11,10 +11,9 @@ import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import {
   buildPurchaseOrdersQuery,
-  PURCHASE_ORDER_PAGE_SIZE,
   purchaseOrderStatusLabel,
 } from "@/lib/purchasing";
 import { PurchaseOrderStatus, PurchaseOrdersList, Supplier } from "@/lib/types";
@@ -35,6 +34,9 @@ export function PurchaseOrdersHistoryView() {
   const [to, setTo] = useState("");
   const [status, setStatus] = useState<HistoryStatus>("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   const suppliersFetcher = useCallback(
     () => api<{ suppliers: Supplier[] }>("/suppliers").then((result) => result.suppliers),
@@ -49,10 +51,28 @@ export function PurchaseOrdersHistoryView() {
       to,
       status,
       page,
+      limit: pageSize,
     });
     return api<PurchaseOrdersList>(`/purchase-orders?${query}`);
-  }, [supplier, from, to, status, page]);
+  }, [supplier, from, to, status, page, pageSize]);
   const { data, error, reload } = useLoad(fetcher);
+
+  useEffect(() => {
+    if (!data || data.purchase_orders.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / data.purchase_orders.length, reservedBelow: 56, min: 5, max: 15, fallback: 15 });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   const hasFilters = Boolean(supplier || from || to || status);
   const clearFilters = () => {
@@ -164,7 +184,7 @@ export function PurchaseOrdersHistoryView() {
         />
       ) : (
         <>
-          <ul className="flex flex-col gap-3 md:hidden">
+          <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
             {data.purchase_orders.map((order) => (
               <li
                 key={order.id}
@@ -191,7 +211,7 @@ export function PurchaseOrdersHistoryView() {
               </li>
             ))}
           </ul>
-          <div className="hidden md:block">
+          <div ref={desktopListRef} className="hidden md:block">
           <Table>
             <thead>
               <tr>
@@ -230,17 +250,17 @@ export function PurchaseOrdersHistoryView() {
             </tbody>
           </Table>
           </div>
-          {computeTotalPages(data.total, PURCHASE_ORDER_PAGE_SIZE) > 1 && (
+          {computeTotalPages(data.total, pageSize) > 1 && (
             <div className="flex items-center justify-end gap-2">
               <p className="mr-auto text-sm text-text-secondary">
-                Página {page} de {computeTotalPages(data.total, PURCHASE_ORDER_PAGE_SIZE)}
+                Página {page} de {computeTotalPages(data.total, pageSize)}
               </p>
               <Button variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>
                 Anterior
               </Button>
               <Button
                 variant="secondary"
-                disabled={page === computeTotalPages(data.total, PURCHASE_ORDER_PAGE_SIZE)}
+                disabled={page === computeTotalPages(data.total, pageSize)}
                 onClick={() => setPage(page + 1)}
               >
                 Siguiente

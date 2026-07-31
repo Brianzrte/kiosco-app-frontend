@@ -5,6 +5,7 @@ import {
   KeyboardEvent,
   useCallback,
   useId,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -20,7 +21,7 @@ import { ErrorState, LoadingState } from "@/components/ui/states";
 import { IconAlert, IconSearch, IconTrash } from "@/components/ui/icons";
 import { ApiError, api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages, pageWindow } from "@/lib/pagination";
+import { computePageSize, computeTotalPages, pageWindow } from "@/lib/pagination";
 import {
   appendSupplierAssociation,
   filterIncompleteDataSuggestions,
@@ -69,6 +70,8 @@ export function PurchaseOrderForm() {
   const [incompleteSearchOpen, setIncompleteSearchOpen] = useState(false);
   const [incompleteSearchTerm, setIncompleteSearchTerm] = useState("");
   const [incompletePage, setIncompletePage] = useState(1);
+  const [incompletePageSize, setIncompletePageSize] = useState(15);
+  const incompleteListRef = useRef<HTMLUListElement>(null);
   const incompleteSearchInputRef = useRef<HTMLInputElement>(null);
   const incompleteSearchButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -191,14 +194,34 @@ export function PurchaseOrderForm() {
     }
   }
 
+  const { lowStock, incompleteData } = suggestions
+    ? splitReplenishmentSuggestions(suggestions.suggestions)
+    : { lowStock: [], incompleteData: [] };
+  const visibleIncompleteData =
+    incompleteSearchOpen && incompleteSearchTerm.trim()
+      ? filterIncompleteDataSuggestions(incompleteData, incompleteSearchTerm)
+      : incompleteData;
+
+  useEffect(() => {
+    if (visibleIncompleteData.length === 0) return;
+    const recompute = () => {
+      const rect = incompleteListRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / Math.min(visibleIncompleteData.length, incompletePageSize), reservedBelow: 56, min: 5, max: 15, fallback: 15 });
+      if (next === incompletePageSize) return;
+      setIncompletePageSize(next);
+      setIncompletePage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [incompletePageSize, visibleIncompleteData]);
+
   if (error) return <ErrorState error={error} />;
   if (!data) return <LoadingState />;
 
   const [suppliers, products] = data;
   const activeSuppliers = suppliers.filter((supplier) => supplier.active);
-  const { lowStock, incompleteData } = suggestions
-    ? splitReplenishmentSuggestions(suggestions.suggestions)
-    : { lowStock: [], incompleteData: [] };
 
   return (
     <Card className="max-w-4xl">
@@ -376,13 +399,6 @@ export function PurchaseOrderForm() {
                   </div>
                 </div>
                 {(() => {
-                  const visibleIncompleteData =
-                    incompleteSearchOpen && incompleteSearchTerm.trim()
-                      ? filterIncompleteDataSuggestions(
-                          incompleteData,
-                          incompleteSearchTerm,
-                        )
-                      : incompleteData;
                   if (incompleteData.length === 0) {
                     return (
                       <p className="text-sm text-text-secondary">
@@ -398,12 +414,11 @@ export function PurchaseOrderForm() {
                       </p>
                     );
                   }
-                  const pageSize = 20;
-                  const totalPages = computeTotalPages(visibleIncompleteData.length, pageSize);
+                  const totalPages = computeTotalPages(visibleIncompleteData.length, incompletePageSize);
                   return (
                     <>
-                    <ul className="divide-y divide-border rounded-app border border-border">
-                      {pageWindow(visibleIncompleteData, incompletePage, pageSize).map((suggestion) => (
+                    <ul ref={incompleteListRef} className="divide-y divide-border rounded-app border border-border">
+                      {pageWindow(visibleIncompleteData, incompletePage, incompletePageSize).map((suggestion) => (
                         <IncompleteDataSuggestionItem
                           key={suggestion.product_id}
                           suggestion={suggestion}

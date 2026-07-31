@@ -14,24 +14,26 @@ export function Table({
 }
 
 export function Th({
+  compact = false,
   className = "",
   ...props
-}: ThHTMLAttributes<HTMLTableCellElement>) {
+}: ThHTMLAttributes<HTMLTableCellElement> & { compact?: boolean }) {
   return (
     <th
-      className={`border-b border-border-strong bg-surface-subtle px-4 py-3 text-xs font-semibold uppercase tracking-wide text-text-secondary first:rounded-tl-app last:rounded-tr-app ${className}`}
+      className={`border-b border-border-strong bg-surface-subtle ${compact ? "px-3 py-2" : "px-4 py-3"} text-xs font-semibold uppercase tracking-wide text-text-secondary first:rounded-tl-app last:rounded-tr-app ${className}`}
       {...props}
     />
   );
 }
 
 export function Td({
+  compact = false,
   className = "",
   ...props
-}: TdHTMLAttributes<HTMLTableCellElement>) {
+}: TdHTMLAttributes<HTMLTableCellElement> & { compact?: boolean }) {
   return (
     <td
-      className={`border-b border-border px-4 py-3 last:border-b-0 ${className}`}
+      className={`border-b border-border ${compact ? "px-3 py-2" : "px-4 py-3"} last:border-b-0 ${className}`}
       {...props}
     />
   );

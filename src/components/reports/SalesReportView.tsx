@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -13,7 +13,7 @@ import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { buildSummaryQuery } from "@/lib/salesSummary";
 import type { SalesSummaryByPaymentMethod } from "@/lib/salesSummary";
 import { addDays, presetRange, today, type RangePreset } from "@/lib/reports";
@@ -220,17 +220,20 @@ function SalesReportContent({
   onPresetChange: (key: SalesPreset) => void;
 }) {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DAILY_PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
   const fetcher = useCallback(async () => {
     const [breakdown, summary] = await Promise.all([
       api<DailyBreakdownResponse>(
-        `/reports/sales/daily-breakdown?from=${from}&to=${to}&page=${page}&limit=${DAILY_PAGE_SIZE}`,
+        `/reports/sales/daily-breakdown?from=${from}&to=${to}&page=${page}&limit=${pageSize}`,
       ),
       api<SalesSummaryByPaymentMethod>(
         `/reports/sales/summary?${buildSummaryQuery({ from, to })}`,
       ),
     ]);
     return { ...breakdown, summary };
-  }, [from, page, to]);
+  }, [from, page, to, pageSize]);
   const { data, error, reload } = useLoad(fetcher);
 
   const filters = (
@@ -243,6 +246,23 @@ function SalesReportContent({
       onPresetChange={onPresetChange}
     />
   );
+
+  useEffect(() => {
+    if (!data || data.days.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / data.days.length, reservedBelow: 56, min: 5, max: 15, fallback: DAILY_PAGE_SIZE });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   if (error) {
     return (
@@ -275,7 +295,7 @@ function SalesReportContent({
 
       {filters}
 
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {data.days.map((day) => (
           <li key={day.date} className="rounded-app border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
@@ -290,7 +310,7 @@ function SalesReportContent({
           </li>
         ))}
       </ul>
-      <div className="hidden md:block">
+      <div ref={desktopListRef} className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -326,14 +346,14 @@ function SalesReportContent({
         </tbody>
       </Table>
       </div>
-      {computeTotalPages(data.total, DAILY_PAGE_SIZE) > 1 && (
+      {computeTotalPages(data.total, pageSize) > 1 && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-text-secondary">
-            Página {data.page} de {computeTotalPages(data.total, DAILY_PAGE_SIZE)} · {data.total} días
+            Página {data.page} de {computeTotalPages(data.total, pageSize)} · {data.total} días
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={data.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</Button>
-            <Button variant="secondary" disabled={data.page >= computeTotalPages(data.total, DAILY_PAGE_SIZE)} onClick={() => setPage((value) => Math.min(computeTotalPages(data.total, DAILY_PAGE_SIZE), value + 1))}>Siguiente</Button>
+            <Button variant="secondary" disabled={data.page >= computeTotalPages(data.total, pageSize)} onClick={() => setPage((value) => Math.min(computeTotalPages(data.total, pageSize), value + 1))}>Siguiente</Button>
           </div>
         </div>
       )}

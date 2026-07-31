@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -12,7 +12,7 @@ import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { today } from "@/lib/reports";
 
 type ProductReportItem = {
@@ -104,7 +104,6 @@ export function ProductsReportView() {
       </CollapsibleFilters>
 
       <ProductsReportTable
-        key={`${from}-${to}-${sort}-${page}`}
         from={from}
         to={to}
         sort={sort}
@@ -128,14 +127,34 @@ function ProductsReportTable({
   page: number;
   onPageChange: (page: number) => void;
 }) {
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
   const fetcher = useCallback(
     () =>
       api<ProductsReportResponse>(
-        `/reports/products?from=${from}&to=${to}&sort=${sort}&page=${page}&limit=${PAGE_SIZE}`,
+        `/reports/products?from=${from}&to=${to}&sort=${sort}&page=${page}&limit=${pageSize}`,
       ),
-    [from, to, sort, page],
+    [from, to, sort, page, pageSize],
   );
   const { data, error, reload } = useLoad(fetcher);
+
+  useEffect(() => {
+    if (!data || data.items.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / data.items.length, reservedBelow: 56, min: 5, max: 15, fallback: PAGE_SIZE });
+      if (next === pageSize) return;
+      setPageSize(next);
+      onPageChange(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, onPageChange, pageSize]);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={6} />;
@@ -145,11 +164,10 @@ function ProductsReportTable({
     );
   }
 
-  const totalPages = computeTotalPages(data.total, PAGE_SIZE);
-
+  const totalPages = computeTotalPages(data.total, pageSize);
   return (
     <div className="flex flex-col gap-4">
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {data.items.map((item) => (
           <li key={item.product_id} className="rounded-app border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
@@ -164,7 +182,7 @@ function ProductsReportTable({
           </li>
         ))}
       </ul>
-      <div className="hidden md:block">
+      <div ref={desktopListRef} className="hidden md:block">
       <Table>
         <thead>
           <tr>

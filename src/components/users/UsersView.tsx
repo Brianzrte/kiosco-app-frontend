@@ -1,6 +1,13 @@
 "use client";
 
-import { KeyboardEvent, useCallback, useState } from "react";
+import {
+  KeyboardEvent,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
@@ -12,12 +19,12 @@ import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { ROLE_META } from "@/lib/roleMeta";
 import { User } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 15;
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-AR", {
@@ -29,20 +36,48 @@ function formatDate(value: string) {
 
 export function UsersView() {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   const fetcher = useCallback(
     () =>
       api<{ users: User[]; total: number }>(
-        `/users?limit=${PAGE_SIZE}&page=${page}`,
+        `/users?limit=${pageSize}&page=${page}`,
       ),
-    [page],
+    [page, pageSize],
   );
   const { data, error, reload } = useLoad(fetcher);
   const [deactivating, setDeactivating] = useState<User | null>(null);
   const [pending, setPending] = useState(false);
   const [dialogError, setDialogError] = useState<string | null>(null);
   const users = data?.users ?? null;
-  const totalPages = data ? computeTotalPages(data.total, PAGE_SIZE) : 1;
+  const totalPages = data ? computeTotalPages(data.total, pageSize) : 1;
+
+  useEffect(() => {
+    if (!data || data.users.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({
+        viewportHeight: window.innerHeight,
+        listTop: rect.top,
+        rowHeight: rect.height / data.users.length,
+        reservedBelow: 56,
+        min: 5,
+        max: 15,
+        fallback: PAGE_SIZE,
+      });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +106,12 @@ export function UsersView() {
         />
       ) : (
         <>
-          <UsersList users={users} onDeactivate={setDeactivating} />
+          <UsersList
+            users={users}
+            onDeactivate={setDeactivating}
+            mobileListRef={mobileListRef}
+            desktopListRef={desktopListRef}
+          />
           {totalPages > 1 && (
             <div className="flex items-center justify-between gap-3 text-sm text-text-secondary">
               <span>
@@ -156,9 +196,13 @@ export function UsersView() {
 function UsersList({
   users,
   onDeactivate,
+  mobileListRef,
+  desktopListRef,
 }: {
   users: User[];
   onDeactivate: (user: User) => void;
+  mobileListRef: RefObject<HTMLUListElement | null>;
+  desktopListRef: RefObject<HTMLDivElement | null>;
 }) {
   const router = useRouter();
   function activate(user: User) {
@@ -172,7 +216,7 @@ function UsersList({
   }
   return (
     <>
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {users.map((user) => (
           <li
             key={user.id}
@@ -213,7 +257,7 @@ function UsersList({
         ))}
       </ul>
 
-      <div className="hidden md:block">
+      <div ref={desktopListRef} className="hidden md:block">
         <Table>
           <thead>
             <tr>

@@ -61,6 +61,7 @@ export function buildMovementsQuery(opts: {
   from: string;
   to: string;
   page: number;
+  limit?: number;
 }): string {
   const params = new URLSearchParams();
   if (opts.productId) params.set("product_id", opts.productId);
@@ -68,6 +69,7 @@ export function buildMovementsQuery(opts: {
   if (opts.from) params.set("from", opts.from);
   if (opts.to) params.set("to", opts.to);
   params.set("page", String(opts.page));
+  if (opts.limit !== undefined) params.set("limit", String(opts.limit));
   return params.toString();
 }
 

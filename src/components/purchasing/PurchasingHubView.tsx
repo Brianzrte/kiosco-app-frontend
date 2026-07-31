@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, ReactNode, useCallback, useState } from "react";
+import { KeyboardEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +12,6 @@ import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages } from "@/lib/pagination";
 import {
   buildPurchaseOrdersQuery,
   PURCHASE_ORDER_PAGE_SIZE,
@@ -23,6 +22,7 @@ import { PurchaseOrdersList, Supplier } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 import { hasAnyRole } from "@/lib/roleAccess";
 import { Role } from "@/lib/types";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 
 export function PurchasingHubView({ roles }: { roles: Role[] }) {
   const router = useRouter();
@@ -31,6 +31,9 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pageSize, setPageSize] = useState(PURCHASE_ORDER_PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
 
   const suppliersFetcher = useCallback(
     () => api<{ suppliers: Supplier[] }>("/suppliers").then((result) => result.suppliers),
@@ -45,10 +48,35 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
       to,
       status: "PENDING",
       page,
+      limit: pageSize,
     });
     return api<PurchaseOrdersList>(`/purchase-orders?${query}`);
-  }, [supplier, from, to, page]);
+  }, [supplier, from, to, page, pageSize]);
   const { data, error, reload } = useLoad(fetcher);
+  useEffect(() => {
+    if (!data || data.purchase_orders.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({
+        viewportHeight: window.innerHeight,
+        listTop: rect.top,
+        rowHeight: rect.height / data.purchase_orders.length,
+        reservedBelow: 56,
+        min: 5,
+        max: 15,
+        fallback: PURCHASE_ORDER_PAGE_SIZE,
+      });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, pageSize]);
 
   const hasFilters = Boolean(supplier || from || to);
   const clearFilters = () => {
@@ -89,10 +117,10 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
       />
     );
   } else {
-    const pages = computeTotalPages(data.total, PURCHASE_ORDER_PAGE_SIZE);
+    const pages = computeTotalPages(data.total, pageSize);
     pendingOrdersContent = (
       <>
-        <ul className="flex flex-col gap-3 md:hidden">
+        <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
           {data.purchase_orders.map((order) => (
             <li
               key={order.id}
@@ -125,7 +153,8 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
           ))}
         </ul>
 
-        <Table className="hidden md:block">
+        <div ref={desktopListRef} className="hidden md:block">
+        <Table>
           <thead>
             <tr>
               <Th>Proveedor</Th>
@@ -165,6 +194,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
             ))}
           </tbody>
         </Table>
+        </div>
 
         {pages > 1 && (
           <div className="flex items-center justify-end gap-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -12,7 +12,7 @@ import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney } from "@/lib/money";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { presetRange, today, type RangePreset } from "@/lib/reports";
 
 type Supplier = { id: string; name: string; active: boolean };
@@ -128,7 +128,6 @@ export function PurchasesReportView() {
       </div>
 
       <PurchasesReportTable
-        key={`${from}-${to}-${supplierId}-${page}`}
         from={from}
         to={to}
         supplierId={supplierId}
@@ -152,17 +151,37 @@ function PurchasesReportTable({
   page: number;
   onPageChange: (page: number) => void;
 }) {
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const mobileListRef = useRef<HTMLUListElement>(null);
+  const desktopListRef = useRef<HTMLDivElement>(null);
   const fetcher = useCallback(() => {
     const params = new URLSearchParams({
       from,
       to,
       page: String(page),
-      limit: String(PAGE_SIZE),
+      limit: String(pageSize),
     });
     if (supplierId) params.set("supplier_id", supplierId);
     return api<PurchaseOrdersResponse>(`/purchase-orders?${params.toString()}`);
-  }, [from, to, supplierId, page]);
+  }, [from, to, supplierId, page, pageSize]);
   const { data, error, reload } = useLoad(fetcher);
+
+  useEffect(() => {
+    if (!data || data.purchase_orders.length === 0) return;
+    const recompute = () => {
+      const mobile = mobileListRef.current?.getBoundingClientRect();
+      const desktop = desktopListRef.current?.getBoundingClientRect();
+      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / data.purchase_orders.length, reservedBelow: 56, min: 5, max: 15, fallback: PAGE_SIZE });
+      if (next === pageSize) return;
+      setPageSize(next);
+      onPageChange(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [data, onPageChange, pageSize]);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={6} />;
@@ -172,11 +191,10 @@ function PurchasesReportTable({
     );
   }
 
-  const totalPages = computeTotalPages(data.total, PAGE_SIZE);
-
+  const totalPages = computeTotalPages(data.total, pageSize);
   return (
     <div className="flex flex-col gap-4">
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {data.purchase_orders.map((order) => (
           <li key={order.id} className="rounded-app border border-border bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
@@ -188,7 +206,7 @@ function PurchasesReportTable({
           </li>
         ))}
       </ul>
-      <div className="hidden md:block">
+      <div ref={desktopListRef} className="hidden md:block">
       <Table>
         <thead>
           <tr>

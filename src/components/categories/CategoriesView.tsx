@@ -16,11 +16,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
-import { computeTotalPages } from "@/lib/pagination";
+import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { useLoad } from "@/lib/useLoad";
 import { Category, CategoryList, ProductList } from "@/lib/types";
-
-const PAGE_SIZE = 20;
 
 const swatches: Record<string, string> = {
   "pastel-pink": "bg-pastel-pink",
@@ -41,16 +39,33 @@ export function CategoriesView() {
   const [editPending, setEditPending] = useState(false);
   const [page, setPage] = useState(1);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const [pageSize, setPageSize] = useState(15);
+  const desktopListRef = useRef<HTMLUListElement>(null);
 
   const categoriesFetcher = useCallback(
-    () => api<CategoryList>(`/categories?limit=${PAGE_SIZE}&page=${page}`),
-    [page],
+    () => api<CategoryList>(`/categories?limit=${pageSize}&page=${page}`),
+    [page, pageSize],
   );
   const { data: categoryList, error, reload } = useLoad(categoriesFetcher);
   const categories = categoryList?.categories ?? null;
   const totalPages = categoryList
-    ? computeTotalPages(categoryList.total, PAGE_SIZE)
+    ? computeTotalPages(categoryList.total, pageSize)
     : 1;
+
+  useEffect(() => {
+    if (!categoryList || categoryList.categories.length === 0) return;
+    const recompute = () => {
+      const rect = desktopListRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / categoryList.categories.length, reservedBelow: 56, min: 5, max: 15, fallback: 15 });
+      if (next === pageSize) return;
+      setPageSize(next);
+      setPage(1);
+    };
+    recompute();
+    window.addEventListener("resize", recompute);
+    return () => window.removeEventListener("resize", recompute);
+  }, [categoryList, pageSize]);
 
   // Sólo alimenta el contador de productos por categoría; no participa de la
   // paginación de la lista de categorías.
@@ -169,7 +184,7 @@ export function CategoriesView() {
         <EmptyState message="Todavía no hay categorías. Creá la primera para organizar los productos." />
       ) : (
         <>
-          <ul className="max-w-xl overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+          <ul ref={desktopListRef} className="max-w-xl overflow-hidden rounded-app border border-border bg-surface shadow-soft">
             {categories.map((c) => (
               <li
                 key={c.id}

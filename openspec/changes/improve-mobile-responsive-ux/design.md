@@ -13,13 +13,13 @@ Varias de las capabilities tocadas (`ui-suppliers-purchasing`, `ui-cashier-closi
 - Reemplazar el patrón repetido de "filtros siempre expandidos" por un único primitive colapsable reutilizable, extraído del patrón ya usado (y ya probado en producción) en `PurchaseOrderForm.tsx`.
 - Que el POS mobile permita completar una venta con un solo ítem sin scroll, y que sus controles de cantidad cumplan el piso táctil de 44px ya documentado en el proyecto.
 - Que ningún listado renderice miles de filas de una sola vez cuando existe una alternativa de paginación razonable.
+- Que las pantallas no-POS sigan siendo legibles y operables en notebooks de 14"/15"/17" a 1366×768 y 1024×768, incluyendo anchos CSS reducidos por escalado del sistema.
 
 **Non-Goals:**
 - No se cambia ningún layout ya verificado en `md:`/`lg:`/`xl:`/`2xl:`, salvo el propio breakpoint del header (el único hallazgo que vive exactamente en ese rango).
-- No se toca el layout de POS en tablet/desktop (≥768px): la auditoría confirmó que el layout de 2 columnas ya resuelve el problema de scroll ahí.
+- No se toca el layout ni el flujo del POS: esa parte del change ya se considera cerrada y queda fuera de esta ampliación.
 - No se agrega ninguna dependencia nueva. El primitive de filtros colapsables se construye sobre los primitives existentes (`Button`, `Input`, `Select`) y sobre el patrón inline ya usado en `PurchaseOrderForm.tsx`, no sobre una librería de disclosure/accordion externa.
 - No se reubica ni se preserva la funcionalidad de `CashClosingTool`; su eliminación es una decisión de producto ya tomada, no una migración a diseñar.
-- No se audita ni se modifica ningún flujo exclusivo de rol cajero (`CashierShiftClosingModal`), `/login` ni `/categories`.
 - No se resuelve el combobox de categorías de Inventario con más de 100 opciones: es una sugerencia a futuro fuera de este change.
 
 ## User flow
@@ -86,6 +86,13 @@ Decisión de producto ya tomada por quien solicitó el change, no una decisión 
 ### 10. Reordenamiento del hub de compras en mobile
 `PurchasingHubView.tsx` (~242–257) tiene la acción primaria "Crear pedido" dentro de un `<aside aria-label="Acciones de compras">` que hoy se apila debajo de filtros + hasta 25 cards de pedidos pendientes + paginación en mobile. Con datos reales (509 pedidos en las pruebas) la acción de crear pedido queda casi indescubrible sin scroll masivo. La corrección es de orden de aparición en mobile: el panel de acciones (incluyendo "Crear pedido") pasa a aparecer antes que la lista de pedidos pendientes por debajo de `md`, sin cambiar el layout de cuatro quintos/un quinto ya vigente desde el breakpoint de escritorio (governed por el requirement "Purchasing hub prioritizes pending orders", que no cambia arriba de ese breakpoint).
 
+### 11. Densidad de notebooks en el flujo no-POS
+La auditoría se amplía a todas las superficies de la aplicación excepto el POS ya cerrado: `/login`; shell y cierre de turno del cajero; `/sales` y `/sales/[id]`; `/products`, `/products/new`, `/products/[id]`, `/categories`; `/inventory`; `/purchasing`, `/purchasing/history`, `/purchasing/new`, `/purchasing/[id]`, `/purchasing/suppliers` y sus redirects `/suppliers`/`/receiving`; `/reports`, `/reports/sales`, `/reports/products`, `/reports/purchases`, `/reports/cash-closings`, `/reports/inventory-valuation`; y `/users`, `/users/new`, `/users/[id]`.
+
+En cada superficie se comprueba ausencia de overflow horizontal accidental, acción primaria alcanzable sin atravesar una lista extensa, densidad de tablas/listas adecuada para lectura operativa, formularios que no fuerzan scroll innecesario antes de su acción, títulos y botones que no se superponen, y estados de carga/vacío/error visibles. Las correcciones reutilizan primitives y tokens existentes; no se achica la tipografía por debajo del piso de legibilidad ni se oculta información esencial.
+
+En `SaleDetail`, el problema ya tiene evidencia estática: desde `md` se monta la tabla, `Table`/`Td` aportan padding vertical y cada contenido agrega otro `py-2`. La solución es una variante compacta explícita del primitive o una composición equivalente gobernada por el kit, quitando el padding duplicado y manteniendo la tabla de cuatro columnas en escritorio. La tabla no se convierte en cards en desktop porque el detalle sigue requiriendo escaneo alineado de cantidades y subtotales.
+
 ## Accessibility
 
 - El diálogo de historial de movimientos hereda la trampa de foco, cierre por `Esc` y cierre por click en backdrop que `Dialog` ya provee; el foco vuelve al control que lo abrió al cerrarse, igual que "Ajustar".
@@ -94,6 +101,8 @@ Decisión de producto ya tomada por quien solicitó el change, no una decisión 
 - El carrusel de `SummaryCards` en mobile sigue siendo alcanzable por teclado (scroll horizontal por foco secuencial en cada card, sin necesidad de un control de paginación adicional) y no introduce ningún elemento nuevo dependiente sólo de color.
 - La barra de acción fija del POS no oculta ningún control accesible detrás de ella: el padding inferior del carrito se ajusta para que la última línea no quede tapada, y el orden de tabulación no cambia respecto del flujo actual.
 - Los botones +/- de cantidad del carrito mantienen su `aria-label` existente; sólo cambia su tamaño de área táctil.
+- La tabla compacta del detalle de venta conserva encabezados semánticos, alineación numérica, nombres completos mediante wrap o estrategia explícita de corte, y no elimina ningún dato requerido por `ui-sales`.
+- Las pantallas auditadas fuera de POS mantienen acción primaria, foco visible y estados de carga/vacío/error después de cualquier ajuste de densidad.
 
 ## Keyboard and focus behavior
 
@@ -115,8 +124,10 @@ Resumen cruzado de los cambios de breakpoint de este change (todos por debajo de
 | `SummaryCards` | Carrusel horizontal con scroll-snap | `< md` (sin cambios desde `md`) |
 | Reporte de ventas diario / proveedores / planificación incompleta | Paginación de render | Todos los anchos (el problema es de volumen de DOM, no de breakpoint) |
 | Hub de compras | "Crear pedido" antes que la lista | `< md` |
+| Flujo no-POS | Auditoría y correcciones acotadas de densidad, overflow y acción primaria | 1024×768 y 1366×768; regresión mobile según cada pantalla |
+| Detalle de venta | Tabla compacta sin padding vertical duplicado; datos completos | `md` en adelante, con foco en 1024×768 y 1366×768 |
 
-Ningún cambio de este change altera el layout ya verificado en `md:`/`lg:`/`xl:`/`2xl:` salvo el propio ajuste del breakpoint del header.
+Esta ampliación permite correcciones visuales acotadas en las superficies no-POS listadas en la decisión 11 cuando la prueba de notebook demuestre densidad, overflow o jerarquía defectuosa. No permite rediseños de flujo ni cambios de contrato.
 
 ## API contract
 
@@ -149,3 +160,4 @@ Cada uno de estos cambios es reversible de forma independiente revirtiendo el co
 
 - ¿`lg` (1024px) alcanza sin overflow con el set completo de 8 ítems + logo + badge de rol + logout, o hace falta `xl` (1280px)? Se resuelve con medición manual antes de cerrar la implementación de esa tarea (no bloqueante para escribir este change).
 - Nombre final del primitive de filtros colapsable (`FilterSheet`, `CollapsibleFilters`, u otro) — no bloqueante, se decide en implementación siguiendo la convención de nombres ya usada en `src/components/ui/`.
+- Qué superficies requieren una corrección después de la auditoría real de navegador — no se inventa el resultado: cada hallazgo debe quedar registrado con viewport, evidencia y archivo antes de implementar su fix.
