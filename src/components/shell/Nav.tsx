@@ -110,14 +110,14 @@ export function Nav({ roles }: { roles: Role[] }) {
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
-                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] 2xl:gap-1.5 2xl:px-3 ${
+                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] xl:gap-1.5 xl:px-3 ${
                     active
                       ? "bg-primary-light text-primary"
                       : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
                   }`}
                 >
                   {ItemIcon && <ItemIcon className="size-4 shrink-0" />}
-                  <span className="hidden 2xl:inline">{item.label}</span>
+                  <span className="hidden xl:inline">{item.label}</span>
                 </Link>
               );
             })}
@@ -150,12 +150,12 @@ export function Nav({ roles }: { roles: Role[] }) {
             onClick={logout}
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
-            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex 2xl:gap-1.5 2xl:px-3 ${
+            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex xl:gap-1.5 xl:px-3 ${
               useDrawerNav ? "hidden" : "flex"
             }`}
           >
             <IconLogout className="size-4 shrink-0" />
-            <span className="hidden 2xl:inline">Cerrar sesión</span>
+            <span className="hidden xl:inline">Cerrar sesión</span>
           </button>
         </div>
       </header>

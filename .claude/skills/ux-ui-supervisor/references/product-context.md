@@ -20,12 +20,18 @@ expresividad visual que se vuelva ruido con la repetición.
 ## Stack y límites duros
 
 - Next.js 16 App Router + React 19, TypeScript strict, Tailwind v4, Vitest.
-- **Dependencias de runtime: `next`, `react`, `react-dom`. Nada más.** Agregar
-  una es una decisión que se levanta al usuario y se registra en el `design.md`
-  de un change (`AGENTS.md` §5). Este skill **nunca** recomienda instalar una
-  librería de UI, de formularios, de iconos, de gráficos ni de animación.
-- **No hay librería de iconos.** Los únicos SVG del repo son los gráficos de
-  `components/reports/charts/`. Ver `iconography.md`.
+- **Dependencias de runtime: `next`, `react`, `react-dom`, más `motion` y
+  `@formkit/auto-animate`** (ya aprobadas — ver `motion.md`, "Estado de
+  dependencias en este proyecto"). Agregar cualquier otra es una decisión que
+  se levanta al usuario y se registra en el `design.md` de un change
+  (`AGENTS.md` §5). Este skill **nunca** recomienda instalar una librería de
+  UI, de formularios, de iconos ni de gráficos — para animación, la
+  jerarquía ya cubre CSS → Motion → AutoAnimate antes de proponer nada nuevo.
+- **No hay librería de iconos** de terceros, pero sí un set propio de SVG
+  inline en `components/ui/icons.tsx` (~28 iconos, un wrapper `Icon` común:
+  `viewBox 24x24`, stroke 1.75, `aria-hidden`) más los gráficos de
+  `components/reports/charts/`. Antes de dibujar un SVG nuevo, revisar si ya
+  existe en `icons.tsx`. Ver `iconography.md`.
 - **No hay tests de componente**: no hay jsdom, ni Testing Library, ni
   Playwright. Todo lo visual, de foco, de teclado y de responsive se verifica
   **manualmente** y se reporta como tal. Un criterio de aceptación visual se
@@ -57,12 +63,17 @@ Para el supervisor esto significa:
 Autoridad: `src/app/globals.css` (`@theme`) + `src/components/ui/`.
 Detalle en `ai/context/ui-system.md`. Resumen para decidir:
 
-- **Paleta de marca**: mauve/rose. `primary #9c566c` y `primary-hover #85485c`
-  son derivados oscurecidos de `secondary #c08497` justamente para sostener
-  texto blanco en AA.
-- **Pasteles** (`pastel-pink/peach/yellow/green/blue`): decorativos. Categorías,
+- **Paleta de marca**: violeta neutro-gris (color-refactor; reemplazó la
+  rose/mauve anterior). `primary #7c3aed`, `primary-hover #6d28d9`,
+  `primary-active #5b21b6` son una rampa oscurecida en cada paso de
+  interacción, no un tinte derivado de otro hue.
+- **Pasteles** (`pastel-pink/peach/yellow/green/blue`): decorativos, sin cambio
+  por el color-refactor — sistema categórico separado de la marca. Categorías,
   badges, cards. **Nunca** un botón primario, **nunca** para codificar un dato
   en un gráfico.
+- **Paleta de pago** (`payment-cash/card/transfer`, `confirm-sale`): tonos
+  mudos, exclusivos de los chips de método de pago y de la confirmación de
+  venta en `PosView`. No reemplaza `success` ni los pasteles.
 - **Paleta de datos** `chart-1..4`: orden fijo, sin ciclar, validada para
   contraste y CVD. Una sola serie usa `primary`.
 - **Estado**: `success` sólo para confirmar éxito, `error` sólo para
@@ -79,11 +90,13 @@ Detalle en `ai/context/ui-system.md`. Resumen para decidir:
 
 ## Primitives disponibles
 
-`Button` (primary/secondary/danger/ghost, `pending`, `pendingImmediate`) ·
-`Input` y `Select` (`label`, `error`, reenvían `ref`) · `Card` · `Badge` +
-`pastelFor(id)` · `Table`/`Th`/`Td` · `Dialog` (`<dialog>` nativo, Esc y
-backdrop, `dismissible`) · `Toast` + `useToast()` · `Spinner` ·
-`LoadingState`, `Skeleton`, `ListSkeleton`, `EmptyState`, `ErrorState`.
+`Button` (primary/secondary/danger/ghost, `pending`, `pendingImmediate`,
+reenvía `ref`) · `Input` y `Select` (`label`, `error`, `icon` decorativo,
+`endAdornment` interactivo, reenvían `ref`) · `Card` · `Badge` + `pastelFor(id)`
+· `Table`/`Th`/`Td` · `Dialog` (`<dialog>` nativo, Esc y backdrop,
+`dismissible`) · `Toast` + `useToast()` · `Spinner` · `LoadingState`,
+`Skeleton`, `ListSkeleton`, `EmptyState`, `ErrorState` · set de iconos SVG
+inline en `ui/icons.tsx` (ver `iconography.md`).
 
 **Regla de reutilización** (`ui-system.md`): estilo ad-hoc en una pantalla es un
 defecto. Si falta una variante, se agrega **en el primitive**. Un layout único
@@ -115,6 +128,8 @@ propone dónde y cómo mostrarlo.
 | `/receiving`, `/receiving/[id]` | SaaS admin + formulario | |
 | `/reports`, `/reports/*` | Reporte / dashboard | Densidad alta, motion nulo. |
 | `/users`, `/users/[id]`, `/users/new` | SaaS admin + formulario | |
+| `/purchasing`, `/purchasing/[id]`, `/purchasing/new`, `/purchasing/history` | SaaS admin + formulario | Change `add-frontend-suppliers-purchasing` en curso; confirmar contra su `design.md` mientras esté abierto. |
+| `/suppliers` (y `/purchasing/suppliers`) | SaaS admin + tabla | Idem. |
 | `/login` | Formulario | Única pantalla sin shell. |
 
 ## Integración con OpenSpec

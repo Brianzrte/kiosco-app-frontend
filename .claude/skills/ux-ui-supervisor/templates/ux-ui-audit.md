@@ -66,7 +66,6 @@ Detalle de cada hallazgo debajo de la tabla, con los nueve campos:
 ## Visual hierarchy
 ## Interaction and feedback
 ## Accessibility
-## Responsive behavior
 ## Keyboard navigation
 ## States
 ## Performance and motion
@@ -76,6 +75,39 @@ motion específicamente: qué mecanismo usa cada animación relevante (CSS /
 Motion / AutoAnimate), si sigue el árbol de decisión de
 `../references/motion.md`, y el resultado de la verificación de
 `prefers-reduced-motion`.
+
+## Mobile & Responsive
+
+Sección obligatoria. Nunca se omite ni se resume en una línea.
+
+- Estado general: PASS | PASS WITH OBSERVATIONS | FAIL
+- Viewports probados: <los que se abrieron de verdad>
+- Revisión estática: <los que sólo se revisaron leyendo código>
+- Hallazgos: <n> BLOCKER · <n> HIGH · <n> MEDIUM · <n> LOW
+- Riesgo principal para completar la tarea: <una frase>
+
+| Viewport | Estado | Problemas principales |
+|---|---|---|
+| 320 × 568 | | |
+| 360 × 640 | | |
+| 360 × 800 | | |
+| 390 × 844 | | |
+| 414 × 896 | | |
+| 430 × 932 | | |
+| 844 × 390 | | |
+| 768 × 1024 | | |
+| 1280 × 720 | | |
+
+En POS se agregan 1024 × 768 y 1366 × 768.
+
+Los hallazgos responsive van en `## Findings` con los nueve campos, como
+cualquier otro; acá se resumen. Checklist: `../checklists/responsive-review.md`.
+
+## Recommended fix order
+
+Orden de corrección de los hallazgos, por: 1) bloqueo de la tarea,
+2) frecuencia del flujo afectado, 3) cantidad de viewports afectados,
+4) accesibilidad, 5) consistencia visual, 6) refinamiento estético.
 
 ## Positive findings
 

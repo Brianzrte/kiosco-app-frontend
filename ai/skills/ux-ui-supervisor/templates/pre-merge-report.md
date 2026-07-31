@@ -56,7 +56,7 @@ Este informe **no** cierra el change: no archiva, no sincroniza specs, no marca
 | 3. Consistencia | | |
 | 4. Reutilización de componentes | | |
 | 5. Tokens | | |
-| 6. Responsive | | |
+| 6. Mobile & Responsive | | |
 | 7. Contraste | | |
 | 8. Focus | | |
 | 9. Teclado | | |
@@ -79,6 +79,37 @@ Los `BLOCKER` que impiden el cierre. `Ninguno` si no hay.
 
 Detalle de cada uno con los nueve campos, como en
 `../templates/ux-ui-audit.md`.
+
+## Mobile & Responsive
+
+Sección obligatoria. Nunca se omite.
+
+- Estado general: PASS | PASS WITH OBSERVATIONS | FAIL
+- Viewports probados: <los que se abrieron de verdad>
+- Revisión estática: <los que sólo se revisaron leyendo código>
+- Hallazgos: <n> BLOCKER · <n> HIGH · <n> MEDIUM · <n> LOW
+- Riesgo principal para completar la tarea: <una frase>
+
+| Viewport | Estado | Problemas principales |
+|---|---|---|
+| 320 × 568 | | |
+| 360 × 640 | | |
+| 360 × 800 | | |
+| 390 × 844 | | |
+| 414 × 896 | | |
+| 430 × 932 | | |
+| 844 × 390 | | |
+| 768 × 1024 | | |
+| 1280 × 720 | | |
+
+En POS se agregan 1024 × 768 y 1366 × 768. Checklist:
+`../checklists/responsive-review.md`.
+
+## Recommended fix order
+
+Orden de corrección, por: 1) bloqueo de la tarea, 2) frecuencia del flujo
+afectado, 3) cantidad de viewports afectados, 4) accesibilidad, 5) consistencia
+visual, 6) refinamiento estético.
 
 ## Spec compliance
 

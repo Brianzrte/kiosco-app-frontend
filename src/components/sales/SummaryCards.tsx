@@ -26,17 +26,14 @@ export function SummaryCards({
   salesLabel?: string;
 }) {
   const byMethod = normalizeByPaymentMethod(data.by_payment_method);
+  const mobileCardClass = "w-40 shrink-0 snap-start md:w-auto";
 
   return (
-    // A 3-column base keeps five compact tiles to two rows on phones. The
-    // fifth tile fills the remaining two columns until xl, where all five
-    // tiles fit in a single row. gap-2 on the smallest phones gives each
-    // ~110px-wide tile a little more content width for its money value
-    // (StatCard's "compact" size); md/xl keep the original gap.
-    <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 xl:grid-cols-5">
+    <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1 sm:gap-3 md:grid md:grid-cols-3 md:gap-4 md:overflow-visible md:pb-0 xl:grid-cols-5">
       <StatCard
         size="compact"
         tone="summary-sales"
+        className={mobileCardClass}
         label={salesLabel}
         value={data.total_sales}
         icon={<IconCart className="size-4.5" />}
@@ -44,6 +41,7 @@ export function SummaryCards({
       <StatCard
         size="compact"
         tone="summary-total"
+        className={mobileCardClass}
         label="Total facturado"
         value={formatMoney(data.total_amount)}
         icon={<IconChart className="size-4.5" />}
@@ -51,6 +49,7 @@ export function SummaryCards({
       <StatCard
         size="compact"
         tone="payment-cash"
+        className={mobileCardClass}
         label="Efectivo"
         value={formatMoney(byMethod.CASH.totalAmount)}
         icon={<IconCash className="size-4.5" />}
@@ -58,6 +57,7 @@ export function SummaryCards({
       <StatCard
         size="compact"
         tone="payment-card"
+        className={mobileCardClass}
         label="Tarjeta"
         value={formatMoney(byMethod.CARD.totalAmount)}
         icon={<IconCardPay className="size-4.5" />}
@@ -65,7 +65,7 @@ export function SummaryCards({
       <StatCard
         size="compact"
         tone="payment-transfer"
-        className="col-span-2 xl:col-span-1"
+        className={`${mobileCardClass} md:col-span-2 xl:col-span-1`}
         label="Transferencia"
         value={formatMoney(byMethod.TRANSFER.totalAmount)}
         icon={<IconTransfer className="size-4.5" />}

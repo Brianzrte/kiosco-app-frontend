@@ -4,6 +4,7 @@ import { KeyboardEvent, useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -82,7 +83,8 @@ export function PurchaseOrdersHistoryView() {
           </Button>
         }
       />
-      <div className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3">
+      <div className="rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:p-3">
+        <CollapsibleFilters activeFilterCount={Number(Boolean(supplier)) + Number(Boolean(status)) + Number(Boolean(from)) + Number(Boolean(to))}>
         <Select
           label="Proveedor"
           value={supplier}
@@ -115,6 +117,7 @@ export function PurchaseOrdersHistoryView() {
         <Input
           label="Desde"
           type="date"
+          compact
           value={from}
           onChange={(event) => {
             setFrom(event.target.value);
@@ -125,6 +128,7 @@ export function PurchaseOrdersHistoryView() {
         <Input
           label="Hasta"
           type="date"
+          compact
           value={to}
           onChange={(event) => {
             setTo(event.target.value);
@@ -140,6 +144,7 @@ export function PurchaseOrdersHistoryView() {
         <p className="w-full text-sm text-text-secondary" aria-live="polite">
           {data.total === 1 ? "1 pedido" : `${data.total} pedidos`}
         </p>
+        </CollapsibleFilters>
       </div>
 
       {data.purchase_orders.length === 0 ? (
@@ -159,6 +164,34 @@ export function PurchaseOrdersHistoryView() {
         />
       ) : (
         <>
+          <ul className="flex flex-col gap-3 md:hidden">
+            {data.purchase_orders.map((order) => (
+              <li
+                key={order.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openOrder(order.id)}
+                onKeyDown={(event) => onRowKeyDown(event, order.id)}
+                className="rounded-app border border-border bg-surface p-4 transition-colors hover:bg-surface-hover focus-visible:bg-surface-hover"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate font-medium">{order.supplier_name}</p>
+                  <Badge tone={statusTone(order.status)}>{purchaseOrderStatusLabel(order.status)}</Badge>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-text-secondary">Fecha</dt>
+                    <dd>{new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(order.ordered_at))}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-secondary">Total</dt>
+                    <dd className="num font-medium">{formatMoney(order.total)}</dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
           <Table>
             <thead>
               <tr>
@@ -196,6 +229,7 @@ export function PurchaseOrdersHistoryView() {
               ))}
             </tbody>
           </Table>
+          </div>
           {computeTotalPages(data.total, PURCHASE_ORDER_PAGE_SIZE) > 1 && (
             <div className="flex items-center justify-end gap-2">
               <p className="mr-auto text-sm text-text-secondary">

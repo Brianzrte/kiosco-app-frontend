@@ -4,21 +4,16 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge, pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
-import {
-  IconCardPay,
-  IconCart,
-  IconCash,
-  IconChart,
-  IconTransfer,
-} from "@/components/ui/icons";
+import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import { formatMoney, fromCents, toCents } from "@/lib/money";
+import { computeTotalPages, pageWindow } from "@/lib/pagination";
 import { addDays, presetRange, today, type RangePreset } from "@/lib/reports";
 
 type PaymentBreakdown = { method: string; total_amount: string };
@@ -145,60 +140,13 @@ export function SalesReportView() {
             </Button>
           ))}
         </div>
-        <Input
-          label="Desde"
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-        />
-        <Input
-          label="Hasta"
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-        />
+        <CollapsibleFilters activeFilterCount={1}>
+          <Input compact label="Desde" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <Input compact label="Hasta" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </CollapsibleFilters>
       </div>
 
       <SalesReportContent key={`${from}-${to}`} from={from} to={to} />
-    </div>
-  );
-}
-
-function SummaryTiles({ days }: { days: DailyBreakdownRow[] }) {
-  const summary = summarizeDays(days);
-  const tiles = [
-    {
-      label: "Ventas",
-      value: String(summary.totalSales),
-      icon: <IconCart className="size-4.5" />,
-    },
-    {
-      label: "Total facturado",
-      value: formatMoney(summary.totalAmount),
-      icon: <IconChart className="size-4.5" />,
-    },
-    {
-      label: "Efectivo",
-      value: formatMoney(summary.cash),
-      icon: <IconCash className="size-4.5" />,
-    },
-    {
-      label: "Tarjeta",
-      value: formatMoney(summary.card),
-      icon: <IconCardPay className="size-4.5" />,
-    },
-    {
-      label: "Transferencia",
-      value: formatMoney(summary.transfer),
-      icon: <IconTransfer className="size-4.5" />,
-    },
-  ];
-
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      {tiles.map((tile) => (
-        <StatCard key={tile.label} size="compact" {...tile} />
-      ))}
     </div>
   );
 }
@@ -219,6 +167,7 @@ function CashierPills({ cashiers }: { cashiers: CashierBreakdown[] }) {
 }
 
 function SalesReportContent({ from, to }: { from: string; to: string }) {
+  const [page, setPage] = useState(1);
   const fetcher = useCallback(
     () =>
       api<DailyBreakdownResponse>(
@@ -228,6 +177,9 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
   );
   const { data, error, reload } = useLoad(fetcher);
   const days = data?.days ?? null;
+  const pageSize = 25;
+  const totalPages = days ? computeTotalPages(days.length, pageSize) : 1;
+  const visibleDays = days ? pageWindow(days, page, pageSize) : [];
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (days === null) return <ListSkeleton rows={6} />;
@@ -239,8 +191,39 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <SummaryTiles days={days} />
+      {(() => {
+        const summary = summarizeDays(days);
+        return (
+          <SummaryCards
+            data={{
+              total_sales: summary.totalSales,
+              total_amount: summary.totalAmount,
+              by_payment_method: [
+                { method: "CASH", sale_count: 0, total_amount: summary.cash },
+                { method: "CARD", sale_count: 0, total_amount: summary.card },
+                { method: "TRANSFER", sale_count: 0, total_amount: summary.transfer },
+              ],
+            }}
+          />
+        );
+      })()}
 
+      <ul className="flex flex-col gap-3 md:hidden">
+        {visibleDays.map((day) => (
+          <li key={day.date} className="rounded-app border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-medium">{formatDayLabel(day.date)}</p>
+              <p className="num text-lg font-semibold">{formatMoney(day.total_amount)}</p>
+            </div>
+            <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+              <div><dt className="text-text-secondary">Efectivo</dt><dd className="num">{formatMoney(amountFor(day, "CASH"))}</dd></div>
+              <div><dt className="text-text-secondary">Tarjeta</dt><dd className="num">{formatMoney(amountFor(day, "CARD"))}</dd></div>
+              <div><dt className="text-text-secondary">Transferencia</dt><dd className="num">{formatMoney(amountFor(day, "TRANSFER"))}</dd></div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -253,7 +236,7 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
           </tr>
         </thead>
         <tbody>
-          {days.map((day) => (
+          {visibleDays.map((day) => (
             <tr key={day.date}>
               <Td className="num">{formatDayLabel(day.date)}</Td>
               <Td className="num text-right font-medium">
@@ -275,6 +258,16 @@ function SalesReportContent({ from, to }: { from: string; to: string }) {
           ))}
         </tbody>
       </Table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-text-secondary">Página {page} de {totalPages} · {days.length} días</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</Button>
+            <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Siguiente</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -93,16 +93,36 @@ después.
 - Restauración del foco después de cada acción: …
 - Atajos visibles: …
 
-## Responsive behavior
+## Mobile & Responsive
 
-Qué pasa en cada corte, con reflow explícito (no ocultamiento):
+La propuesta se describe **mobile-first**: primero el layout de 360 px, después
+lo que agregan los breakpoints. Reflow explícito, no ocultamiento
+(`../references/responsive-design.md`).
 
 | Viewport | Comportamiento |
 |---|---|
-| 360 × 800 | … |
-| 1024 × 768 | … |
+| 320 × 568 | … piso de funcionalidad: qué se sacrifica y qué no |
+| 360 × 800 | … layout base |
+| 390 × 844 | … |
+| 430 × 932 | … |
+| 844 × 390 | … apaisado: alto útil ~390 px |
+| 768 × 1024 | … |
 | 1280 × 720 | … |
 | 1920 × 1080 | … |
+
+En POS se agregan 1024 × 768 y 1366 × 768.
+
+Además:
+
+- **Cambios de patrón** y en qué breakpoint ocurren (tabla → cards, sidebar →
+  drawer, modal → sheet, acciones apiladas → en línea). Cada breakpoint
+  introducido se justifica por el contenido, no por un dispositivo.
+- **Estrategia de tabla** en móvil, elegida entre las seis de
+  `../references/responsive-design.md`, con el motivo.
+- **Barras fijas y safe areas**: qué usa `env(safe-area-inset-*)` y qué usa
+  `dvh`.
+- **Teclado virtual**: qué pasa con la acción principal cuando se abre.
+- **Targets táctiles**: dónde se aplica el mínimo de 44 × 44 px.
 
 ## States
 

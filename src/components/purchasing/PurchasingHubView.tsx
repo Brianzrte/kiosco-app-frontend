@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -29,6 +30,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const suppliersFetcher = useCallback(
     () => api<{ suppliers: Supplier[] }>("/suppliers").then((result) => result.suppliers),
@@ -190,56 +192,67 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
           {data && (
-            <div className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3">
-              <Select
-                label="Proveedor"
-                value={supplier}
-                onChange={(event) => {
-                  setSupplier(event.target.value);
-                  setPage(1);
-                }}
-                className="w-full sm:w-56"
-              >
-                <option value="">Todos</option>
-                {(suppliers ?? []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </Select>
-              <Input
-                label="Desde"
-                type="date"
-                value={from}
-                onChange={(event) => {
-                  setFrom(event.target.value);
-                  setPage(1);
-                }}
-                className="w-full sm:w-auto"
-              />
-              <Input
-                label="Hasta"
-                type="date"
-                value={to}
-                onChange={(event) => {
-                  setTo(event.target.value);
-                  setPage(1);
-                }}
-                className="w-full sm:w-auto"
-              />
-              {hasFilters && (
-                <Button variant="ghost" onClick={clearFilters}>
-                  Limpiar filtros
-                </Button>
-              )}
-              <p className="w-full text-sm text-text-secondary" aria-live="polite">
-                {data.total === 1 ? "1 pedido pendiente" : `${data.total} pedidos pendientes`}
-              </p>
+            <div className="rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:p-3">
+              <div className="flex items-center justify-between gap-3">
+                <CollapsibleFilters
+                  activeFilterCount={Number(Boolean(supplier)) + Number(Boolean(from)) + Number(Boolean(to))}
+                  open={filtersOpen}
+                  onOpenChange={setFiltersOpen}
+                  className="order-last w-auto md:order-none"
+                >
+                  <Select
+                    label="Proveedor"
+                    value={supplier}
+                    onChange={(event) => {
+                      setSupplier(event.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full sm:w-56"
+                  >
+                    <option value="">Todos</option>
+                    {(suppliers ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    label="Desde"
+                    type="date"
+                    compact
+                    value={from}
+                    onChange={(event) => {
+                      setFrom(event.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full sm:w-auto"
+                  />
+                  <Input
+                    label="Hasta"
+                    type="date"
+                    compact
+                    value={to}
+                    onChange={(event) => {
+                      setTo(event.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full sm:w-auto"
+                  />
+                  {hasFilters && (
+                    <Button variant="ghost" onClick={clearFilters}>
+                      Limpiar filtros
+                    </Button>
+                  )}
+                </CollapsibleFilters>
+                <p className={`${filtersOpen ? "hidden md:block" : ""} order-first whitespace-nowrap text-sm text-text-secondary`} aria-live="polite">
+                  {data.total === 1 ? "1 pedido pendiente" : `${data.total} pedidos pendientes`}
+                </p>
+              </div>
             </div>
           )}
           {pendingOrdersContent}
         </div>
-        <aside aria-label="Acciones de compras">
+        <aside aria-label="Acciones de compras" className="order-first md:order-none">
           <Card className="flex flex-col gap-3 p-4">
             <h2 className="text-sm font-medium text-text-secondary">Acciones</h2>
             {canManage && (

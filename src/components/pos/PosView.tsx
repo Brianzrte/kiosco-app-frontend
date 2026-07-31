@@ -488,7 +488,7 @@ export function PosView() {
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_23rem]">
-      <div className="flex flex-col gap-4">
+      <div className={`flex flex-col gap-4 ${cart.length > 0 ? "pb-28 md:pb-0" : ""}`}>
         <form onSubmit={scan}>
           <label htmlFor="scan" className="mb-1.5 block text-sm font-medium">
             Escaneá o ingresá un código de barras
@@ -508,7 +508,7 @@ export function PosView() {
           </div>
         </form>
 
-        <div>
+        <div className="relative z-20">
           <form onSubmit={submitSearch}>
             <label
               htmlFor="pos-search"
@@ -553,7 +553,7 @@ export function PosView() {
           {searchTerm.trim() && !catalogError && !searchDismissed && (
             <ul
               id="pos-search-results"
-              className="mt-2 overflow-hidden rounded-app border border-border bg-surface shadow-soft"
+              className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-app border border-border bg-surface shadow-soft"
             >
               {catalog === null ? (
                 <li className="px-4 py-3 text-sm text-text-secondary">
@@ -632,7 +632,7 @@ export function PosView() {
                         ? `flash-${flash.nonce}`
                         : "static"
                     }
-                    className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover md:px-5 ${
+                    className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] md:px-5 ${
                       flash?.id === line.product.id ? "flash" : ""
                     }`}
                   >
@@ -645,28 +645,34 @@ export function PosView() {
                       </p>
                     </div>
                     <div className="flex items-center rounded-app border border-border bg-surface">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="md"
+                        iconOnly
                         aria-label={`Restar uno a ${line.product.name}`}
                         data-line-decrement={line.product.id}
                         onClick={() =>
                           setQuantity(line.product.id, line.quantity - 1)
                         }
-                        className="flex size-9 items-center justify-center rounded-l-app text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                        className="rounded-l-app rounded-r-none text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
                       >
                         <IconMinus className="size-3.5" />
-                      </button>
-                      <span className="num flex h-9 w-10 items-center justify-center border-x border-border text-sm font-semibold">
+                      </Button>
+                      <span className="num flex h-11 w-10 items-center justify-center border-x border-border text-sm font-semibold md:h-10">
                         {line.quantity}
                       </span>
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="md"
+                        iconOnly
                         aria-label={`Sumar uno a ${line.product.name}`}
                         onClick={() => incrementQuantity(line)}
-                        className="flex size-9 items-center justify-center rounded-r-app text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-2 hover:text-text-primary active:scale-[0.98] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                        className="rounded-l-none rounded-r-app text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
                       >
                         <IconPlus className="size-3.5" />
-                      </button>
+                      </Button>
                     </div>
                     <p className="num w-24 text-right text-base font-semibold">
                       {formatMoney(
@@ -676,12 +682,13 @@ export function PosView() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      iconOnly
                       aria-label={`Quitar ${line.product.name}`}
-                      className="gap-1.5 text-text-muted hover:!bg-error/10 hover:!text-error focus-visible:!text-error"
+                      title={`Quitar ${line.product.name}`}
+                      className="ml-auto text-error hover:!bg-error/10 focus-visible:!text-error"
                       onClick={() => setQuantity(line.product.id, 0)}
                     >
                       <IconTrash className="size-4" />
-                      Quitar
                     </Button>
                   </div>
                 </li>
@@ -696,7 +703,7 @@ export function PosView() {
           Total
         </h2>
         <div
-          className="mb-6 flex flex-col items-center justify-center gap-1 rounded-app bg-primary-light/40 py-4"
+          className="mb-6 hidden flex-col items-center justify-center gap-1 rounded-app bg-primary-light/40 py-4 md:flex"
           aria-live="polite"
           aria-atomic="true"
         >
@@ -916,7 +923,7 @@ export function PosView() {
         )}
         <Button
           variant="confirm"
-          className={`w-full py-3.5 text-base ${confirmReady ? "confirm-ready" : ""}`}
+          className={`hidden w-full py-3.5 text-base md:flex ${confirmReady ? "confirm-ready" : ""}`}
           disabled={!!confirmDisabledReason}
           pending={pending}
           pendingImmediate
@@ -925,6 +932,25 @@ export function PosView() {
           {pending ? "Confirmando…" : "Confirmar venta"}
         </Button>
       </Card>
+
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-border bg-surface-raised p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-soft-lg md:hidden">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">Total</p>
+            <p className="num truncate text-xl font-bold" aria-live="polite">{formatMoney(fromCents(totalCents))}</p>
+          </div>
+          <Button
+            variant="confirm"
+            className={`shrink-0 py-3 text-base ${confirmReady ? "confirm-ready" : ""}`}
+            disabled={!!confirmDisabledReason}
+            pending={pending}
+            pendingImmediate
+            onClick={confirmSale}
+          >
+            {pending ? "Confirmando…" : "Confirmar venta"}
+          </Button>
+        </div>
+      )}
 
       {/* Deliberately not a real a11y modal (no aria-modal, no focus trap):
           pos-patterns.md requires that confirming a sale never blocks the

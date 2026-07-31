@@ -47,6 +47,19 @@ Un cambio chico e inequívoco puede recorrer `audit → fix → verify` en la mi
 invocación, como fases separadas. Un rediseño grande siempre pasa por
 `discover → design → aprobación humana` antes de tocar código.
 
+### `Mobile & Responsive` es obligatoria
+
+`audit`, `verify` y `pre-merge` siempre incluyen la sección
+`Mobile & Responsive`, con la matriz mínima de viewports (320 × 568, 360 × 640,
+360 × 800, 390 × 844, 414 × 896, 430 × 932, 844 × 390, 768 × 1024, 1280 × 720;
+más 1024 × 768 y 1366 × 768 en POS), la tabla de resultados por viewport y la
+separación entre lo **probado** y lo revisado de forma **estática**. Como este
+repo no tiene E2E ni tests de componente, lo habitual es revisión estática: el
+agente lo declara así en vez de afirmar que un viewport fue validado. La regla
+de fondo —mobile-first, funcional desde 320 px, sin scroll horizontal
+accidental— vive en `ai/skills/ux-ui-supervisor/references/responsive-design.md`
+y no se duplica acá.
+
 ### Cuándo NO usarlo
 
 - Trabajo puramente de backend, contratos de API o reglas de negocio.

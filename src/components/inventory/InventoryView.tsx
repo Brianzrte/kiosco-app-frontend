@@ -3,6 +3,8 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
+import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -44,6 +46,8 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
   const [term, setTerm] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(INVENTORY_DEFAULT_PAGE_SIZE);
   const listRef = useRef<HTMLUListElement>(null);
@@ -163,35 +167,20 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         }
       />
 
-      <div className="flex flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3">
-        <Input
-          icon={<IconSearch />}
-          placeholder="Buscar por nombre, SKU o código de barras"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xl flex-1"
-          aria-label="Buscar producto"
-        />
-        {canPlanStock && (
-          <Select
-            value={categoryId}
-            onChange={(e) => selectCategory(e.target.value)}
-            className="w-full max-w-56"
-            aria-label="Filtrar por categoría"
-          >
+      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-row md:items-end md:gap-3 md:p-3`}>
+        <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
+          <Input icon={<IconSearch />} placeholder="Buscar por nombre, SKU o código de barras" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full max-w-xl flex-1" aria-label="Buscar producto" />
+        </CollapsibleSearch>
+        <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryId)) + Number(lowStockOnly)}>
+          {canPlanStock && <Select value={categoryId} onChange={(e) => selectCategory(e.target.value)} className="w-full max-w-none md:w-56" aria-label="Filtrar por categoría">
             <option value="">Todas las categorías</option>
-            {(categories ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        )}
+            {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>}
         {/* Segmented control: filled background marks the active option,
             same convention as ProductsReportView's sort buttons — a filter
             toggle, not a section-switching tab (see StockPanel's Ajustar/
             Mínimo tabs below, which use the underline convention instead). */}
-        <div className="flex overflow-hidden rounded-app border border-border sm:ml-auto">
+        <div className="w-fit self-start overflow-hidden rounded-app border border-border">
           <button
             type="button"
             onClick={() => selectLowStockOnly(false)}
@@ -215,6 +204,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
             Stock bajo
           </button>
         </div>
+        </CollapsibleFilters>
       </div>
 
       {error ? (
@@ -275,10 +265,10 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                       </p>
                     </>
                   )}
-                  <div className="flex shrink-0 gap-2">
+                  <div className="ml-auto flex shrink-0 gap-1">
                     {canPlanStock && (
                       <Button
-                        variant="ghost"
+                        variant="ghost" size="sm"
                         onClick={() =>
                           setHistoryRequest({
                             productId: item.product_id,
@@ -290,7 +280,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                       </Button>
                     )}
                     <Button
-                      variant="secondary"
+                      variant="secondary" size="sm"
                       onClick={() => setSelectedItem(item)}
                     >
                       {item.initialized ? "Ajustar" : "Inicializar"}
@@ -343,13 +333,19 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         )}
       </Dialog>
 
-      {historyRequest && (
-        <MovementHistorySection
-          key={historyRequest.nonce}
-          initialProductId={historyRequest.productId}
-          onClose={() => setHistoryRequest(null)}
-        />
-      )}
+      <Dialog
+        open={!!historyRequest}
+        title="Historial de movimientos"
+        onClose={() => setHistoryRequest(null)}
+        className="max-w-4xl"
+      >
+        {historyRequest && (
+          <MovementHistorySection
+            key={historyRequest.nonce}
+            initialProductId={historyRequest.productId}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
@@ -684,10 +680,8 @@ function SetMinimumForm({
 
 function MovementHistorySection({
   initialProductId,
-  onClose,
 }: {
   initialProductId: string;
-  onClose: () => void;
 }) {
   const [productId, setProductId] = useState(initialProductId);
   const [type, setType] = useState("");
@@ -721,20 +715,13 @@ function MovementHistorySection({
   const totalPages = data ? computeTotalPages(data.total, data.limit) : 1;
 
   return (
-    <section className="flex flex-col gap-4 rounded-app border border-border bg-surface p-5 shadow-soft">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-semibold">Historial de movimientos</h2>
-        <Button variant="ghost" onClick={onClose}>
-          Cerrar
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <Select
           label="Producto"
           value={productId}
           onChange={(e) => updateFilter(() => setProductId(e.target.value))}
-          className="max-w-64"
+          className="w-full sm:max-w-64"
         >
           <option value="">Todos los productos</option>
           {(products ?? []).map((p) => (
@@ -747,7 +734,7 @@ function MovementHistorySection({
           label="Tipo"
           value={type}
           onChange={(e) => updateFilter(() => setType(e.target.value))}
-          className="max-w-56"
+          className="w-full sm:max-w-56"
         >
           <option value="">Todos los tipos</option>
           {Object.entries(MOVEMENT_TYPE_LABELS).map(([value, label]) => (
@@ -759,14 +746,18 @@ function MovementHistorySection({
         <Input
           label="Desde"
           type="date"
+          compact
           value={from}
           onChange={(e) => updateFilter(() => setFrom(e.target.value))}
+          className="w-full sm:w-auto"
         />
         <Input
           label="Hasta"
           type="date"
+          compact
           value={to}
           onChange={(e) => updateFilter(() => setTo(e.target.value))}
+          className="w-full sm:w-auto"
         />
       </div>
 
@@ -778,44 +769,71 @@ function MovementHistorySection({
         <EmptyState message="No hay movimientos registrados con estos filtros." />
       ) : (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Fecha</Th>
-                <Th>Producto</Th>
-                <Th>Tipo</Th>
-                <Th className="text-right">Cantidad</Th>
-                <Th>Motivo</Th>
-                <Th>Usuario</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <Td className="data">
-                    {new Date(row.created_at).toLocaleString("es-AR")}
-                  </Td>
-                  <Td className="font-medium">{row.product_name}</Td>
-                  <Td>{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</Td>
-                  <Td
-                    className={`num text-right ${
-                      row.quantity_delta < 0 ? "text-error" : "text-success"
-                    }`}
+          <ul className="flex flex-col gap-3 md:hidden">
+            {rows.map((row) => (
+              <li key={row.id} className="rounded-app border border-border bg-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{row.product_name}</p>
+                    <p className="data text-xs text-text-secondary">
+                      {new Date(row.created_at).toLocaleString("es-AR")}
+                    </p>
+                  </div>
+                  <Badge
+                    tone={row.quantity_delta < 0 ? "error" : "success"}
+                    className="shrink-0 whitespace-nowrap"
                   >
-                    {row.previous_quantity} → {row.new_quantity}
-                    <span className="ml-2 text-xs text-text-secondary">
-                      ({row.quantity_delta > 0 ? "+" : ""}
-                      {row.quantity_delta})
-                    </span>
-                  </Td>
-                  <Td className="text-text-secondary">{row.reason || "—"}</Td>
-                  <Td className="text-text-secondary">
-                    {row.performed_by_username || "—"}
-                  </Td>
+                    {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                  </Badge>
+                </div>
+                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-text-secondary">Cantidad</dt>
+                    <dd className="num font-medium">
+                      {row.previous_quantity} → {row.new_quantity} ({row.quantity_delta > 0 ? "+" : ""}{row.quantity_delta})
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-secondary">Usuario</dt>
+                    <dd>{row.performed_by_username || "—"}</dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-text-secondary">Motivo</dt>
+                    <dd>{row.reason || "—"}</dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Fecha</Th>
+                  <Th>Producto</Th>
+                  <Th>Tipo</Th>
+                  <Th className="text-right">Cantidad</Th>
+                  <Th>Motivo</Th>
+                  <Th>Usuario</Th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <Td className="data">{new Date(row.created_at).toLocaleString("es-AR")}</Td>
+                    <Td className="font-medium">{row.product_name}</Td>
+                    <Td className="whitespace-nowrap">{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</Td>
+                    <Td className={`num text-right ${row.quantity_delta < 0 ? "text-error" : "text-success"}`}>
+                      {row.previous_quantity} → {row.new_quantity}
+                      <span className="ml-2 text-xs text-text-secondary">({row.quantity_delta > 0 ? "+" : ""}{row.quantity_delta})</span>
+                    </Td>
+                    <Td className="text-text-secondary">{row.reason || "—"}</Td>
+                    <Td className="text-text-secondary">{row.performed_by_username || "—"}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-text-secondary">

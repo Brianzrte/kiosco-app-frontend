@@ -123,6 +123,14 @@ export function IconSearch(props: IconProps) {
   );
 }
 
+export function IconFilter(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </Icon>
+  );
+}
+
 export function IconLogout(props: IconProps) {
   return (
     <Icon {...props}>
@@ -210,6 +218,15 @@ export function IconX(props: IconProps) {
     <Icon {...props}>
       <path d="M6 6l12 12" />
       <path d="M18 6 6 18" />
+    </Icon>
+  );
+}
+
+export function IconPower(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v9" />
+      <path d="M7.1 5.8a8 8 0 1 0 9.8 0" />
     </Icon>
   );
 }

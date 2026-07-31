@@ -160,4 +160,14 @@ Reportar, en este orden:
 8. `git diff --stat`.
 
 No hacer commit, sync ni archive. No continuar con otra sección sin una nueva
-ejecución.
+ejecución, salvo en modo loop.
+
+## Modo loop
+
+Opcional, sólo si el usuario lo pide explícitamente. Ver `## Modo loop` en
+`ai/roles/frontend-implementer.md` para la activación y los motivos de
+frenado. Cuando está activo: repetir los pasos 3–9 de este flujo para cada
+sección pendiente sin esperar una nueva ejecución del usuario, hasta que el
+change se agote o se llegue a uno de los motivos de frenado del rol. Un test
+que falla en el paso 6 se corrige y se vuelve a testear ahí mismo; no es un
+motivo de frenado por sí solo.

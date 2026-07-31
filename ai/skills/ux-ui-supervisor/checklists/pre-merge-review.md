@@ -65,13 +65,24 @@ código.
 - [ ] Ningún valor de espaciado arbitrario sin justificación.
 - [ ] No se agregó ningún token nuevo sin al menos dos usos reales.
 
-## 6. Responsive
+## 6. Mobile & Responsive
 
-- [ ] Verificado en 360 × 800, 1024 × 768 y 1280 × 720 como mínimo.
-- [ ] En POS, verificado además en 1366 × 768.
+Área **obligatoria**: nunca se marca `Not evaluated` sin decir qué impidió
+revisarla.
+
+- [ ] Recorrida la matriz mínima: 320 × 568, 360 × 640, 360 × 800, 390 × 844,
+      414 × 896, 430 × 932, 844 × 390, 768 × 1024, 1280 × 720.
+- [ ] En POS, además 1024 × 768 y 1366 × 768.
+- [ ] Declarado qué viewports se **probaron** y cuáles se revisaron sólo de
+      forma **estática**.
+- [ ] La pantalla está escrita mobile-first y funciona desde 320 px.
 - [ ] La página no scrollea horizontalmente en ningún viewport.
-- [ ] Ninguna acción necesaria está oculta en móvil.
-- [ ] Las tablas scrollean dentro de su contenedor.
+- [ ] Ninguna acción necesaria está oculta ni fuera de pantalla en móvil.
+- [ ] Cada tabla tiene una estrategia móvil explícita y coherente con la tarea.
+- [ ] Overlays y diálogos usan altura dinámica y entran en apaisado.
+- [ ] Las barras fijas respetan `env(safe-area-inset-*)`.
+- [ ] Los targets táctiles son ≥ 44 px con ≥ 8 px de separación.
+- [ ] Las correcciones de móvil no rompieron tablet ni escritorio.
 - [ ] Detalle: `responsive-review.md`.
 
 ## 7. Contraste
@@ -181,6 +192,10 @@ código.
 | `PASS` | Sin BLOCKER, ≤ 1 HIGH, score ≥ 80 |
 | `PASS WITH OBSERVATIONS` | Sin BLOCKER, ≤ 1 HIGH, score 65–79 |
 | `FAIL` | Cualquier BLOCKER, ≥ 2 HIGH, o score < 65 |
+
+Un BLOCKER de móvil —no se puede cobrar, un botón principal fuera de pantalla,
+un modal que no cierra, el teclado tapando la acción requerida— produce `FAIL`
+igual que cualquier otro BLOCKER: no existe un "PASS salvo en móvil".
 
 Un `PASS` no autoriza el cierre por sí solo: el change todavía necesita el
 review técnico (`ai/roles/frontend-reviewer.md`), la verificación

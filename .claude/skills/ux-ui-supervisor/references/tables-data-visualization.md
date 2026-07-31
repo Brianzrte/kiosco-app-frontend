@@ -14,9 +14,16 @@ La ventaja de una tabla es la **alineación vertical**: comparar la cuarta
 columna de veinte filas es trivial cuando están en columna, e imposible cuando
 están en veinte cards separadas.
 
-**No convertir cada fila en una card.** Ni en móvil (`responsive-design.md`).
-Triplica el alto, destruye la comparabilidad y agrega tres señales visuales
-—borde, sombra, fondo— donde antes había una línea.
+**No convertir cada fila en una card en escritorio.** Triplica el alto, destruye
+la comparabilidad y agrega tres señales visuales —borde, sombra, fondo— donde
+antes había una línea.
+
+En **móvil** la respuesta depende de la tarea, no de la regla anterior: si el
+usuario compara filas, la tabla sobrevive con scroll horizontal deliberado o con
+columnas priorizadas; si busca un registro puntual y opera sobre él, la card o
+la lista de pares label/valor es correcta —plana, sin acumular borde + sombra +
+fondo— y en `md:` se vuelve a la tabla. Las seis estrategias, con cuándo aplica
+cada una, están en `responsive-design.md`, *Tablas y datos densos*.
 
 ## Densidad
 

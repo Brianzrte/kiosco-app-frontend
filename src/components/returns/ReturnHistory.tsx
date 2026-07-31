@@ -77,6 +77,18 @@ export function ReturnHistory({
                   {formatMoney(ret.total_amount)}
                 </p>
               </div>
+              <ul className="flex flex-col gap-2 p-3 md:hidden">
+                {ret.items.map((item) => (
+                  <li key={item.id} className="rounded-app border border-border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-medium">{productNameBySaleItemId.get(item.sale_item_id) ?? item.product_id}</span>
+                      <span className="num font-medium">{formatMoney(item.subtotal)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-text-secondary">Cantidad: <span className="num">{item.quantity}</span></p>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden md:block">
               <Table>
                 <thead>
                   <tr>
@@ -100,6 +112,7 @@ export function ReturnHistory({
                   ))}
                 </tbody>
               </Table>
+              </div>
             </div>
           ))}
         </div>

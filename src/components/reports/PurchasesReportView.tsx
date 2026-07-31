@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -116,40 +117,14 @@ export function PurchasesReportView() {
             </Button>
           ))}
         </div>
-        <Input
-          label="Desde"
-          type="date"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value);
-            setPage(1);
-          }}
-        />
-        <Input
-          label="Hasta"
-          type="date"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value);
-            setPage(1);
-          }}
-        />
-        <Select
-          label="Proveedor"
-          value={supplierId}
-          onChange={(e) => {
-            setSupplierId(e.target.value);
-            setPage(1);
-          }}
-          className="w-56"
-        >
-          <option value="">Todos los proveedores</option>
-          {(suppliers ?? []).map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
+        <CollapsibleFilters activeFilterCount={supplierId ? 1 : 0}>
+          <Input compact label="Desde" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+          <Input compact label="Hasta" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
+          <Select label="Proveedor" value={supplierId} onChange={(e) => { setSupplierId(e.target.value); setPage(1); }} className="w-56">
+            <option value="">Todos los proveedores</option>
+            {(suppliers ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </Select>
+        </CollapsibleFilters>
       </div>
 
       <PurchasesReportTable
@@ -201,6 +176,19 @@ function PurchasesReportTable({
 
   return (
     <div className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-3 md:hidden">
+        {data.purchase_orders.map((order) => (
+          <li key={order.id} className="rounded-app border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="num text-sm">{formatDateTime(order.ordered_at)}</p>
+              <Badge tone={STATUS_TONES[order.status]}>{STATUS_LABELS[order.status]}</Badge>
+            </div>
+            <p className="mt-2 truncate font-medium">{order.supplier_name}</p>
+            <p className="num mt-2 text-lg font-semibold">{formatMoney(order.total)}</p>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -231,6 +219,7 @@ function PurchasesReportTable({
           ))}
         </tbody>
       </Table>
+      </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

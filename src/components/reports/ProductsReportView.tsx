@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -53,10 +54,11 @@ export function ProductsReportView() {
 
       <PageHeader title="Reporte de productos" />
 
-      <div className="flex flex-wrap items-end gap-3">
+      <CollapsibleFilters activeFilterCount={sort === "best_selling" ? 0 : 1}>
         <Input
           label="Desde"
           type="date"
+          compact
           value={from}
           onChange={(e) => {
             setFrom(e.target.value);
@@ -66,6 +68,7 @@ export function ProductsReportView() {
         <Input
           label="Hasta"
           type="date"
+          compact
           value={to}
           onChange={(e) => {
             setTo(e.target.value);
@@ -94,7 +97,7 @@ export function ProductsReportView() {
             Menos vendidos
           </Button>
         </div>
-      </div>
+      </CollapsibleFilters>
 
       <ProductsReportTable
         key={`${from}-${to}-${sort}-${page}`}
@@ -142,6 +145,21 @@ function ProductsReportTable({
 
   return (
     <div className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-3 md:hidden">
+        {data.items.map((item) => (
+          <li key={item.product_id} className="rounded-app border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 truncate font-medium">{item.product_name}</p>
+              <p className="num shrink-0 font-medium">{formatMoney(item.price)}</p>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div><dt className="text-text-secondary">Costo</dt><dd className="num">{formatMoney(item.cost)}</dd></div>
+              <div><dt className="text-text-secondary">Vendidos</dt><dd className="num">{item.quantity_sold}</dd></div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -168,6 +186,7 @@ function ProductsReportTable({
           ))}
         </tbody>
       </Table>
+      </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

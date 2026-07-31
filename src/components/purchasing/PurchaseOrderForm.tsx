@@ -17,9 +17,10 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
-import { IconAlert, IconSearch } from "@/components/ui/icons";
+import { IconAlert, IconSearch, IconTrash } from "@/components/ui/icons";
 import { ApiError, api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
+import { computeTotalPages, pageWindow } from "@/lib/pagination";
 import {
   appendSupplierAssociation,
   filterIncompleteDataSuggestions,
@@ -67,6 +68,7 @@ export function PurchaseOrderForm() {
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [incompleteSearchOpen, setIncompleteSearchOpen] = useState(false);
   const [incompleteSearchTerm, setIncompleteSearchTerm] = useState("");
+  const [incompletePage, setIncompletePage] = useState(1);
   const incompleteSearchInputRef = useRef<HTMLInputElement>(null);
   const incompleteSearchButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -217,6 +219,7 @@ export function PurchaseOrderForm() {
           <Input
             label="Fecha del pedido"
             type="date"
+            compact
             value={orderedAt}
             onChange={(event) => setOrderedAt(event.target.value)}
           />
@@ -339,9 +342,10 @@ export function PurchaseOrderForm() {
                         id="incomplete-data-search"
                         ref={incompleteSearchInputRef}
                         value={incompleteSearchTerm}
-                        onChange={(event) =>
-                          setIncompleteSearchTerm(event.target.value)
-                        }
+                        onChange={(event) => {
+                          setIncompleteSearchTerm(event.target.value);
+                          setIncompletePage(1);
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === "Escape") {
                             closeIncompleteSearch();
@@ -394,9 +398,12 @@ export function PurchaseOrderForm() {
                       </p>
                     );
                   }
+                  const pageSize = 20;
+                  const totalPages = computeTotalPages(visibleIncompleteData.length, pageSize);
                   return (
-                    <ul className="max-h-96 divide-y divide-border overflow-y-auto rounded-app border border-border">
-                      {visibleIncompleteData.map((suggestion) => (
+                    <>
+                    <ul className="divide-y divide-border rounded-app border border-border">
+                      {pageWindow(visibleIncompleteData, incompletePage, pageSize).map((suggestion) => (
                         <IncompleteDataSuggestionItem
                           key={suggestion.product_id}
                           suggestion={suggestion}
@@ -404,6 +411,16 @@ export function PurchaseOrderForm() {
                         />
                       ))}
                     </ul>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between gap-3 pt-2">
+                        <p className="text-xs text-text-secondary">Página {incompletePage} de {totalPages}</p>
+                        <div className="flex gap-2">
+                          <Button type="button" size="sm" variant="secondary" disabled={incompletePage <= 1} onClick={() => setIncompletePage((value) => Math.max(1, value - 1))}>Anterior</Button>
+                          <Button type="button" size="sm" variant="secondary" disabled={incompletePage >= totalPages} onClick={() => setIncompletePage((value) => Math.min(totalPages, value + 1))}>Siguiente</Button>
+                        </div>
+                      </div>
+                    )}
+                    </>
                   );
                 })()}
               </div>
@@ -496,10 +513,13 @@ function PurchaseOrderItemRow({
         <Button
           type="button"
           variant="ghost"
+          iconOnly
+          aria-label="Quitar producto"
+          title="Quitar producto"
           disabled={disabledRemove}
           onClick={onRemove}
         >
-          Quitar
+          <IconTrash className="size-4" />
         </Button>
       </div>
       {supplierId && item.productId && (

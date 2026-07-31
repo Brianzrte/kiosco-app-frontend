@@ -76,6 +76,12 @@ comportamiento responsive o estados visuales de cara al usuario, y antes de
 cerrar un change frontend con impacto visible. Es supervisora: no implementa,
 no agrega dependencias, no marca tasks y no archiva.
 
+Toda pantalla se escribe **mobile-first** y tiene que seguir siendo funcional
+desde 320 px. La matriz de viewports obligatoria y las reglas de overflow, safe
+areas, tablas, overlays y targets táctiles están en
+`ai/skills/ux-ui-supervisor/references/responsive-design.md`; el checklist
+ejecutable, en `ai/skills/ux-ui-supervisor/checklists/responsive-review.md`.
+
 Para ejecutar ese conocimiento de punta a punta —discovery, diseño, auditoría,
 corrección acotada e implementada, y verificación independiente— usá el agente
 `ux-ui-reviewer` (`agent-definitions/ux-ui-reviewer/`, con adaptadores para

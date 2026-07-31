@@ -13,11 +13,13 @@ import {
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
+import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
-import { IconSearch, IconX } from "@/components/ui/icons";
+import { IconSearch } from "@/components/ui/icons";
 import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
@@ -28,12 +30,7 @@ import {
   paymentMethodTone,
   SALES_DEFAULT_PAGE_SIZE,
 } from "@/lib/sales";
-import {
-  buildSummaryQuery,
-  normalizeByPaymentMethod,
-  SalesSummaryByPaymentMethod,
-  todayISO,
-} from "@/lib/salesSummary";
+import { buildSummaryQuery, SalesSummaryByPaymentMethod, todayISO } from "@/lib/salesSummary";
 import {
   OperationalSale,
   OperationalSalesList,
@@ -75,13 +72,12 @@ export function SalesView({ roles }: { roles: Role[] }) {
   const [saleNumber, setSaleNumber] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(SALES_DEFAULT_PAGE_SIZE);
-  const [cashClosingOpen, setCashClosingOpen] = useState(false);
   // Mobile-only: the number search starts collapsed behind a search-icon
   // trigger (see the form below) instead of a fixed field taking space
   // above the filters. Expanded automatically whenever a search is active
   // so the active query and "Limpiar búsqueda" stay visible.
   const [searchOpen, setSearchOpen] = useState(false);
-  const searchExpanded = searchOpen || !!saleNumber;
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const saleNumberInputRef = useRef<HTMLInputElement>(null);
   const mobileListRef = useRef<HTMLUListElement>(null);
   const desktopListRef = useRef<HTMLDivElement>(null);
@@ -184,76 +180,36 @@ export function SalesView({ roles }: { roles: Role[] }) {
       <PageHeader
         title="Historial de ventas"
         description="Consultá ventas confirmadas y borradores operativos."
-        actions={
-          !isCashier && (
-            <Button
-              variant="secondary"
-              onClick={() => setCashClosingOpen((open) => !open)}
-            >
-              {cashClosingOpen ? "Cerrar" : "Cierre de caja"}
-            </Button>
-          )
-        }
+        actions={null}
       />
 
       {isCashier ? <CashierTodaySummaryCards /> : <DailySummaryCards />}
 
-      {!isCashier && cashClosingOpen && <CashClosingTool />}
-
-      {/* Mobile-only trigger: replaces the fixed search form with a single
-          icon button until the cashier/admin actually wants to search by
-          number, freeing that space above the filters on phones. Desktop
-          (md:) keeps the form visible via the `hidden md:flex` below. */}
-      {!searchExpanded && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => setSearchOpen(true)}
-          className="w-fit gap-2 md:hidden"
-        >
-          <IconSearch className="size-4" />
-          Buscar por número de venta
-        </Button>
-      )}
-
-      <form
-        onSubmit={searchByNumber}
-        className={`${searchExpanded ? "flex" : "hidden"} flex-wrap items-end gap-3 rounded-app border border-border bg-surface-subtle p-3 md:flex`}
-      >
+      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-2 py-1.5 md:flex md:flex-wrap md:items-end md:gap-3 md:p-3`}>
+      <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar por número de venta">
+      <form onSubmit={searchByNumber} className="flex flex-wrap items-end gap-3">
         <Input
           ref={saleNumberInputRef}
-          label="Buscar por número de venta"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
           value={saleNumberInput}
           onChange={(event) => setSaleNumberInput(event.target.value)}
-          placeholder="Ej. 124"
+          placeholder="Número de venta"
+          label="Buscar"
+          aria-label="Buscar por número de venta"
           className="w-full sm:min-w-52 sm:flex-1"
+          endAdornment={<Button type="submit" variant="ghost" size="sm" iconOnly aria-label="Buscar venta" disabled={!saleNumberInput.trim()}><IconSearch className="size-4" /></Button>}
+          compact
         />
-        <Button type="submit" disabled={!saleNumberInput.trim()}>
-          Buscar venta
-        </Button>
         {saleNumber && (
           <Button type="button" variant="secondary" onClick={clearNumberSearch}>
             Limpiar búsqueda
           </Button>
         )}
-        {!saleNumber && (
-          <Button
-            type="button"
-            variant="ghost"
-            iconOnly
-            aria-label="Cerrar buscador"
-            onClick={() => setSearchOpen(false)}
-            className="md:hidden"
-          >
-            <IconX className="size-4" />
-          </Button>
-        )}
       </form>
-
-      <div className="flex flex-wrap items-end gap-3">
+      </CollapsibleSearch>
+      <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(status !== "confirmed") + Number(Boolean(cashierId)) + Number(Boolean(from)) + Number(Boolean(to))}>
         <Select
           label="Estado"
           value={status}
@@ -302,7 +258,8 @@ export function SalesView({ roles }: { roles: Role[] }) {
                 setPage(1);
               }}
               disabled={!!saleNumber}
-              className="w-full sm:w-44"
+              className="w-full sm:w-36"
+              compact
             />
             <Input
               label="Hasta"
@@ -313,10 +270,12 @@ export function SalesView({ roles }: { roles: Role[] }) {
                 setPage(1);
               }}
               disabled={!!saleNumber}
-              className="w-full sm:w-44"
+              className="w-full sm:w-36"
+              compact
             />
           </>
         )}
+      </CollapsibleFilters>
       </div>
 
       {error ? (
@@ -414,14 +373,10 @@ function SalesTable({
             role="button"
             className="flex cursor-pointer flex-col gap-3 rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
               <p className="num text-base font-semibold text-text-primary">
                 {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
               </p>
-              <SaleStatusBadge status={sale.status} />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-text-secondary">Medio de pago</span>
               {sale.payments.length === 0 ? (
                 <span className="text-sm text-text-secondary">—</span>
               ) : (
@@ -434,6 +389,7 @@ function SalesTable({
                   </Badge>
                 ))
               )}
+              <SaleStatusBadge className="ml-auto" status={sale.status} />
             </div>
             {/* Total gets the visual weight — it's what a cashier/admin
                 scans for first — set off by a divider from the secondary
@@ -533,9 +489,15 @@ function SalesTable({
   );
 }
 
-function SaleStatusBadge({ status }: { status: SaleStatus }) {
+function SaleStatusBadge({
+  status,
+  className = "",
+}: {
+  status: SaleStatus;
+  className?: string;
+}) {
   return (
-    <Badge tone={status === "confirmed" ? "success" : "warning"}>
+    <Badge className={className} tone={status === "confirmed" ? "success" : "warning"}>
       {statusLabel(status)}
     </Badge>
   );
@@ -577,94 +539,4 @@ function CashierTodaySummaryCards() {
   if (data === null) return <ListSkeleton rows={2} />;
 
   return <SummaryCards data={data} salesLabel="Ventas hoy" />;
-}
-
-/** Mismo desglose que las cards, sobre un rango elegido — pensado para cerrar el turno. */
-function CashClosingTool() {
-  const today = todayISO();
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
-
-  const fetcher = useCallback(
-    () =>
-      api<SalesSummaryByPaymentMethod>(
-        `/reports/sales/summary?${buildSummaryQuery({ from, to })}`,
-      ),
-    [from, to],
-  );
-  const { data, error, reload } = useLoad(fetcher);
-  const byMethod = normalizeByPaymentMethod(data?.by_payment_method);
-
-  return (
-    <section className="flex flex-col gap-4 rounded-app border border-border bg-surface p-5 shadow-soft">
-      <div>
-        <h2 className="font-semibold">Cierre de caja</h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Elegí un rango para ver cuánto se vendió y por qué medio de pago. Esto
-          no afecta al POS: no hay ninguna acción que bloquee la venta.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <Input
-          label="Desde"
-          type="date"
-          value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          max={to}
-          className="w-full sm:w-auto"
-        />
-        <Input
-          label="Hasta"
-          type="date"
-          value={to}
-          onChange={(e) => setTo(e.target.value)}
-          min={from}
-          className="w-full sm:w-auto"
-        />
-      </div>
-
-      {error ? (
-        <ErrorState error={error} onRetry={reload} />
-      ) : data === null ? (
-        <ListSkeleton rows={2} />
-      ) : (
-        <div className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between rounded-app bg-surface-2 px-4 py-3">
-            <span className="text-sm text-text-secondary">
-              {data.total_sales}{" "}
-              {data.total_sales === 1
-                ? "venta confirmada"
-                : "ventas confirmadas"}
-            </span>
-            <span className="num text-xl font-semibold">
-              {formatMoney(data.total_amount)}
-            </span>
-          </div>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Método</Th>
-                <Th className="text-right">Ventas</Th>
-                <Th className="text-right">Total</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {(["CASH", "CARD", "TRANSFER"] as const).map((method) => (
-                <tr key={method}>
-                  <Td>{paymentMethodLabels[method]}</Td>
-                  <Td className="num text-right">
-                    {byMethod[method].saleCount}
-                  </Td>
-                  <Td className="num text-right font-medium">
-                    {formatMoney(byMethod[method].totalAmount)}
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        </div>
-      )}
-    </section>
-  );
 }

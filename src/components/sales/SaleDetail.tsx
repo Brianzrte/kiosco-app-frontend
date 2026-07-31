@@ -138,6 +138,28 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             <h2 className="mb-3 text-sm font-medium text-text-secondary">
               Ítems
             </h2>
+            <ul className="flex flex-col gap-3 md:hidden">
+              {sale.items.map((item) => {
+                const availability = availabilityByItemId.get(item.id);
+                const fullyReturned = !!availability && availability.alreadyReturned > 0 && availability.available === 0;
+                const partiallyReturned = !!availability && availability.alreadyReturned > 0 && availability.available > 0;
+                return (
+                  <li key={item.id} className="rounded-app border border-border bg-surface p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className={`min-w-0 font-medium ${fullyReturned ? "text-text-secondary line-through decoration-error decoration-2" : ""}`}>{item.product_name}</p>
+                      {fullyReturned && <Badge tone="error">Devuelto</Badge>}
+                      {partiallyReturned && <Badge tone="error">{availability.alreadyReturned} de {item.quantity} devuelto</Badge>}
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div><dt className="text-text-secondary">Cantidad</dt><dd className="num">{item.quantity}</dd></div>
+                      <div><dt className="text-text-secondary">Precio unitario</dt><dd className="num">{formatMoney(item.unit_price)}</dd></div>
+                      <div className="col-span-2"><dt className="text-text-secondary">Subtotal</dt><dd className="num text-lg font-semibold">{formatMoney(item.subtotal)}</dd></div>
+                    </dl>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="hidden md:block">
             <Table>
               <thead>
                 <tr>
@@ -197,6 +219,7 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                 })}
               </tbody>
             </Table>
+            </div>
           </section>
 
           <section>

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSummaryQuery, normalizeByPaymentMethod } from "./salesSummary";
+import { buildSummaryQuery, normalizeByPaymentMethod, todayISO } from "./salesSummary";
+
+describe("todayISO", () => {
+  it("uses the business date at UTC-3 instead of the UTC calendar date", () => {
+    expect(todayISO(new Date("2026-08-01T01:30:00.000Z"))).toBe("2026-07-31");
+  });
+});
 
 describe("buildSummaryQuery", () => {
   it("always requests the payment_method breakdown for the given range", () => {

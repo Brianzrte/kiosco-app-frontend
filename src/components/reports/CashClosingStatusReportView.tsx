@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
@@ -62,10 +63,11 @@ export function CashClosingStatusReportView() {
         description="Revisá los cierres diarios de cada cajero y los que requieren actualización."
       />
 
-      <div className="flex flex-wrap items-end gap-3">
+      <CollapsibleFilters activeFilterCount={0}>
         <Input
           label="Desde"
           type="date"
+          compact
           value={from}
           onChange={(event) => {
             setFrom(event.target.value);
@@ -75,13 +77,14 @@ export function CashClosingStatusReportView() {
         <Input
           label="Hasta"
           type="date"
+          compact
           value={to}
           onChange={(event) => {
             setTo(event.target.value);
             setPage(1);
           }}
         />
-      </div>
+      </CollapsibleFilters>
 
       <CashClosingStatusTable
         key={`${from}-${to}-${page}`}
@@ -126,6 +129,24 @@ function CashClosingStatusTable({
 
   return (
     <div className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-3 md:hidden">
+        {data.items.map((item) => (
+          <li key={`${item.business_date}-${item.cashier_id}`} className="rounded-app border border-border bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium">{item.cashier_username}</p>
+                <p className="num text-sm text-text-secondary">{formatBusinessDate(item.business_date)}</p>
+              </div>
+              <Badge tone={reconciliationStatusTone(item.status)}>{reconciliationStatusLabel(item.status)}</Badge>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div><dt className="text-text-secondary">Diferencia</dt><dd className="num font-medium"><AmountCell value={item.difference} /></dd></div>
+              <div><dt className="text-text-secondary">Ventas</dt><dd className="num">{item.total_sales} · {formatMoney(item.total_amount)}</dd></div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -170,6 +191,7 @@ function CashClosingStatusTable({
           ))}
         </tbody>
       </Table>
+      </div>
 
       {totalPages > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-4">

@@ -26,6 +26,8 @@ export type NormalizedBreakdown = Record<
   { saleCount: number; totalAmount: string }
 >;
 
+export const BUSINESS_TIME_ZONE = "America/Argentina/Buenos_Aires";
+
 export function buildSummaryQuery(opts: { from: string; to: string }): string {
   const params = new URLSearchParams({
     from: opts.from,
@@ -35,8 +37,19 @@ export function buildSummaryQuery(opts: { from: string; to: string }): string {
   return params.toString();
 }
 
-export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+export function todayISO(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 /** Every known method always present, defaulting to zero when absent from the response. */

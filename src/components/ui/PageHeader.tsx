@@ -31,8 +31,8 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="min-w-0">
+    <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
+      <div className="min-w-0 flex-1">
         {eyebrow && (
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
             {eyebrow}
@@ -51,7 +51,7 @@ export function PageHeader({
         )}
       </div>
       {actions && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 md:w-auto">
           {actions}
         </div>
       )}

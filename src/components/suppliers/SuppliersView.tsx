@@ -14,12 +14,14 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { IconSearch } from "@/components/ui/icons";
 import { api, ApiError } from "@/lib/api";
+import { computeTotalPages, pageWindow } from "@/lib/pagination";
 import { Supplier, SuppliersList } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 
@@ -28,6 +30,8 @@ type DialogState = "create" | "edit" | "deactivate" | null;
 export function SuppliersView() {
   const toast = useToast();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [dialog, setDialog] = useState<DialogState>(null);
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [name, setName] = useState("");
@@ -54,6 +58,9 @@ export function SuppliersView() {
       supplier.name.toLocaleLowerCase("es-AR").includes(term),
     );
   }, [suppliers, search]);
+  const pageSize = 25;
+  const totalPages = computeTotalPages(filtered.length, pageSize);
+  const visibleSuppliers = pageWindow(filtered, page, pageSize);
 
   function openDialog(
     next: Exclude<DialogState, null>,
@@ -144,15 +151,9 @@ export function SuppliersView() {
         }
       />
 
-      <Input
-        icon={<IconSearch />}
-        placeholder="Buscar proveedor por nombre"
-        aria-label="Buscar proveedor por nombre"
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        className="sm:max-w-sm"
-        inputMode="search"
-      />
+      <CollapsibleSearch open={searchOpen || !!search} onOpenChange={setSearchOpen} label="Buscar proveedor">
+        <Input icon={<IconSearch />} placeholder="Buscar proveedor por nombre" aria-label="Buscar proveedor por nombre" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} className="sm:max-w-sm" inputMode="search" />
+      </CollapsibleSearch>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -175,9 +176,9 @@ export function SuppliersView() {
         />
       ) : (
         <>
-          <div className="max-h-[calc(100vh-18rem)] overflow-y-auto pr-1 md:hidden">
+          <div className="md:hidden">
             <ul className="flex flex-col gap-3">
-              {filtered.map((supplier) => (
+              {visibleSuppliers.map((supplier) => (
                 <SupplierCard
                   key={supplier.id}
                   supplier={supplier}
@@ -191,7 +192,7 @@ export function SuppliersView() {
               ))}
             </ul>
           </div>
-          <div className="hidden max-h-[calc(100vh-18rem)] overflow-y-auto md:block">
+          <div className="hidden md:block">
             <Table>
               <thead>
                 <tr>
@@ -201,7 +202,7 @@ export function SuppliersView() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((supplier) => (
+                {visibleSuppliers.map((supplier) => (
                   <tr
                     key={supplier.id}
                     role="button"
@@ -250,6 +251,15 @@ export function SuppliersView() {
               </tbody>
             </Table>
           </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-text-secondary">Página {page} de {totalPages} · {filtered.length} proveedores</p>
+              <div className="flex gap-2">
+                <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</Button>
+                <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Siguiente</Button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
+import { IconTrash } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
@@ -147,6 +148,30 @@ export function ReceivingDetailView({ id }: { id: string }) {
           editable && <AddPurchaseOrderItemForm orderId={id} onAdded={reload} />
         }
       />
+      <ul className="flex flex-col gap-3 md:hidden">
+        {order.items.map((item) => {
+          const removed = !!item.removed_at;
+          return (
+            <li key={item.id} className={`rounded-app border border-border bg-surface p-4 ${removed ? "text-text-secondary" : ""}`}>
+              <div className="flex items-start justify-between gap-3">
+                <p className={`font-medium ${removed ? "line-through" : ""}`}>{item.product_name ?? item.description}</p>
+                <div className="flex shrink-0 items-center gap-2">
+                  {!item.product_id && <Badge tone="warning">Pendiente de alta</Badge>}
+                  {editable && !removed && <Button variant="ghost" iconOnly size="sm" aria-label="Quitar ítem" title="Quitar ítem" className="-mt-1 text-error hover:bg-error/10" onClick={() => { setRemoving(item); setReason(""); setFormError(null); }}><IconTrash className="size-4" /></Button>}
+                </div>
+              </div>
+              <dl className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                <div><dt className="text-text-secondary">Solicitada</dt><dd className="num">{item.quantity}</dd></div>
+                <div><dt className="text-text-secondary">Recibida</dt><dd className="num">{item.received_quantity}</dd></div>
+                <div><dt className="text-text-secondary">Costo</dt><dd className="num">{formatMoney(item.unit_cost)}</dd></div>
+                <div><dt className="text-text-secondary">Subtotal</dt><dd className="num font-medium">{formatMoney(item.subtotal)}</dd></div>
+              </dl>
+              {item.non_delivery_reason && <p className="mt-2 text-xs">Motivo: {item.non_delivery_reason}</p>}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden md:block">
       <Table>
         <thead>
           <tr>
@@ -197,15 +222,18 @@ export function ReceivingDetailView({ id }: { id: string }) {
                   <Td>
                     {!removed && (
                       <Button
-                        variant="danger"
+                        variant="ghost"
+                        iconOnly
+                        size="sm"
+                        aria-label="Quitar ítem"
+                        title="Quitar ítem"
+                        className="text-error hover:bg-error/10"
                         onClick={() => {
                           setRemoving(item);
                           setReason("");
                           setFormError(null);
                         }}
-                      >
-                        Quitar
-                      </Button>
+                      ><IconTrash className="size-4" /></Button>
                     )}
                   </Td>
                 )}
@@ -214,6 +242,7 @@ export function ReceivingDetailView({ id }: { id: string }) {
           })}
         </tbody>
       </Table>
+      </div>
       <Card className="flex items-center justify-between">
         <span className="font-medium">Total</span>
         <span className="num text-lg font-semibold">

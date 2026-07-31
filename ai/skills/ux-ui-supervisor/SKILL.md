@@ -88,6 +88,16 @@ formulado.
     (`references/motion.md`, *Árbol de decisión*).
 27. Motion y AutoAnimate nunca controlan el mismo contenedor ni el mismo
     conjunto de hijos directos.
+28. **Toda pantalla se escribe mobile-first**, sin excepción por tipo de
+    pantalla: el estilo base es el del ancho chico y los breakpoints agregan.
+    El diseño base arranca en 360 px y la interfaz sigue siendo funcional desde
+    320 px (`references/responsive-design.md`).
+29. Cuando reducir elementos produce una mala experiencia, **cambia el patrón de
+    layout** — tabla a cards, sidebar a drawer, modal a bottom sheet — antes que
+    achicar tipografías, comprimir controles u ocultar información.
+30. Ninguna pantalla se aprueba con scroll horizontal accidental, con una acción
+    necesaria fuera del viewport, ni con la matriz mínima de viewports sin
+    revisar (`checklists/responsive-review.md`).
 
 ## Product classification
 
@@ -220,6 +230,7 @@ No leer todas las referencias. Cargar por tarea:
 | Tarea | Leer |
 |---|---|
 | Cualquier modo | `references/design-principles.md`, `references/product-context.md` |
+| `design`, `audit`, `pre-merge` — **siempre** | `references/responsive-design.md`, `checklists/responsive-review.md` |
 | Pantalla nueva | `checklists/design-discovery.md`, `references/spacing-layout.md`, `references/states-feedback.md` |
 | Formularios | `references/forms-validation.md`, `references/accessibility.md`, `references/navigation-keyboard.md`, `checklists/accessibility-review.md` |
 | Tablas, listados, reportes | `references/tables-data-visualization.md`, `references/typography.md`, `references/responsive-design.md` |
@@ -280,7 +291,7 @@ Auditorías completas de ejemplo: `examples/pos-sale-screen-review.md`,
 
 ## Accessibility
 
-## Responsive behavior
+## Mobile & Responsive
 
 ## Keyboard navigation
 
@@ -291,6 +302,8 @@ Auditorías completas de ejemplo: `examples/pos-sale-screen-review.md`,
 ## Positive findings
 
 ## Acceptance criteria
+
+## Recommended fix order
 
 ## Deferred suggestions
 ```
@@ -309,7 +322,7 @@ Auditorías completas de ejemplo: `examples/pos-sale-screen-review.md`,
 ## Design tokens
 ## Interaction model
 ## Keyboard behavior
-## Responsive behavior
+## Mobile & Responsive
 ## States
 ## Errors and recovery
 ## Motion
@@ -329,6 +342,45 @@ Auditorías completas de ejemplo: `examples/pos-sale-screen-review.md`,
 
 Se mantienen **todos** los encabezados. Una sección vacía se escribe `Ninguno`
 o `Not evaluated`; no se borra.
+
+### La sección `Mobile & Responsive` es obligatoria
+
+En `design`, `audit` y `pre-merge` nunca se omite ni se resume en una línea. Su
+contenido mínimo:
+
+```markdown
+## Mobile & Responsive
+
+- Estado general: PASS | PASS WITH OBSERVATIONS | FAIL
+- Viewports probados: <los que se abrieron de verdad>
+- Revisión estática: <los que sólo se revisaron leyendo código>
+- Hallazgos: <n> BLOCKER · <n> HIGH · <n> MEDIUM · <n> LOW
+- Riesgo principal para completar la tarea: <una frase>
+
+| Viewport | Estado | Problemas principales |
+|---|---|---|
+| 320 × 568 | | |
+| 360 × 800 | | |
+| 390 × 844 | | |
+| 414 × 896 | | |
+| 430 × 932 | | |
+| 844 × 390 | | |
+| 768 × 1024 | | |
+| 1280 × 720 | | |
+```
+
+Reglas de llenado:
+
+- La matriz mínima y el resto del checklist están en
+  `checklists/responsive-review.md`; acá no se duplican.
+- No se afirma que un viewport fue validado si no se abrió. Sin navegador
+  disponible, la revisión es estática: se declara así, se listan los riesgos
+  probables y se marca qué requiere verificación manual.
+- Un hallazgo responsive nombra **componente o regla CSS**, **viewport donde se
+  reproduce**, **impacto sobre el usuario** y **solución concreta**. "Falta
+  responsive" no es un hallazgo.
+- Toda corrección responsive se comprueba también en tablet y escritorio: no se
+  arregla móvil rompiendo 1280 × 720.
 
 ## Severity model
 
@@ -369,6 +421,14 @@ Criterio de validación· cómo se comprueba que quedó resuelto
 Sin `Evidencia` no hay hallazgo. Una sospecha se investiga o se declara
 `Not evaluated`.
 
+Este es el **único** vocabulario de severidad del skill. Un hallazgo móvil
+descrito como `Critical` en una fuente externa entra como `BLOCKER`; no se
+introduce una escala paralela para responsive:
+
+```text
+Critical → BLOCKER    High → HIGH    Medium → MEDIUM    Low → LOW
+```
+
 ## Scoring system
 
 Puntaje 0–100 sobre ocho categorías ponderadas:
@@ -395,6 +455,11 @@ Reglas:
 - Sin evidencia suficiente, la categoría se marca `Not evaluated`, se excluye
   del total y el total se reporta sobre el peso efectivo
   (p. ej. `72/95 — Responsive not evaluated`).
+- `Responsive` sólo se puntúa completo cuando se recorrió la matriz mínima de
+  `checklists/responsive-review.md`. Con revisión estática o parcial se puntúa
+  como máximo la mitad del peso y se declara qué quedó sin probar. Un problema
+  responsive que impide completar la tarea principal es `BLOCKER` y arrastra el
+  status, no un descuento de 5 puntos.
 - `Confidence`: `alta` (código + screenshot + spec), `media` (una sola fuente),
   `baja` (sólo descripción en prosa).
 
@@ -452,6 +517,13 @@ Una intervención de este skill está terminada cuando:
 - [ ] Los criterios de aceptación son ejecutables por un implementador y
       comprobables por un revisor.
 - [ ] Los hallazgos positivos están incluidos cuando existen.
+- [ ] La sección `Mobile & Responsive` está completa, con los viewports
+      realmente probados separados de los revisados de forma estática.
+- [ ] Cada hallazgo responsive nombra componente o regla CSS, viewport y
+      solución concreta.
+- [ ] Ninguna propuesta resuelve móvil ocultando información necesaria,
+      achicando tipografías por debajo del piso de legibilidad o dejando
+      controles por debajo de 44 px.
 - [ ] Ninguna recomendación agrega una dependencia nueva sin autorización —
       `motion` y `@formkit/auto-animate` ya están disponibles y no cuentan
       como una dependencia nueva.

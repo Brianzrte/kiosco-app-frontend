@@ -108,9 +108,10 @@ Foco inicial, restauración del foco y comportamiento de Escape si es un overlay
 
 ## Responsive
 
-Qué hace en anchos chicos. Si es un componente reutilizable montado en
-contenedores de ancho distinto, considerar container queries en vez de
-breakpoints de viewport.
+Qué hace en anchos chicos, empezando por 360 px y comprobando 320 px. Sin
+anchos fijos; `min-w-0` en los hijos que llevan texto largo. Si es un componente
+reutilizable montado en contenedores de ancho distinto, considerar container
+queries en vez de breakpoints de viewport.
 
 ## Motion
 

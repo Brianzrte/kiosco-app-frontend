@@ -62,18 +62,22 @@ export function ReportsView() {
         title="Reportes"
         description="Panorama del período seleccionado y acceso a cada reporte detallado."
         actions={
-          <div className="flex gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
             <Input
               label="Desde"
               type="date"
+              compact
               value={from}
               onChange={(e) => setFrom(e.target.value)}
+              className="w-full sm:w-auto"
             />
             <Input
               label="Hasta"
               type="date"
+              compact
               value={to}
               onChange={(e) => setTo(e.target.value)}
+              className="w-full sm:w-auto"
             />
           </div>
         }

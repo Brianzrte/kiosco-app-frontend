@@ -2,20 +2,37 @@
 
 ## Estado actual del proyecto
 
-**Mini Moni no tiene librería de iconos.** Los únicos SVG del repo están en
-`src/components/reports/charts/` y son gráficos, no iconos. La interfaz se apoya
-en texto, y en un producto operativo en español eso funciona bien: "Confirmar
-venta" es inequívoco; un icono de carrito, no.
+**Mini Moni no tiene librería de iconos de terceros, pero sí un set propio.**
+`src/components/ui/icons.tsx` define ~28 iconos como SVG inline (`IconCart`,
+`IconHistory`, `IconBox`, `IconLayers`, `IconTruck`, `IconTag`, `IconUsers`,
+`IconChart`, `IconSearch`, `IconLogout`, `IconCash`, `IconCardPay`,
+`IconTransfer`, `IconBarcode`, `IconAlert`, `IconCheckCircle`,
+`IconInfoCircle`, `IconX`, `IconUserOff`, `IconMenu`, `IconSplit`,
+`IconMinus`/`IconPlus`, `IconTrash`, `IconEye`/`IconEyeOff`,
+`IconCalculator`), todos construidos sobre un único wrapper `Icon` interno:
+`viewBox 0 0 24 24`, `stroke 1.75`, `round` caps/joins, `aria-hidden="true"` +
+`focusable="false"` por defecto. Un grid óptico y un grosor ya están resueltos
+— **la consistencia de trazo de este documento ya está aplicada**, no es
+trabajo pendiente. Aparte de ese set, `src/components/reports/charts/` tiene
+SVG propios que son gráficos, no iconos.
 
 Consecuencias directas para este skill:
 
+- **Antes de dibujar un SVG nuevo, revisar si ya existe en `icons.tsx`.** Un
+  icono repetido con trazo o grid distinto rompe exactamente la consistencia
+  que este documento pide.
 - **No se recomienda instalar una librería de iconos.** El runtime es `next`,
   `react`, `react-dom` y nada más (`AGENTS.md` §5). Proponerlo es proponer una
   decisión de dependencia, que se levanta al usuario y se registra en el
   `design.md` de un change — no se resuelve en una recomendación de UI.
-- Si hace falta un icono puntual, la opción proporcional es un **SVG inline**,
-  como ya se hace en los gráficos.
-- Un hallazgo del estilo "faltan iconos" es inválido salvo que el texto por sí
+- Si hace falta un icono nuevo y puntual, se agrega a `icons.tsx` siguiendo el
+  mismo wrapper `Icon` (24×24, stroke 1.75, round caps/joins) — no un SVG
+  suelto en el componente que lo consume.
+- La interfaz se sigue apoyando primero en texto — "Confirmar venta" es
+  inequívoco; un icono de carrito, no — así que un icono es siempre decorativo
+  junto a texto salvo los casos ya resueltos en `icons.tsx` con `aria-label` en
+  el botón (p. ej. `IconEye`/`IconEyeOff` en el toggle de contraseña).
+  Un hallazgo del estilo "faltan iconos" es inválido salvo que el texto por sí
   solo esté fallando en una tarea concreta y se pueda demostrar.
 
 ## Si algún día se agrega una librería

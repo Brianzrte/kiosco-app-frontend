@@ -21,6 +21,14 @@ Acciones destructivas:  confirmación proporcional al riesgo.
 Flujo principal:        realizable sin mouse cuando sea posible.
 ```
 
+El POS se usa mayormente en la PC del mostrador, así que 1024 × 768, 1280 × 720
+y 1366 × 768 son sus viewports **prioritarios de verificación**. Eso no lo exime
+de mobile-first: el CSS se escribe igual desde 360 px y la venta tiene que poder
+completarse en un teléfono. El detalle responsive de la pantalla de venta —
+total siempre visible, `Cobrar` alcanzable, barra inferior con safe area,
+teclado virtual, controles de cantidad separados de eliminar — está en
+`responsive-design.md`, *Las pantallas de Mini Moni*.
+
 ### De dónde salen estas prioridades
 
 El cajero **no mira la pantalla**: mira al cliente, al producto y al lector. La

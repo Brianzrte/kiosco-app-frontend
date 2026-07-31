@@ -14,13 +14,14 @@ export const Input = forwardRef<
   InputHTMLAttributes<HTMLInputElement> & {
     label?: string;
     error?: string;
+    compact?: boolean;
     /** Decorative leading icon (e.g. a search glyph). Purely visual — the field's accessible name still comes from `label`/`aria-label`, never from the icon. */
     icon?: ReactNode;
     /** Interactive trailing control (e.g. the password show/hide toggle). Unlike `icon`, this can be a real button — it isn't marked aria-hidden. */
     endAdornment?: ReactNode;
   }
 >(function Input(
-  { label, error, icon, endAdornment, className = "", id, ...props },
+  { label, error, icon, endAdornment, compact = false, className = "", id, ...props },
   ref,
 ) {
   const generatedId = useId();
@@ -44,7 +45,7 @@ export const Input = forwardRef<
         <input
           ref={ref}
           id={inputId}
-          className={`${fieldClass} ${icon ? "pl-9" : ""} ${endAdornment ? "pr-11" : ""}`}
+          className={`${fieldClass} ${compact ? "px-2.5 py-2 text-xs" : ""} ${icon ? "pl-9" : ""} ${endAdornment ? "pr-11" : ""}`}
           {...props}
         />
         {endAdornment && (
@@ -61,12 +62,14 @@ export const Input = forwardRef<
 export function Select({
   label,
   error,
+  compact = false,
   className = "",
   children,
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement> & {
   label?: string;
   error?: string;
+  compact?: boolean;
 }) {
   const id = useId();
   return (
@@ -76,7 +79,7 @@ export function Select({
           {label}
         </label>
       )}
-      <select id={id} className={fieldClass} {...props}>
+      <select id={id} className={`${fieldClass} ${compact ? "px-2.5 py-2 text-xs" : ""}`} {...props}>
         {children}
       </select>
       {error && <p className="mt-1.5 text-sm text-error">{error}</p>}

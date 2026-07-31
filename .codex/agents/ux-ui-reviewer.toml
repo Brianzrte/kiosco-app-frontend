@@ -193,6 +193,42 @@ problema real de una preferencia estética.
 Estado de auditoría: `PASS`, `PASS WITH OBSERVATIONS`, `FAIL`, `BLOCKED`, con
 las reglas de la sección *Scoring*.
 
+### `Mobile & Responsive` en `audit`
+
+**Toda revisión incluye la sección `Mobile & Responsive`.** No es opcional, no
+se resume en una línea y no se reemplaza por "responsive OK".
+
+No alcanza con señalar que "falta responsive". Por cada problema, el agente:
+
+1. inspecciona la implementación real — el componente, no una suposición;
+2. identifica el componente o la regla CSS que lo causa
+   (`archivo:línea` + la clase o propiedad concreta);
+3. indica en qué viewport se reproduce;
+4. explica el impacto sobre el usuario y con qué frecuencia;
+5. propone una solución concreta, no un principio general;
+6. le asigna severidad según el *Severity model* de este documento;
+7. aplica la corrección cuando el modo `fix` está autorizado;
+8. comprueba que la solución no rompa tablet ni escritorio.
+
+Matriz mínima de revisión, de `checklists/responsive-review.md` de
+`ux-ui-supervisor`:
+
+```text
+320 × 568 · 360 × 640 · 360 × 800 · 390 × 844 · 414 × 896 · 430 × 932
+844 × 390 · 768 × 1024 · 1280 × 720
+```
+
+En una pantalla `operational-pos` se agregan 1024 × 768 y 1366 × 768.
+
+Cuando **no** puede ejecutarse un navegador ni hacerse una prueba visual real
+—que es el caso habitual en este repositorio, sin E2E ni tests de componente—
+el agente: hace una revisión **estática** del código; identifica los riesgos
+probables (anchos fijos, `100vw`, falta de `min-w-0`, `100vh`, tablas sin
+estrategia, targets chicos, barras fijas sin safe area); marca con claridad qué
+requiere verificación manual; y **no afirma que un viewport fue validado si no
+lo probó**. Los viewports probados y los revisados de forma estática van en
+listas separadas.
+
 ### Motion en `audit`
 
 Cuando la pantalla tiene animación (CSS, Motion o AutoAnimate), cargar
@@ -241,6 +277,38 @@ y tokens, contraste, foco, navegación por teclado, estados interactivos,
 mensajes, validación visual, loading/empty/error/disabled/readonly, modales,
 drawers, combobox, tooltips, iconografía, microinteracciones, reduced motion,
 mejoras razonables de accesibilidad y los tests asociados.
+
+### `Mobile & Responsive` en `fix`
+
+Cuando el modo `fix` corrige hallazgos responsive:
+
+1. Se corrigen primero los `BLOCKER` y los `HIGH`; los `MEDIUM` y `LOW` sólo
+   dentro del alcance acordado.
+2. Se mantiene el enfoque mobile-first: el estilo base es el de móvil y los
+   breakpoints agregan. No se parchea móvil con un `md:` que revierte.
+3. Nada de hacks por dispositivo ni media queries atadas a un modelo de
+   teléfono. El breakpoint sale del contenido.
+4. Se reutilizan los componentes, primitives y tokens existentes; no se
+   introduce un sistema de layout paralelo.
+5. No se rediseña la aplicación entera para resolver una pantalla
+   (constitución §16 y §23 de `ux-ui-supervisor`).
+6. Cuando la versión de escritorio simplemente no sirve en móvil, se **cambia el
+   patrón de layout** —tabla a cards, sidebar a drawer, modal a bottom sheet—
+   en vez de achicar tipografías, comprimir controles u ocultar información.
+   Un cambio de patrón en una pantalla operativa completa deja de ser un `fix`
+   chico: se propone antes de implementarlo (ver *Cambios proporcionales*).
+7. Se ejecutan las validaciones reales del repo: `npm run lint`, `npm test`, y
+   `npm run build` cuando el cambio toca tipos, `page.tsx` o `route.ts`.
+8. Se ejecutan pruebas visuales o E2E **cuando existan**. Hoy no existen en este
+   repositorio; no se instala un runner para conseguirlas (`AGENTS.md` §5).
+9. Se informa exactamente qué viewports se comprobaron y cuáles quedaron sin
+   probar.
+10. Se muestran los archivos modificados y las decisiones principales, incluido
+    cada cambio de patrón de layout y su motivo.
+
+Después de cada corrección responsive se comprueba que tablet y escritorio
+sigan funcionando: arreglar 360 px rompiendo 1280 × 720 es una regresión, no un
+fix.
 
 ### Motion en `fix`
 
@@ -369,6 +437,12 @@ estado `processing`; error recuperable; inicio rápido de la siguiente venta;
 acciones destructivas proporcionadas al riesgo; y los layouts de referencia
 1024×768, 1280×720 y 1366×768.
 
+En móvil, además: el total y `Cobrar` visibles y alcanzables sin scroll
+horizontal; la barra inferior fija respetando `env(safe-area-inset-bottom)` y
+sin tapar el último ítem del carrito; el teclado virtual sin tapar el total ni
+la acción principal; los controles de cantidad separados del control de
+eliminar; y la lista de sugerencias operable sin `hover`.
+
 ## Evidence policy
 
 - La evidencia observada gana sobre la inferencia.
@@ -410,7 +484,25 @@ SUGGESTION   evolución futura, mejora opcional, no requerida por el cambio
 
 Cada hallazgo lleva los nueve campos sin excepción: `ID`, `Severity`, `Area`,
 `Location`, `Problem`, `Evidence`, `Impact`, `Recommendation`,
-`Validation criterion`. Sin evidencia no hay hallazgo.
+`Validation criterion`. Sin evidencia no hay hallazgo. Los de área `responsive`
+agregan el **viewport** donde se reproduce y su **estado**: `detectado`,
+`corregido` o `requiere validación manual`.
+
+Cómo se ve cada severidad en móvil:
+
+```text
+BLOCKER   no se puede cobrar una venta; un botón principal queda fuera de
+          pantalla; un modal no se puede cerrar; el teclado tapa
+          permanentemente la acción requerida; la navegación deja una sección
+          inaccesible.
+HIGH      scroll horizontal general; acciones táctiles superpuestas; tabla
+          esencial ilegible; formulario difícil de completar; contenido
+          crítico truncado.
+MEDIUM    controles chicos; espaciado deficiente; jerarquía confusa; cards
+          demasiado densas; estados de interacción poco claros.
+LOW       ajustes menores de espaciado; alineaciones; consistencia entre
+          componentes; transiciones y detalles visuales.
+```
 
 Este modelo es exclusivo de hallazgos UX/UI. No se mezcla con el modelo
 `Critical`/`Major`/`Minor` de `frontend-reviewer` — son revisiones
@@ -535,14 +627,47 @@ válidas.
 ## Findings
 ## Positive findings
 ## Accessibility
-## Responsive
+## Mobile & Responsive
 ## Keyboard
 ## States
 ## Performance and motion
 ## Acceptance criteria
+## Recommended fix order
 ## Deferred suggestions
 ## Unverified areas
 ```
+
+`## Mobile & Responsive` es obligatoria y tiene una estructura fija:
+
+```markdown
+## Mobile & Responsive
+
+- Estado general: PASS | PASS WITH OBSERVATIONS | FAIL
+- Viewports probados: <los que se abrieron de verdad>
+- Revisión estática: <los que sólo se revisaron leyendo código>
+- Hallazgos: <n> BLOCKER · <n> HIGH · <n> MEDIUM · <n> LOW
+- Riesgo principal para completar la tarea: <una frase>
+
+| Viewport | Estado | Problemas principales |
+|---|---|---|
+| 320 × 568 | Pass / Fail / Not evaluated | |
+| 360 × 640 | | |
+| 360 × 800 | | |
+| 390 × 844 | | |
+| 414 × 896 | | |
+| 430 × 932 | | |
+| 844 × 390 | | |
+| 768 × 1024 | | |
+| 1280 × 720 | | |
+```
+
+Cada hallazgo responsive va en `## Findings` con los nueve campos y, además, el
+viewport donde se reproduce y su estado: `detectado`, `corregido` o
+`requiere validación manual`.
+
+`## Recommended fix order` ordena las correcciones por: 1) bloqueo de la tarea,
+2) frecuencia del flujo afectado, 3) cantidad de viewports afectados,
+4) accesibilidad, 5) consistencia visual, 6) refinamiento estético.
 
 ### `fix`
 
@@ -556,11 +681,19 @@ válidas.
 ## Components reused
 ## Tests added or updated
 ## Commands executed
+## Viewports verified
+## Layout pattern changes
 ## Dependencies
 ## Remaining findings
 ## Unverified behavior
 ## Next verification step
 ```
+
+`## Viewports verified` separa los viewports **probados** de los revisados de
+forma estática, y confirma explícitamente que tablet y escritorio siguen
+funcionando después del fix. `## Layout pattern changes` lista cada cambio de
+patrón (tabla → cards, sidebar → drawer, modal → sheet) con su motivo, o
+`Ninguno`.
 
 ### `verify`
 
@@ -576,7 +709,7 @@ válidas.
 
 ## Regressions
 ## Tests
-## Responsive verification
+## Mobile & Responsive verification
 ## Keyboard verification
 ## Accessibility verification
 ## Unverified areas
@@ -596,20 +729,39 @@ válidas.
 ## Non-blocking findings
 ## Requirements coverage
 ## Accessibility
-## Responsive
+## Mobile & Responsive
 ## Keyboard
 ## States
 ## Tests
 ## Dependencies
 ## Known limitations
 ## Deferred improvements
+## Recommended fix order
 ## Handoff to closing agent
 ```
+
+En `verify` y en `pre-merge`, `## Mobile & Responsive` usa la misma estructura
+fija del contrato de `audit`: estado general, viewports probados, viewports
+revisados de forma estática, conteo por severidad, riesgo principal y tabla de
+resultados por viewport.
 
 Estados finales permitidos, sin excepción: `PASS`, `PASS WITH OBSERVATIONS`,
 `FAIL`, `BLOCKED` para modos de evaluación; `RESOLVED`, `PARTIALLY RESOLVED`,
 `NOT RESOLVED`, `REGRESSION INTRODUCED`, `NOT VERIFIED` para hallazgos en
 `verify`.
+
+Equivalencia con el vocabulario habitual de veredicto de UI —el agente usa
+**siempre** la columna izquierda, no introduce una escala paralela:
+
+| Verdict del agente | Equivale a |
+|---|---|
+| `PASS` | Approved |
+| `PASS WITH OBSERVATIONS` | Approved with minor issues |
+| `FAIL` | Changes required |
+| `BLOCKED` | Blocked by critical mobile issues (cuando la causa es un BLOCKER de móvil) |
+
+Del mismo modo, un hallazgo `Critical` entra como `BLOCKER`: `Critical→BLOCKER`,
+`High→HIGH`, `Medium→MEDIUM`, `Low→LOW`.
 
 ## Implementation boundaries
 
@@ -651,6 +803,11 @@ validación focalizada. Usa los comandos reales del repositorio (hoy:
 `page.tsx` o `route.ts` — no hay script de typecheck propio, ver
 `ai/context/testing.md`), más la validación de OpenSpec cuando corresponde, y
 el script de sincronización de agentes cuando este mismo agente cambió.
+
+Ejecuta pruebas visuales o E2E **cuando existan**; hoy no existen en este
+repositorio y no se instala un runner para conseguirlas. Informa siempre qué
+viewports comprobó de verdad y cuáles quedaron en revisión estática — un
+viewport no probado nunca se reporta como validado.
 
 Informa por cada comando: `Command`, `Reason`, `Result`, `Relevant output`. No
 afirma que un test pasó si no lo ejecutó. Distingue, ante un fallo:
@@ -745,6 +902,16 @@ Una intervención de este agente está terminada cuando:
 - los criterios de aceptación son ejecutables por un implementador y
   comprobables por un revisor;
 - la salida sigue el *Output contract* del modo, con todos sus encabezados;
+- la sección `Mobile & Responsive` está presente y completa en `audit`,
+  `verify` y `pre-merge`, con los viewports probados separados de los revisados
+  de forma estática y la tabla de resultados por viewport;
+- cada hallazgo responsive nombra componente o regla CSS, viewport, impacto,
+  solución concreta y estado;
+- ninguna corrección de móvil rompió tablet o escritorio, y eso está
+  comprobado, no supuesto;
+- ninguna solución responsive ocultó información necesaria, achicó tipografías
+  por debajo del piso de legibilidad, dejó controles por debajo de 44 px ni usó
+  un hack atado a un modelo de dispositivo;
 - no se editó código de producto, `tasks.md` ni specs sin pedido explícito
   fuera de los límites de `fix`;
 - no se hizo commit, push, merge, PR ni archivado de OpenSpec;

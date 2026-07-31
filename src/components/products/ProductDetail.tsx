@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { IconPower } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useToast } from "@/components/ui/Toast";
 import { ErrorState, LoadingState } from "@/components/ui/states";
@@ -58,18 +59,10 @@ export function ProductDetail({ id, roles }: { id: string; roles: Role[] }) {
     <div className="flex flex-col gap-6">
       <PageHeader
         title={product.name}
-        titleAdornment={
-          product.active ? (
-            <Badge tone="success">Activo</Badge>
-          ) : (
-            <Badge tone="neutral">Inactivo</Badge>
-          )
-        }
+        titleAdornment={product.active ? <Badge tone="success">Activo</Badge> : <Badge tone="neutral">Inactivo</Badge>}
         actions={
           product.active ? (
-            <Button variant="danger" onClick={() => setConfirmOpen(true)}>
-              Desactivar producto
-            </Button>
+            <Button variant="ghost" size="sm" iconOnly aria-label="Desactivar producto" title="Desactivar producto" className="text-error hover:!bg-error/10" onClick={() => setConfirmOpen(true)}><IconPower className="size-4" /></Button>
           ) : (
             roles.includes("admin") && (
               <Button variant="primary" onClick={activate} pending={pending}>
