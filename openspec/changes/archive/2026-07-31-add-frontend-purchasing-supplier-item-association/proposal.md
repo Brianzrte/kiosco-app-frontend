@@ -1,0 +1,29 @@
+## Why
+
+En `/purchasing/new`, cuando no hay proveedor seleccionado, la sección de sugerencias de reposición muestra en una sola lista tanto productos realmente bajos de stock como productos con datos de planificación incompletos, bajo el mismo texto "Revisar datos"; la persona usuaria no puede distinguir de un vistazo qué necesita reponerse de qué necesita completar información, y los productos con datos incompletos no ofrecen ninguna acción pese a estar listados. Además, cuando sí hay proveedor seleccionado, elegir en un ítem un producto que todavía no está asociado a ese proveedor no ofrece ninguna salida: la persona debe abandonar la creación del pedido, ir a la ficha del producto, asociar el proveedor y volver a empezar el pedido desde cero. Por último, el formulario crea el pedido apenas se envía, sin ninguna instancia de repaso final de productos, cantidades y costos antes de confirmar una compra real.
+
+## What Changes
+
+- Cuando no hay proveedor seleccionado en `/purchasing/new`, dividir la sección de sugerencias de reposición en dos bloques: "Bajos de stock" (`suggested_quantity` positivo, con su acción "Usar N" como hoy) y "Datos de planificación incompletos" (`suggested_quantity` nulo, mostrando la explicación del backend). Cada bloque tiene su propio texto de vacío cuando no tiene ítems, y cada uno usa un tono de color distinto (tokens ya existentes de `Badge.tsx`) para diferenciarse visualmente por urgencia.
+- Hacer accionable el bloque "Datos de planificación incompletos": cada ítem tiene un checkbox que, al marcarse, despliega un campo de cantidad y un botón para confirmar; al confirmar, se agrega un ítem al pedido con ese producto y esa cantidad (costo unitario a completar por la persona usuaria, igual que con "Usar N"). Desmarcar antes de confirmar oculta el campo sin agregar nada.
+- Cuando hay proveedor seleccionado y la persona usuaria elige, en un ítem del pedido, un producto sin ninguna asociación activa (preferida o no) con ese proveedor, mostrar un warning inline con la acción de asociar el producto al proveedor sin salir del formulario ni perder los ítems ya cargados. La asociación reutiliza el mismo patrón de lectura y reemplazo completo (`GET`/`PUT /products/{id}/suppliers`, alta con `preferred: false`) ya usado en la ficha de producto.
+- Antes de crear el pedido, mostrar un modal de confirmación con el resumen (producto, cantidad, costo unitario, subtotal por ítem y total general) y una acción explícita "Confirmar pedido" que recién ahí envía `POST /purchase-orders`; cancelar o cerrar el modal vuelve al formulario sin enviar nada y sin perder los valores cargados.
+- Agregar un ícono de lupa a la derecha del encabezado "Datos de planificación incompletos" que, al hacer click, expande hacia la izquierda un campo de búsqueda (con una animación suave usando los tokens de motion ya existentes) para filtrar esa lista por nombre de producto sin pedir datos nuevos al backend.
+- Reemplazar el `<Select>` de producto de cada ítem del pedido por un combobox buscable (texto + lista filtrada, navegable con teclado), reutilizando el mismo patrón accesible ya implementado en el buscador de productos de `PosView.tsx`, para facilitar elegir un producto entre un catálogo extenso.
+- Fuera de alcance de este change: crear un pedido sin proveedor y acotar la lista de sugerencias al proveedor seleccionado considerando cualquier asociación no preferida; ambos puntos requieren ampliar `GET /purchase-orders/suggestions` y quedan en un change hermano bloqueado por backend.
+
+## Capabilities
+
+### Modified Capabilities
+
+- `ui-suppliers-purchasing`: la creación manual de pedidos separa las sugerencias sin proveedor en dos secciones explicables, accionables y buscables, distinguidas por color, permite elegir el producto de un ítem con un combobox buscable, permite asociar inline un producto al proveedor seleccionado del pedido, y exige una confirmación final con resumen antes de crear el pedido.
+
+## Impact
+
+- `src/components/purchasing/PurchaseOrderForm.tsx`: divide la sección de sugerencias en dos bloques con color, acción propia y buscador expandible en el bloque de datos incompletos; reemplaza el `<Select>` de producto por un combobox buscable en cada ítem; agrega el warning y la acción de asociación por ítem; agrega el modal de confirmación previo al `POST /purchase-orders`.
+- `src/lib/purchasing.ts` (o módulo equivalente): funciones puras para partir las sugerencias por `suggested_quantity`, para filtrar la lista de datos incompletos por término de búsqueda, para decidir/​construir la asociación producto-proveedor, y para calcular subtotales/total del resumen del modal, todas testeables sin React.
+- Reutiliza `src/components/ui/Dialog.tsx` (ya existente, mismo patrón que `CashierShiftClosingModal.tsx`) para el modal de confirmación; no crea un componente de diálogo nuevo.
+- Reutiliza el patrón de combobox accesible (`role="combobox"`, filtro cliente, navegación por teclado) ya implementado en `src/components/pos/PosView.tsx` para el buscador de producto en el POS; no introduce una librería de combobox nueva.
+- No agrega rutas, roles ni endpoints nuevos. Reutiliza exclusivamente `GET /purchase-orders/suggestions`, `GET /products/{id}/suppliers` y `PUT /products/{id}/suppliers`, ya verificados y desplegados; `POST /purchase-orders` no cambia de contrato, sólo se pospone su llamada hasta la confirmación en el modal. El buscador de datos incompletos y el combobox de producto filtran client-side sobre datos ya cargados (`GET /purchase-orders/suggestions`, `GET /products`), sin ningún parámetro ni endpoint de búsqueda nuevo.
+- Depende de `add-frontend-suppliers-purchasing` (todavía sin archivar), del cual hereda `PurchaseOrderForm.tsx` y la capability `ui-suppliers-purchasing`.
+- No agrega dependencias.
