@@ -76,11 +76,11 @@ export function ProductsView() {
         }
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(44px,1fr)] items-start gap-2 rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-wrap md:items-end md:gap-3 md:p-3">
-        <CollapsibleSearch open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
+      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-2 py-1.5 md:flex md:flex-wrap md:items-end md:gap-3 md:p-3`}>
+        <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
           <Input icon={<IconSearch />} placeholder="Buscar por nombre, SKU o código de barras" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full sm:min-w-64 sm:flex-1" inputMode="search" />
         </CollapsibleSearch>
-        <CollapsibleFilters open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryFilter)) + Number(Boolean(activeFilter))}>
+        <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryFilter)) + Number(Boolean(activeFilter))}>
           <Select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className="w-full sm:w-48" aria-label="Filtrar por categoría">
             <option value="">Todas las categorías</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}

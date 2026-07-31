@@ -7,7 +7,7 @@ import {
 } from "react";
 
 const fieldClass =
-  "w-full rounded-app border border-border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover focus:border-primary disabled:bg-surface-2 disabled:text-text-disabled";
+  "min-w-0 max-w-full w-full rounded-app border border-border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover focus:border-primary disabled:bg-surface-2 disabled:text-text-disabled";
 
 export const Input = forwardRef<
   HTMLInputElement,
@@ -28,7 +28,7 @@ export const Input = forwardRef<
   const generatedId = useId();
   const inputId = id ?? generatedId;
   return (
-    <div className={`${inline ? "flex min-w-0 items-start gap-2" : ""} ${className}`}>
+    <div className={`${inline ? "flex min-w-0 items-start gap-2" : "min-w-0"} ${className}`}>
       {label && (
         <label htmlFor={inputId} className={`${inline ? "mb-0 whitespace-nowrap pt-2.5" : "mb-1.5 block"} text-sm font-medium`}>
           {label}
