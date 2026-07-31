@@ -2,10 +2,24 @@ import { describe, expect, it } from "vitest";
 import {
   buildMovementsQuery,
   buildStockQuery,
+  isDeepLinkedProductId,
   computeInventoryPageSize,
   computeTotalPages,
   isRowLow,
 } from "./inventory";
+
+describe("isDeepLinkedProductId", () => {
+  it("accepts non-empty raw query values without normalizing them", () => {
+    expect(isDeepLinkedProductId("product-1")).toBe(true);
+    expect(isDeepLinkedProductId("  product-1  ")).toBe(true);
+  });
+
+  it("rejects missing and empty query values", () => {
+    expect(isDeepLinkedProductId(null)).toBe(false);
+    expect(isDeepLinkedProductId("")).toBe(false);
+    expect(isDeepLinkedProductId("   ")).toBe(false);
+  });
+});
 
 describe("buildStockQuery", () => {
   it("omits empty filters", () => {

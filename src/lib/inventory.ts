@@ -18,6 +18,11 @@ export const INVENTORY_DEFAULT_PAGE_SIZE = 15;
 export const INVENTORY_MIN_PAGE_SIZE = 5;
 export const INVENTORY_MAX_PAGE_SIZE = 15;
 
+/** A non-empty product_id query value is enough; the backend owns UUID validation. */
+export function isDeepLinkedProductId(value: string | null): value is string {
+  return value !== null && value.trim() !== "";
+}
+
 export function computeInventoryPageSize(opts: {
   viewportHeight: number;
   listTop: number;

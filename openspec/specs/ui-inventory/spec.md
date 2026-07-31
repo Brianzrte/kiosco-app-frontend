@@ -7,7 +7,10 @@ Vista de stock, inicialización y ajuste manual con motivo obligatorio.
 Fuente: `CLAUDE.md` (spec de frontend y design system) y los specs de backend en `../backend/docs/specs/`.
 ## Requirements
 ### Requirement: Stock view per product
+
 The frontend SHALL show current stock from the inventory endpoints, displaying quantity, minimum quantity, and last update. Low-stock status SHALL be taken from the backend and SHALL NOT be derived in the client. The list SHALL visually distinguish three states — not initialised, initialised at zero, and below minimum — using text, never colour alone. Pagination SHALL use the backend's `page` parameter.
+
+The screen SHALL support opening directly to a specific product's "Gestionar stock" dialog via a `product_id` query parameter in its URL, resolving that product with `GET /api/v1/products/{id}` independently of whichever page of the paginated, filtered list is currently loaded. When that product resolves, its "Gestionar stock" dialog SHALL open immediately — in initialization mode if it has no stock record, or in adjustment mode if it does — with the same content it would show if opened by clicking its row. When `product_id` is absent, the screen's behavior SHALL be unchanged from before this requirement was extended.
 
 #### Scenario: Stock displayed
 - **WHEN** the inventory screen loads a product's stock
@@ -28,6 +31,23 @@ The frontend SHALL show current stock from the inventory endpoints, displaying q
 #### Scenario: Pagination advances
 - **WHEN** the user moves to the next page of the stock list
 - **THEN** the request sends the `page` parameter and different rows are returned
+
+#### Scenario: Opening directly to a product via URL
+- **WHEN** the inventory screen loads with `?product_id={id}` for an existing
+  product
+- **THEN** that product's "Gestionar stock" dialog opens immediately, without
+  requiring the product to appear on the currently loaded page of the list
+
+#### Scenario: Deep-linked product not found
+- **WHEN** `?product_id={id}` does not resolve to an existing product, or the
+  lookup fails
+- **THEN** no dialog opens, a short non-blocking message explains it, and the
+  underlying list remains usable
+
+#### Scenario: No query parameter behaves as before
+- **WHEN** the inventory screen loads without a `product_id` parameter
+- **THEN** its behavior is exactly as it was before this requirement was
+  extended
 
 ### Requirement: Initialize stock
 The frontend SHALL allow initializing stock for a product without stock via `POST /api/v1/inventory/stock` with `{ product_id, quantity, reason }`, where quantity SHALL be ≥ 0.

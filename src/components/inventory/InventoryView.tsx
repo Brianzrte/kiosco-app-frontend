@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -21,11 +22,13 @@ import {
   computeTotalPages,
   INVENTORY_DEFAULT_PAGE_SIZE,
   isRowLow,
+  isDeepLinkedProductId,
   MOVEMENT_TYPE_LABELS,
 } from "@/lib/inventory";
 import {
   CategoryList,
   MovementList,
+  Product,
   Stock,
   StockList,
   StockListItem,
@@ -37,7 +40,10 @@ import {
 const RESERVED_BELOW_LIST_PX = 100;
 
 export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
+  const searchParams = useSearchParams();
+  const deepLinkedProductId = searchParams.get("product_id");
   const [selectedItem, setSelectedItem] = useState<StockListItem | null>(null);
+  const [deepLinkNotice, setDeepLinkNotice] = useState<string | null>(null);
   const [historyRequest, setHistoryRequest] = useState<{
     productId: string;
     nonce: number;
@@ -148,6 +154,45 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
 
   const totalPages = computeTotalPages(total, pageSize);
 
+  const deepLinkedProductFetcher = useCallback(() => {
+    if (!isDeepLinkedProductId(deepLinkedProductId)) {
+      return Promise.resolve<Product | null>(null);
+    }
+    return api<Product>(
+      `/products/${encodeURIComponent(deepLinkedProductId)}`,
+    );
+  }, [deepLinkedProductId]);
+  const {
+    data: deepLinkedProduct,
+    error: deepLinkedProductError,
+  } = useLoad(deepLinkedProductFetcher);
+
+  useEffect(() => {
+    if (!isDeepLinkedProductId(deepLinkedProductId)) return;
+    queueMicrotask(() => {
+      if (deepLinkedProductError) {
+        setSelectedItem(null);
+        setDeepLinkNotice(
+          `No se pudo abrir el producto en Inventario. ${deepLinkedProductError.message}`,
+        );
+        return;
+      }
+      if (!deepLinkedProduct) return;
+      setDeepLinkNotice(null);
+      setSelectedItem({
+        product_id: deepLinkedProduct.id,
+        sku: deepLinkedProduct.sku,
+        name: deepLinkedProduct.name,
+        barcode: deepLinkedProduct.barcode,
+        active: deepLinkedProduct.active,
+        initialized: false,
+        quantity: 0,
+        minimum_quantity: 0,
+        updated_at: null,
+      });
+    });
+  }, [deepLinkedProduct, deepLinkedProductError, deepLinkedProductId]);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -166,6 +211,11 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
           )
         }
       />
+      {deepLinkNotice && (
+        <p className="text-sm text-text-secondary" role="status">
+          {deepLinkNotice}
+        </p>
+      )}
 
       <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-row md:items-end md:gap-3 md:p-3`}>
         <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">

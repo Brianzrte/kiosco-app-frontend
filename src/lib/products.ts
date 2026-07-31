@@ -1,5 +1,18 @@
 import { computePageSize } from "./pagination";
 import { subtractMoney, toCents } from "./money";
+import type { Role } from "./types";
+
+export function getLastCartLineProductId(
+  cart: readonly { product: { id: string } }[],
+): string | null {
+  return cart.length > 0 ? cart[cart.length - 1].product.id : null;
+}
+
+export function canInitializeStockFromPos(roles: readonly Role[]): boolean {
+  return roles.some((role) =>
+    ["inventory", "receiving", "admin"].includes(role),
+  );
+}
 
 export const PRODUCTS_MIN_PAGE_SIZE = 5;
 export const PRODUCTS_MAX_PAGE_SIZE = 15;

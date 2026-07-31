@@ -31,7 +31,11 @@ import {
   type SplitPaymentInput,
   type SplitPaymentMethod,
 } from "@/lib/paymentComposition";
-import { Product, ProductList, Sale, Stock } from "@/lib/types";
+import {
+  canInitializeStockFromPos,
+  getLastCartLineProductId,
+} from "@/lib/products";
+import { Product, ProductList, Role, Sale, Stock } from "@/lib/types";
 import {
   IconBarcode,
   IconCalculator,
@@ -128,7 +132,7 @@ const PAYMENT_ICONS: Record<SplitPaymentMethod, typeof IconCash> = {
   TRANSFER: IconTransfer,
 };
 
-export function PosView() {
+export function PosView({ roles }: { roles: Role[] }) {
   const shouldReduceMotion = useReducedMotion();
   const scanRef = useRef<HTMLInputElement>(null);
   const actualPriceRef = useRef<HTMLInputElement>(null);
@@ -159,6 +163,7 @@ export function PosView() {
     id: string;
     total: string;
     saleNumber: number | null;
+    productId: string | null;
   } | null>(null);
 
   const [totalFlash, setTotalFlash] = useState(0);
@@ -575,6 +580,7 @@ export function PosView() {
     setUnknownState(false);
     setPending(true);
     const total = formatMoney(saleTotal);
+    const lastCartProductId = getLastCartLineProductId(cart);
     try {
       const sale = await api<{ id: string }>("/sales", { method: "POST" });
       for (const line of cart) {
@@ -607,6 +613,7 @@ export function PosView() {
         id: sale.id,
         total,
         saleNumber: confirmed.sale_number ?? null,
+        productId: lastCartProductId,
       });
       setCart([]);
       setPayment(null);
@@ -1287,7 +1294,28 @@ export function PosView() {
                 </div>
 
                 <div className="flex w-full flex-col gap-2">
-                  <Button onClick={dismissConfirmedSale}>Nueva venta</Button>
+                  {canInitializeStockFromPos(roles) &&
+                    confirmedSale.productId && (
+                      <Button
+                        onClick={() =>
+                          window.location.assign(
+                            `/inventory?product_id=${encodeURIComponent(confirmedSale.productId!)}`,
+                          )
+                        }
+                      >
+                        Inicializar stock
+                      </Button>
+                    )}
+                  <Button
+                    variant={
+                      canInitializeStockFromPos(roles) && confirmedSale.productId
+                        ? "secondary"
+                        : "primary"
+                    }
+                    onClick={dismissConfirmedSale}
+                  >
+                    Ahora no
+                  </Button>
                   <Link
                     href={`/sales/${confirmedSale.id}`}
                     className="text-sm font-medium text-primary hover:text-primary-hover"

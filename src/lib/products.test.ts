@@ -8,7 +8,27 @@ import {
   PRODUCTS_DEFAULT_PAGE_SIZE,
   PRODUCTS_MAX_PAGE_SIZE,
   PRODUCTS_MIN_PAGE_SIZE,
+  canInitializeStockFromPos,
+  getLastCartLineProductId,
 } from "./products";
+
+describe("stock shortcut helpers", () => {
+  it("returns the last product in cart order", () => {
+    expect(
+      getLastCartLineProductId([
+        { product: { id: "first" } },
+        { product: { id: "last" } },
+      ]),
+    ).toBe("last");
+    expect(getLastCartLineProductId([])).toBeNull();
+  });
+
+  it("matches roles that can access inventory", () => {
+    expect(canInitializeStockFromPos(["cashier"])).toBe(false);
+    expect(canInitializeStockFromPos(["cashier", "inventory"])).toBe(true);
+    expect(canInitializeStockFromPos(["admin"])).toBe(true);
+  });
+});
 
 describe("product pricing helpers", () => {
   it("computes a sale price from cost and percent", () => {

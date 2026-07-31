@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
+import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { canApplySkuSuggestion } from "@/lib/productSku";
@@ -35,6 +36,14 @@ export function ProductForm({ product }: { product?: Product }) {
     null,
   );
   const [conflict, setConflict] = useState(false);
+  const [barcodeConflict, setBarcodeConflict] = useState<Product | null>(null);
+  const [barcodeLookupNotice, setBarcodeLookupNotice] = useState<string | null>(
+    null,
+  );
+  const [createdProduct, setCreatedProduct] = useState<Pick<
+    Product,
+    "id" | "name" | "sku"
+  > | null>(null);
   const skuRequestId = useRef(0);
   const skuInputRef = useRef<HTMLInputElement>(null);
   const skuManuallyEditedRef = useRef(Boolean(product));
@@ -132,6 +141,42 @@ export function ProductForm({ product }: { product?: Product }) {
     setSkuSuggestionError(null);
   }
 
+  function onBarcodeChange(value: string) {
+    set("barcode", value);
+    setBarcodeConflict(null);
+    setBarcodeLookupNotice(null);
+  }
+
+  async function checkBarcode(event: KeyboardEvent<HTMLInputElement>) {
+    if (product || event.key !== "Enter") return;
+    event.preventDefault();
+    const barcode = form.barcode.trim();
+    if (!barcode) {
+      setBarcodeConflict(null);
+      setBarcodeLookupNotice(null);
+      return;
+    }
+
+    try {
+      const found = await api<Product>(
+        `/products/barcode/${encodeURIComponent(barcode)}`,
+      );
+      setBarcodeConflict(found);
+      setBarcodeLookupNotice(null);
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.status === 404) {
+        setBarcodeConflict(null);
+        setBarcodeLookupNotice(null);
+      } else {
+        setBarcodeConflict(null);
+        setBarcodeLookupNotice(
+          "No se pudo verificar el código ahora. Podés continuar y el servidor lo validará al crear el producto.",
+        );
+      }
+    }
+  }
+
   function onCategoryChange(categoryId: string) {
     set("category_id", categoryId);
     setSkuSuggestionError(null);
@@ -175,6 +220,7 @@ export function ProductForm({ product }: { product?: Product }) {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (barcodeConflict) return;
     setError(null);
     setConflict(false);
     setPending(true);
@@ -194,7 +240,12 @@ export function ProductForm({ product }: { product?: Product }) {
           method: "POST",
           body: payload,
         });
-        toast("success", `Producto creado · SKU efectivo: ${created.sku}`);
+        setCreatedProduct({
+          id: created.id,
+          name: created.name,
+          sku: created.sku,
+        });
+        return;
       }
       router.push("/products");
       router.refresh();
@@ -204,6 +255,36 @@ export function ProductForm({ product }: { product?: Product }) {
     } finally {
       setPending(false);
     }
+  }
+
+  function resetCreationForm() {
+    setCreatedProduct(null);
+    setForm({
+      sku: "",
+      barcode: "",
+      name: "",
+      category_id: "",
+      unit_type: "",
+      price: "",
+      price_per_kg: "",
+      cost: "",
+    });
+    setError(null);
+    setConflict(false);
+    setBarcodeConflict(null);
+    setBarcodeLookupNotice(null);
+    setSkuSuggestionState("idle");
+    setSkuSuggestionError(null);
+    skuManuallyEditedRef.current = false;
+    setMarginPercent("30");
+    setPriceSuggestionVisible(false);
+    router.replace("/products/new");
+    router.refresh();
+  }
+
+  function initializeCreatedStock() {
+    if (!createdProduct) return;
+    router.push(`/inventory?product_id=${encodeURIComponent(createdProduct.id)}`);
   }
 
   return (
@@ -218,28 +299,110 @@ export function ProductForm({ product }: { product?: Product }) {
               Identificá el producto y asociá su categoría.
             </p>
           </div>
+          {!product && (
+            <>
+              <Input
+                label="Código de barras (opcional)"
+                value={form.barcode}
+                onChange={(e) => onBarcodeChange(e.target.value)}
+                onKeyDown={checkBarcode}
+                autoFocus
+                aria-describedby="product-barcode-help"
+              />
+              {barcodeConflict && (
+                <p
+                  id="product-barcode-help"
+                  className="-mt-2 text-sm text-warning"
+                  role="alert"
+                >
+                  Ya existe “{barcodeConflict.name}” con el SKU {barcodeConflict.sku}.{" "}
+                  <a
+                    href={`/products/${barcodeConflict.id}`}
+                    className="font-medium underline underline-offset-2"
+                  >
+                    Abrir ficha para editarlo
+                  </a>
+                </p>
+              )}
+              {barcodeLookupNotice && (
+                <p
+                  id="product-barcode-help"
+                  className="-mt-2 text-sm text-text-secondary"
+                  role="status"
+                >
+                  {barcodeLookupNotice}
+                </p>
+              )}
+            </>
+          )}
           <Input
             label="Nombre"
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             required
-            autoFocus
+            autoFocus={Boolean(product)}
           />
-          <Select
-            label="Categoría"
-            value={form.category_id}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            required
-          >
-            <option value="" disabled>
-              Elegí una categoría
-            </option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
+          {!product ? (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Select
+                  label="Categoría"
+                  value={form.category_id}
+                  onChange={(e) => onCategoryChange(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Elegí una categoría
+                  </option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  label="SKU (automático)"
+                  id="product-sku"
+                  ref={skuInputRef}
+                  value={form.sku}
+                  onChange={(e) => onSkuChange(e.target.value)}
+                  aria-describedby="product-sku-help"
+                  readOnly
+                  aria-readonly="true"
+                  title="El SKU se asigna automáticamente"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <Select
+                label="Categoría"
+                value={form.category_id}
+                onChange={(e) => onCategoryChange(e.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Elegí una categoría
+                </option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+              <Input
+                label="SKU (automático)"
+                id="product-sku"
+                ref={skuInputRef}
+                value={form.sku}
+                onChange={(e) => onSkuChange(e.target.value)}
+                aria-describedby="product-sku-help"
+                readOnly
+                aria-readonly="true"
+                title="El SKU se asigna automáticamente"
+              />
+            </>
+          )}
           {!product && (
             <div
               id="product-sku-help"
@@ -254,24 +417,13 @@ export function ProductForm({ product }: { product?: Product }) {
                 `No se pudo obtener una propuesta. ${skuSuggestionError ?? "El backend intentará generarlo al crear el producto."}`}
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="SKU (automático)"
-              id="product-sku"
-              ref={skuInputRef}
-              value={form.sku}
-              onChange={(e) => onSkuChange(e.target.value)}
-              aria-describedby="product-sku-help"
-              readOnly
-              aria-readonly="true"
-              title="El SKU se asigna automáticamente"
-            />
+          {product && (
             <Input
               label="Código de barras (opcional)"
               value={form.barcode}
               onChange={(e) => set("barcode", e.target.value)}
             />
-          </div>
+          )}
         </section>
 
         <section aria-labelledby="product-pricing-heading" className="flex flex-col gap-4">
@@ -359,7 +511,7 @@ export function ProductForm({ product }: { product?: Product }) {
           </p>
         )}
         <div className="flex flex-wrap gap-3 border-t border-border pt-6">
-          <Button type="submit" pending={pending}>
+          <Button type="submit" pending={pending} disabled={Boolean(barcodeConflict)}>
             {pending
               ? "Guardando…"
               : product
@@ -375,6 +527,25 @@ export function ProductForm({ product }: { product?: Product }) {
           </Button>
         </div>
       </form>
+      <Dialog
+        open={Boolean(createdProduct)}
+        title="Producto creado"
+        onClose={resetCreationForm}
+      >
+        {createdProduct && (
+          <div className="flex flex-col gap-5">
+            <p className="text-sm text-text-secondary">
+              “{createdProduct.name}” quedó creado con el SKU {createdProduct.sku}.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={resetCreationForm}>
+                Ahora no
+              </Button>
+              <Button onClick={initializeCreatedStock}>Inicializar stock</Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </Card>
   );
 }
