@@ -51,12 +51,13 @@ The frontend SHALL render a purchase order detail at `/receiving/[id]` from `GET
 #### Scenario: Removed item stays visible
 - **WHEN** an order containing a removed item is opened
 - **THEN** the item is shown struck through with its removal reason and is excluded from the total
+
 ### Requirement: Confirm reception with payment method
-The frontend SHALL let an authorized user confirm the reception of a `PENDING` order through a dialog that requires choosing a payment method — efectivo, transferencia or cuenta corriente — and that states, before confirmation, that the reception will be recorded with their user and the current date and time. Confirmation SHALL call `POST /purchase-orders/{id}/receive` with the chosen method. The confirm button SHALL be disabled while the request is in flight and until a method is chosen. On success the frontend SHALL show a success toast and re-read the order rather than assuming the resulting state. Backend failures SHALL surface the `message` inline in the dialog, leaving the dialog open with the chosen method intact.
+The frontend SHALL let an authorized user confirm the reception of a `PENDING` order through a dialog that requires choosing a payment method — efectivo, transferencia or cuenta corriente — and that states, before confirmation, that the reception will record their user, the current date and time, the quantities actually delivered, stock movements and the order closure. The dialog SHALL let the user review or enter the quantity actually delivered for each active order item. Confirmation SHALL call the backend reception contract with the chosen method and delivered quantities. The confirm button SHALL be disabled while the request is in flight and until a method is chosen. On success the frontend SHALL show a success toast and re-read the order rather than assuming the resulting state. Backend failures SHALL surface the `message` inline in the dialog, leaving the chosen method and quantities intact.
 
 #### Scenario: Successful reception
-- **WHEN** the user chooses a payment method and confirms
-- **THEN** the order is re-read as `RECEIVED`, showing the receiving user, timestamp and payment method, and a success toast is shown
+- **WHEN** the user chooses a payment method, confirms delivered quantities and the backend accepts reception
+- **THEN** the order is re-read as `RECEIVED`, showing the receiving user, timestamp and payment method, stock reflects the delivered quantities, and a success toast is shown
 
 #### Scenario: Payment method is mandatory
 - **WHEN** the dialog opens with no payment method chosen
@@ -64,11 +65,11 @@ The frontend SHALL let an authorized user confirm the reception of a `PENDING` o
 
 #### Scenario: What gets recorded is stated up front
 - **WHEN** the reception dialog is open
-- **THEN** it states that the user, date and time of the reception will be recorded
+- **THEN** it states that the user, date and time, actual delivered quantities, stock movements and order closure will be recorded
 
 #### Scenario: Reception fails
-- **WHEN** the backend rejects the reception
-- **THEN** the dialog stays open showing the backend `message`, and the order is not shown as received
+- **WHEN** the backend rejects reception because quantities or stock cannot be updated
+- **THEN** the dialog stays open showing the backend `message`, the order is not shown as received, and the frontend does not report a stock update
 
 #### Scenario: Already received
 - **WHEN** the order was received by someone else since the page loaded and the backend responds `409`
