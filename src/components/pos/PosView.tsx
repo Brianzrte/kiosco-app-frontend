@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   FormEvent,
   KeyboardEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -17,6 +18,11 @@ import { EmptyState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
+import {
+  calculateWeightedPrice,
+  effectiveLinePrice,
+  isValidWeight,
+} from "@/lib/weightPricing";
 import { MOTION } from "@/lib/motion";
 import {
   composeSplitPayment,
@@ -36,6 +42,7 @@ import {
   IconSearch,
   IconSplit,
   IconTrash,
+  IconEdit,
   IconTransfer,
   IconX,
 } from "@/components/ui/icons";
@@ -73,7 +80,13 @@ const panelTransition = {
   },
 };
 
-type CartLine = { product: Product; quantity: number };
+type CartLine = {
+  product: Product;
+  quantity: number;
+  weight?: string;
+  calculatedPrice?: string;
+  actualPrice?: string;
+};
 
 const PAYMENT_LABELS: Record<SplitPaymentMethod, string> = {
   CASH: "Efectivo",
@@ -118,6 +131,7 @@ const PAYMENT_ICONS: Record<SplitPaymentMethod, typeof IconCash> = {
 export function PosView() {
   const shouldReduceMotion = useReducedMotion();
   const scanRef = useRef<HTMLInputElement>(null);
+  const actualPriceRef = useRef<HTMLInputElement>(null);
   const splitAmountRef = useRef<HTMLInputElement>(null);
   const cashReceivedRef = useRef<HTMLInputElement>(null);
   const [barcode, setBarcode] = useState("");
@@ -129,6 +143,11 @@ export function PosView() {
   const [cashReceived, setCashReceived] = useState("");
   const [showCashChange, setShowCashChange] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [weightProduct, setWeightProduct] = useState<Product | null>(null);
+  const [weightValue, setWeightValue] = useState("");
+  const [weightError, setWeightError] = useState<string | null>(null);
+  const [editingPriceProductId, setEditingPriceProductId] = useState<string | null>(null);
+  const [actualPriceDraft, setActualPriceDraft] = useState("");
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [unknownState, setUnknownState] = useState(false);
   const [pending, setPending] = useState(false);
@@ -172,21 +191,118 @@ export function PosView() {
     }
   }
 
-  function refocus() {
+  const refocus = useCallback(() => {
     setBarcode("");
     // defer so the focus lands after React re-renders and after the browser's
     // default focus handling on the clicked element
     requestAnimationFrame(() => scanRef.current?.focus());
+  }, []);
+
+  function beginWeightEntry(product: Product) {
+    if (!product.price_per_kg || !isMoneyAmount(product.price_per_kg)) {
+      setScanError(`“${product.name}” no tiene un precio por kilo válido y no se puede vender.`);
+      return;
+    }
+    const existing = cart.find((line) => line.product.id === product.id);
+    if (existing) {
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLInputElement>(`[data-weight-input="${product.id}"]`)?.focus(),
+      );
+      return;
+    }
+    setWeightProduct(product);
+    setWeightValue("");
+    setWeightError(null);
+    requestAnimationFrame(() => document.querySelector<HTMLInputElement>("[data-pending-weight]")?.focus());
+  }
+
+  function applyWeight(product: Product, value: string) {
+    if (!isValidWeight(value)) {
+      setWeightError("Ingresá un peso mayor a cero con hasta tres decimales.");
+      return;
+    }
+    const calculatedPrice = calculateWeightedPrice(value, product.price_per_kg!);
+    setCart((lines) => {
+      const existing = lines.find((line) => line.product.id === product.id);
+      if (existing) {
+        return lines.map((line) =>
+          line.product.id === product.id
+            ? { ...line, weight: value, calculatedPrice, actualPrice: undefined }
+            : line,
+        );
+      }
+      return [...lines, { product, quantity: 0, weight: value, calculatedPrice }];
+    });
+    setWeightProduct(null);
+    setWeightValue("");
+    setWeightError(null);
+    setConfirmedSale(null);
+    setScanError(null);
+    setTotalFlash((n) => n + 1);
+  }
+
+  function updateLineWeight(product: Product, value: string) {
+    if (!isValidWeight(value)) {
+      setWeightError(`Ingresá un peso mayor a cero con hasta tres decimales.`);
+      setCart((lines) =>
+        lines.map((line) =>
+          line.product.id === product.id ? { ...line, weight: value } : line,
+        ),
+      );
+      return;
+    }
+    setWeightError(null);
+    setCart((lines) =>
+      lines.map((line) =>
+        line.product.id === product.id
+          ? {
+              ...line,
+              weight: value,
+              calculatedPrice: calculateWeightedPrice(value, product.price_per_kg!),
+              actualPrice: undefined,
+            }
+          : line,
+      ),
+    );
+    setTotalFlash((n) => n + 1);
+  }
+
+  function openActualPrice(line: CartLine) {
+    const calculated = line.calculatedPrice ?? fromCents(toCents(line.product.price) * line.quantity);
+    setEditingPriceProductId(line.product.id);
+    setActualPriceDraft(line.actualPrice ?? calculated);
+    requestAnimationFrame(() => actualPriceRef.current?.focus());
+  }
+
+  function closeActualPrice() {
+    setEditingPriceProductId(null);
+    setActualPriceDraft("");
+    refocus();
+  }
+
+  function saveActualPrice(productId: string) {
+    if (!isMoneyAmount(actualPriceDraft)) {
+      setScanError("Ingresá un precio real válido con hasta dos decimales.");
+      return;
+    }
+    setCart((lines) =>
+      lines.map((line) =>
+        line.product.id === productId
+          ? { ...line, actualPrice: actualPriceDraft }
+          : line,
+      ),
+    );
+    closeActualPrice();
   }
 
   // Every way of dismissing the confirmation modal — auto-dismiss, the
   // close button, "Nueva venta", or clicking the backdrop — ends with focus
   // back on the scan field, not just wherever the dismissing click landed
   // (pos-patterns.md: "el foco vuelve al campo de escaneo").
-  function dismissConfirmedSale() {
+  const dismissConfirmedSale = useCallback(() => {
     setConfirmedSale(null);
     refocus();
-  }
+  }, [refocus]);
 
   // Auto-dismiss timer. The other dismissal paths (close button, "Nueva
   // venta", click on the backdrop) are onClick handlers in the JSX below —
@@ -198,13 +314,14 @@ export function PosView() {
       CONFIRMED_SALE_AUTO_DISMISS_MS,
     );
     return () => clearTimeout(timer);
-  }, [confirmedSale]);
+  }, [confirmedSale, dismissConfirmedSale]);
 
   async function scan(event: FormEvent) {
     event.preventDefault();
     const code = barcode.trim();
     if (!code || pending) return;
     setScanError(null);
+    let keepWeightFocus = false;
     try {
       const product = await api<Product>(
         `/products/barcode/${encodeURIComponent(code)}`,
@@ -216,6 +333,7 @@ export function PosView() {
         return;
       }
       await addToCart(product);
+      keepWeightFocus = product.unit_type === "pesable";
     } catch (e) {
       const err = e as ApiError;
       setScanError(
@@ -224,7 +342,7 @@ export function PosView() {
           : err.message,
       );
     } finally {
-      refocus();
+      if (!keepWeightFocus) refocus();
     }
   }
 
@@ -237,6 +355,10 @@ export function PosView() {
   }
 
   async function addToCart(product: Product) {
+    if (product.unit_type === "pesable") {
+      beginWeightEntry(product);
+      return;
+    }
     const currentQuantity =
       cart.find((l) => l.product.id === product.id)?.quantity ?? 0;
     const available = await availableStock(product.id);
@@ -260,6 +382,7 @@ export function PosView() {
   }
 
   async function incrementQuantity(line: CartLine) {
+    if (line.product.unit_type === "pesable") return;
     const available = await availableStock(line.product.id);
     if (available !== undefined && line.quantity + 1 > available) {
       setScanError(stockLimitMessage(line.product, available));
@@ -273,7 +396,10 @@ export function PosView() {
     catalogRequested.current = true;
     setCatalogError(null);
     try {
-      const list = await api<ProductList>("/products");
+      // The POS filters this catalog locally for scan-free lookup. Load the
+      // full kiosk-sized catalog instead of the backend's default page of 20;
+      // otherwise products beyond the first page cannot be found here.
+      const list = await api<ProductList>("/products?limit=100");
       setCatalog(list.products);
     } catch (e) {
       catalogRequested.current = false;
@@ -294,7 +420,7 @@ export function PosView() {
   async function pickSearchResult(product: Product) {
     await addToCart(product);
     setSearchTerm("");
-    refocus();
+    if (product.unit_type !== "pesable") refocus();
   }
 
   function submitSearch(event: FormEvent) {
@@ -356,12 +482,13 @@ export function PosView() {
     }
   }
 
-  const totalCents = cart.reduce(
-    (sum, line) => sum + toCents(line.product.price) * line.quantity,
-    0,
-  );
+  const totalCents = cart.reduce((sum, line) => {
+    const calculated =
+      line.calculatedPrice ?? fromCents(toCents(line.product.price) * line.quantity);
+    return sum + toCents(effectiveLinePrice(calculated, line.actualPrice));
+  }, 0);
   const saleTotal = fromCents(totalCents);
-  const itemCount = cart.reduce((sum, line) => sum + line.quantity, 0);
+  const itemCount = cart.length;
 
   function selectPaymentMethod(method: SplitPaymentMethod) {
     setPayment(method);
@@ -413,6 +540,12 @@ export function PosView() {
   const confirmDisabledReason =
     cart.length === 0
       ? "Agregá al menos un producto"
+      : cart.some(
+            (line) =>
+              line.product.unit_type === "pesable" &&
+              (!line.weight || !isValidWeight(line.weight)),
+          )
+        ? "Ingresá un peso válido"
       : !payment
         ? "Elegí un medio de pago"
         : !hasBalancedPayments
@@ -447,7 +580,14 @@ export function PosView() {
       for (const line of cart) {
         await api(`/sales/${sale.id}/items`, {
           method: "POST",
-          body: { product_id: line.product.id, quantity: line.quantity },
+          body:
+            line.product.unit_type === "pesable"
+              ? {
+                  product_id: line.product.id,
+                  weight: line.weight,
+                  ...(line.actualPrice ? { actual_price: line.actualPrice } : {}),
+                }
+              : { product_id: line.product.id, quantity: line.quantity },
         });
       }
       await api(`/sales/${sale.id}/payment`, {
@@ -590,7 +730,8 @@ export function PosView() {
                         </span>
                       </span>
                       <span className="num font-semibold">
-                        {formatMoney(p.price)}
+                        {formatMoney(p.unit_type === "pesable" ? p.price_per_kg ?? "0.00" : p.price)}
+                        {p.unit_type === "pesable" && "/kg"}
                       </span>
                     </button>
                   </li>
@@ -607,6 +748,43 @@ export function PosView() {
           >
             {scanError}
           </div>
+        )}
+
+        {weightProduct && (
+          <Card className="border-primary-light bg-primary-light/30">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="font-medium">Peso de {weightProduct.name}</p>
+                <p className="text-sm text-text-secondary">
+                  Precio por kilo: {formatMoney(weightProduct.price_per_kg!)}
+                </p>
+              </div>
+              <div className="flex-1 sm:max-w-52">
+                <Input
+                  label="Peso (kg)"
+                  data-pending-weight
+                  value={weightValue}
+                  onChange={(event) => setWeightValue(event.target.value)}
+                  onBlur={() => applyWeight(weightProduct, weightValue)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      applyWeight(weightProduct, weightValue);
+                    }
+                    if (event.key === "Escape") {
+                      setWeightProduct(null);
+                      setWeightValue("");
+                      setWeightError(null);
+                      refocus();
+                    }
+                  }}
+                  inputMode="decimal"
+                  placeholder="0.000"
+                  error={weightError ?? undefined}
+                />
+              </div>
+            </div>
+          </Card>
         )}
 
         {cart.length === 0 ? (
@@ -641,44 +819,88 @@ export function PosView() {
                         {line.product.name}
                       </p>
                       <p className="num text-sm text-text-secondary">
-                        {formatMoney(line.product.price)} c/u
+                        {line.product.unit_type === "pesable"
+                          ? `${formatMoney(line.product.price_per_kg!)} /kg`
+                          : `${formatMoney(line.product.price)} c/u`}
                       </p>
                     </div>
-                    <div className="flex items-center rounded-app border border-border bg-surface">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="md"
-                        iconOnly
-                        aria-label={`Restar uno a ${line.product.name}`}
-                        data-line-decrement={line.product.id}
-                        onClick={() =>
-                          setQuantity(line.product.id, line.quantity - 1)
-                        }
-                        className="rounded-l-app rounded-r-none text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
-                      >
-                        <IconMinus className="size-3.5" />
-                      </Button>
-                      <span className="num flex h-11 w-10 items-center justify-center border-x border-border text-sm font-semibold md:h-10">
-                        {line.quantity}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="md"
-                        iconOnly
-                        aria-label={`Sumar uno a ${line.product.name}`}
-                        onClick={() => incrementQuantity(line)}
-                        className="rounded-l-none rounded-r-app text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
-                      >
-                        <IconPlus className="size-3.5" />
-                      </Button>
-                    </div>
+                    {line.product.unit_type === "pesable" ? (
+                      <Input
+                        label="Peso (kg)"
+                        inline
+                        data-weight-input={line.product.id}
+                        value={line.weight ?? ""}
+                        onChange={(event) => updateLineWeight(line.product, event.target.value)}
+                        inputMode="decimal"
+                        className="w-36"
+                        error={weightError ?? undefined}
+                      />
+                    ) : (
+                      <div className="flex items-center rounded-app border border-border bg-surface">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="md"
+                          iconOnly
+                          aria-label={`Restar uno a ${line.product.name}`}
+                          data-line-decrement={line.product.id}
+                          onClick={() => setQuantity(line.product.id, line.quantity - 1)}
+                          className="rounded-l-app rounded-r-none text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
+                        >
+                          <IconMinus className="size-3.5" />
+                        </Button>
+                        <span className="num flex h-11 w-10 items-center justify-center border-x border-border text-sm font-semibold md:h-10">
+                          {line.quantity}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="md"
+                          iconOnly
+                          aria-label={`Sumar uno a ${line.product.name}`}
+                          onClick={() => incrementQuantity(line)}
+                          className="rounded-l-none rounded-r-app text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
+                        >
+                          <IconPlus className="size-3.5" />
+                        </Button>
+                      </div>
+                    )}
                     <p className="num w-24 text-right text-base font-semibold">
-                      {formatMoney(
-                        fromCents(toCents(line.product.price) * line.quantity),
-                      )}
+                      {formatMoney(effectiveLinePrice(
+                        line.calculatedPrice ?? fromCents(toCents(line.product.price) * line.quantity),
+                        line.actualPrice,
+                      ))}
                     </p>
+                    {line.product.unit_type === "pesable" && editingPriceProductId === line.product.id ? (
+                      <div className="flex items-end gap-2">
+                        <Input
+                          ref={actualPriceRef}
+                          label="Precio real"
+                          value={actualPriceDraft}
+                          onChange={(event) => setActualPriceDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") saveActualPrice(line.product.id);
+                            if (event.key === "Escape") closeActualPrice();
+                          }}
+                          inputMode="decimal"
+                          className="w-28"
+                        />
+                        <Button type="button" size="sm" onClick={() => saveActualPrice(line.product.id)}>Aplicar</Button>
+                      </div>
+                    ) : line.product.unit_type === "pesable" ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        aria-label={`Editar precio real de ${line.product.name}`}
+                        title={`Editar precio real de ${line.product.name}`}
+                        onClick={() => openActualPrice(line)}
+                      >
+                        <IconEdit className="size-4" />
+                      </Button>
+                    ) : null}
+                    {line.actualPrice && <span className="text-xs text-text-secondary">Editado</span>}
                     <Button
                       variant="ghost"
                       size="sm"

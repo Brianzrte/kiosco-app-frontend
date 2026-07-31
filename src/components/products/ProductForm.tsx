@@ -37,7 +37,9 @@ export function ProductForm({ product }: { product?: Product }) {
     barcode: product?.barcode ?? "",
     name: product?.name ?? "",
     category_id: product?.category_id ?? "",
+    unit_type: product ? product.unit_type ?? "unitario" : "",
     price: product?.price ?? "",
+    price_per_kg: product?.price_per_kg ?? "",
     cost: product?.cost ?? "",
   });
 
@@ -100,7 +102,13 @@ export function ProductForm({ product }: { product?: Product }) {
     setError(null);
     setConflict(false);
     setPending(true);
-    const payload = { ...form, barcode: form.barcode.trim() || undefined };
+    const payload = {
+      ...form,
+      price: form.unit_type === "pesable" ? "0.00" : form.price,
+      price_per_kg:
+        form.unit_type === "pesable" ? form.price_per_kg : undefined,
+      barcode: form.barcode.trim() || undefined,
+    };
     try {
       if (product) {
         await api(`/products/${product.id}`, { method: "PUT", body: payload });
@@ -180,16 +188,35 @@ export function ProductForm({ product }: { product?: Product }) {
           />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Select
+            label="Tipo de producto"
+            value={form.unit_type}
+            onChange={(e) => set("unit_type", e.target.value)}
+            required
+          >
+            <option value="" disabled>
+              Elegí un tipo
+            </option>
+            <option value="unitario">Unitario</option>
+            <option value="pesable">Pesable (por kg)</option>
+          </Select>
           <Input
-            label="Precio"
+            label={form.unit_type === "pesable" ? "Precio por kilo" : "Precio"}
             inputMode="decimal"
             pattern="\d+(\.\d{1,2})?"
             placeholder="0.00"
             title="Número con hasta dos decimales, p. ej. 1250.50"
-            value={form.price}
-            onChange={(e) => set("price", e.target.value)}
+            value={form.unit_type === "pesable" ? form.price_per_kg : form.price}
+            onChange={(e) =>
+              set(
+                form.unit_type === "pesable" ? "price_per_kg" : "price",
+                e.target.value,
+              )
+            }
             required
           />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="Costo"
             inputMode="decimal"

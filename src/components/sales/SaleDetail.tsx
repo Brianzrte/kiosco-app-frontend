@@ -38,6 +38,28 @@ function statusLabel(status: SaleStatus) {
   return status === "confirmed" ? "Confirmada" : "Borrador";
 }
 
+function itemQuantityLabel(item: Sale["items"][number]) {
+  return item.weight ? `${item.weight} kg` : String(item.quantity);
+}
+
+function itemPrice(item: Sale["items"][number]) {
+  const calculated = item.weight ? item.calculated_subtotal : item.unit_price;
+  const corrected = item.actual_price && item.actual_price !== calculated;
+  if (!corrected) return <>{formatMoney(item.actual_price ?? calculated)}</>;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-end gap-2">
+      <s
+        className="text-error"
+        aria-label="Precio calculado, reemplazado por precio real"
+      >
+        {formatMoney(calculated)}
+      </s>
+      <span>{formatMoney(item.actual_price!)}</span>
+      <span className="sr-only">Precio calculado reemplazado por precio real</span>
+    </span>
+  );
+}
+
 export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
   const [returnFormOpen, setReturnFormOpen] = useState(false);
 
@@ -148,12 +170,12 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                     <div className="flex items-start justify-between gap-3">
                       <p className={`min-w-0 font-medium ${fullyReturned ? "text-text-secondary line-through decoration-error decoration-2" : ""}`}>{item.product_name}</p>
                       {fullyReturned && <Badge tone="error">Devuelto</Badge>}
-                      {partiallyReturned && <Badge tone="error">{availability.alreadyReturned} de {item.quantity} devuelto</Badge>}
+                      {partiallyReturned && <Badge tone="error">{availability.alreadyReturned} de {itemQuantityLabel(item)} devuelto</Badge>}
                     </div>
-                    <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                      <div><dt className="text-text-secondary">Cantidad</dt><dd className="num">{item.quantity}</dd></div>
-                      <div><dt className="text-text-secondary">Precio unitario</dt><dd className="num">{formatMoney(item.unit_price)}</dd></div>
-                      <div className="col-span-2"><dt className="text-text-secondary">Subtotal</dt><dd className="num text-lg font-semibold">{formatMoney(item.subtotal)}</dd></div>
+                    <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                      <div><dt className="text-text-secondary">{item.weight ? "Peso" : "Cantidad"}</dt><dd className="num">{itemQuantityLabel(item)}</dd></div>
+                      <div><dt className="text-text-secondary">{item.weight ? "Precio cobrado" : "Precio unitario"}</dt><dd className="num">{itemPrice(item)}</dd></div>
+                      <div><dt className="text-text-secondary">Subtotal</dt><dd className="num text-lg font-semibold">{formatMoney(item.subtotal)}</dd></div>
                     </dl>
                   </li>
                 );
@@ -164,8 +186,8 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
               <thead>
                 <tr>
                   <Th className="w-2/5">Producto</Th>
-                  <Th className="text-right">Cantidad</Th>
-                  <Th className="text-right">Precio unitario</Th>
+                  <Th className="text-right">Cantidad / peso</Th>
+                  <Th className="text-right">Precio</Th>
                   <Th className="text-right">Subtotal</Th>
                 </tr>
               </thead>
@@ -195,22 +217,22 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                           )}
                           {partiallyReturned && (
                             <Badge tone="error" className="no-underline">
-                              {availability.alreadyReturned} de {item.quantity}{" "}
+                              {availability.alreadyReturned} de {itemQuantityLabel(item)}{" "}
                               devuelto
                             </Badge>
                           )}
                         </span>
                       </Td>
                       <Td className={`num text-right ${struck}`}>
-                        <span className="block py-2">{item.quantity}</span>
+                        <span className="block py-2">{itemQuantityLabel(item)}</span>
                       </Td>
                       <Td className={`num text-right ${struck}`}>
                         <span className="block py-2">
-                          {formatMoney(item.unit_price)}
+                          {itemPrice(item)}
                         </span>
                       </Td>
                       <Td className={`num text-right font-medium ${struck}`}>
-                        <span className="block py-2">
+                        <span className="block py-2 text-lg font-semibold">
                           {formatMoney(item.subtotal)}
                         </span>
                       </Td>

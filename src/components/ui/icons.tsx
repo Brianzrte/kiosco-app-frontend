@@ -297,6 +297,15 @@ export function IconTrash(props: IconProps) {
   );
 }
 
+export function IconEdit(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m4 16.5-.8 3.3 3.3-.8L18.8 6.7a2.1 2.1 0 0 0-3-3L4 16.5Z" />
+      <path d="m14.5 5.5 4 4" />
+    </Icon>
+  );
+}
+
 // Password visibility toggle (LoginForm). Interactive when used inside a
 // button, unlike the rest of this file — the caller sets its own
 // aria-label/aria-hidden as appropriate instead of hardcoding it here.

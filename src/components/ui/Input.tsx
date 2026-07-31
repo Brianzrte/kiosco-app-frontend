@@ -15,25 +15,26 @@ export const Input = forwardRef<
     label?: string;
     error?: string;
     compact?: boolean;
+    inline?: boolean;
     /** Decorative leading icon (e.g. a search glyph). Purely visual — the field's accessible name still comes from `label`/`aria-label`, never from the icon. */
     icon?: ReactNode;
     /** Interactive trailing control (e.g. the password show/hide toggle). Unlike `icon`, this can be a real button — it isn't marked aria-hidden. */
     endAdornment?: ReactNode;
   }
 >(function Input(
-  { label, error, icon, endAdornment, compact = false, className = "", id, ...props },
+  { label, error, icon, endAdornment, compact = false, inline = false, className = "", id, ...props },
   ref,
 ) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   return (
-    <div className={className}>
+    <div className={`${inline ? "flex min-w-0 items-start gap-2" : ""} ${className}`}>
       {label && (
-        <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium">
+        <label htmlFor={inputId} className={`${inline ? "mb-0 whitespace-nowrap pt-2.5" : "mb-1.5 block"} text-sm font-medium`}>
           {label}
         </label>
       )}
-      <div className="relative">
+      <div className={`${inline ? "min-w-0 flex-1" : ""} relative`}>
         {icon && (
           <span
             aria-hidden="true"
@@ -53,8 +54,8 @@ export const Input = forwardRef<
             {endAdornment}
           </span>
         )}
+        {error && <p className="mt-1.5 text-sm text-error">{error}</p>}
       </div>
-      {error && <p className="mt-1.5 text-sm text-error">{error}</p>}
     </div>
   );
 });

@@ -25,7 +25,10 @@ export type SaleItem = {
   product_id: string;
   product_name: string;
   quantity: number;
+  weight?: string;
   unit_price: string;
+  calculated_subtotal: string;
+  actual_price?: string;
   subtotal: string;
 };
 
@@ -122,7 +125,9 @@ export type Product = {
   barcode: string | null;
   name: string;
   category_id: string;
+  unit_type?: "unitario" | "pesable";
   price: string;
+  price_per_kg?: string;
   cost: string;
   active: boolean;
   created_at: string;

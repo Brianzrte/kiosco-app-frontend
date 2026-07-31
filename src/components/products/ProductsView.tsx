@@ -17,6 +17,12 @@ import { formatMoney } from "@/lib/money";
 import { computeTotalPages } from "@/lib/pagination";
 import { CategoryList, ProductList } from "@/lib/types";
 
+function productPrice(product: ProductList["products"][number]): string {
+  return product.unit_type === "pesable"
+    ? `${formatMoney(product.price_per_kg ?? "0.00")}/kg`
+    : formatMoney(product.price);
+}
+
 export function ProductsView() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -130,7 +136,7 @@ export function ProductsView() {
                       {p.barcode ? ` · ${p.barcode}` : ""}
                     </p>
                     <p className="num text-lg font-semibold">
-                      {formatMoney(p.price)}
+                      {productPrice(p)}
                     </p>
                   </div>
                   {!p.active && (
@@ -182,7 +188,7 @@ export function ProductsView() {
                         {categoryName.get(p.category_id) ?? p.category_id}
                       </Badge>
                     </Td>
-                    <Td className="num text-right">{formatMoney(p.price)}</Td>
+                    <Td className="num text-right">{productPrice(p)}</Td>
                     <Td>
                       {p.active ? (
                         <Badge tone="success">Activo</Badge>
