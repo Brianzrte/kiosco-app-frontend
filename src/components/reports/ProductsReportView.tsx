@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,6 +23,7 @@ type ProductReportItem = {
   cost: string;
   price: string;
   margin: string;
+  margin_estimated: boolean;
 };
 
 type ProductsReportResponse = { items: ProductReportItem[]; total: number };
@@ -29,6 +31,8 @@ type ProductsReportResponse = { items: ProductReportItem[]; total: number };
 type Sort = "best_selling" | "worst_selling";
 
 const PAGE_SIZE = 20;
+const ESTIMATED_MARGIN_EXPLANATION =
+  "Margen estimado — incluye ventas sin costo histórico registrado, calculado con el costo actual del catálogo";
 
 function firstOfMonth(): string {
   const now = new Date();
@@ -155,6 +159,7 @@ function ProductsReportTable({
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-text-secondary">Costo</dt><dd className="num">{formatMoney(item.cost)}</dd></div>
               <div><dt className="text-text-secondary">Vendidos</dt><dd className="num">{item.quantity_sold}</dd></div>
+              <div className="col-span-2"><dt className="text-text-secondary">Margen</dt><dd className="num font-medium"><MarginValue item={item} /></dd></div>
             </dl>
           </li>
         ))}
@@ -180,7 +185,7 @@ function ProductsReportTable({
               <Td className="num text-right">{formatMoney(item.cost)}</Td>
               <Td className="num text-right">{formatMoney(item.price)}</Td>
               <Td className="num text-right font-medium">
-                {formatMoney(item.margin)}
+                <MarginValue item={item} />
               </Td>
             </tr>
           ))}
@@ -212,5 +217,25 @@ function ProductsReportTable({
         </div>
       )}
     </div>
+  );
+}
+
+function MarginValue({ item }: { item: ProductReportItem }) {
+  return (
+    <span className="inline-flex flex-wrap items-center justify-end gap-2">
+      {formatMoney(item.margin)}
+      {item.margin_estimated && (
+        <>
+          <Badge
+            tone="warning"
+            title={ESTIMATED_MARGIN_EXPLANATION}
+            aria-label={ESTIMATED_MARGIN_EXPLANATION}
+          >
+            Margen estimado
+          </Badge>
+          <span className="sr-only">{ESTIMATED_MARGIN_EXPLANATION}</span>
+        </>
+      )}
+    </span>
   );
 }
