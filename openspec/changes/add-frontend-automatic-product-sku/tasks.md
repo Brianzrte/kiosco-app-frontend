@@ -5,8 +5,8 @@
 
 ## 1. Tipos e integración API
 
-- [ ] 1.1 Definir el tipo de respuesta de propuesta `{ sku: string }` y consumir la ruta exclusivamente mediante `api<T>()`; inspección de código para confirmar que el token no llega al navegador.
-- [ ] 1.2 Integrar la consulta al cambio de categoría, asociando la respuesta a la selección vigente y descartando respuestas tardías obsoletas.
+- [x] 1.1 Definir el tipo de respuesta de propuesta `{ sku: string }` y consumir la ruta exclusivamente mediante `api<T>()`; inspección de código para confirmar que el token no llega al navegador. Evidencia: `ProductSkuSuggestion`, `ProductForm` y `api()`.
+- [x] 1.2 Integrar la consulta al cambio de categoría, asociando la respuesta a la selección vigente y descartando respuestas tardías obsoletas. Evidencia: `skuRequestId` y comprobación del SKU vigente en `ProductForm`.
 
 ## 2. Formulario y estados
 
@@ -23,14 +23,14 @@
 
 ## 4. Pruebas y validación
 
-- [ ] 4.1 Agregar tests automatizados `*.test.ts` sólo para helpers puros de protección de edición/formato, usando el environment `node`; no crear tests DOM ni agregar dependencias.
+- [x] 4.1 Agregar tests automatizados `*.test.ts` sólo para helpers puros de protección de edición/formato, usando el environment `node`; no crear tests DOM ni agregar dependencias. Evidencia: `src/lib/productSku.test.ts`.
 - [ ] 4.2 Ejecutar `npm run lint` y corregir hallazgos; evidencia: salida limpia.
-- [ ] 4.3 Ejecutar `npm test` y corregir fallos; evidencia: suite exitosa.
-- [ ] 4.4 Ejecutar `npm run build` por el impacto en tipos y `page.tsx`; evidencia: build exitoso.
+- [x] 4.3 Ejecutar `npm test` y corregir fallos; evidencia: 15 archivos y 129 tests exitosos.
+- [x] 4.4 Ejecutar `npm run build` por el impacto en tipos y `page.tsx`; evidencia: build Next.js y TypeScript exitoso.
 - [ ] 4.5 Validar contra backend real propuesta, creación, respuesta efectiva y conflictos; evidencia: requests/responses verificadas.
 - [ ] 4.6 Ejecutar revisión UX/UI siguiendo `ai/skills/ux-ui-supervisor/SKILL.md` y resolver hallazgos aplicables antes del cierre.
 
 ## 5. Cierre condicionado
 
-- [ ] 5.1 Revisar que el diff sólo contenga el alcance implementado y que no se hayan agregado dependencias ni llamadas directas al backend; inspección de código.
+- [x] 5.1 Revisar que el diff sólo contenga el alcance implementado y que no se hayan agregado dependencias ni llamadas directas al backend; inspección de código. Evidencia: diff limitado a formulario, tipos, helper/test y tasks; consulta mediante `api()`.
 - [ ] 5.2 Sincronizar el delta con `openspec/specs/ui-catalog/spec.md` y archivar el change sólo con decisión explícita del usuario y después de completar las verificaciones anteriores.

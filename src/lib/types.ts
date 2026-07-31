@@ -134,6 +134,8 @@ export type ProductList = {
   total: number;
 };
 
+export type ProductSkuSuggestion = { sku: string };
+
 export type Category = {
   id: string;
   name: string;
