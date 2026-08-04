@@ -129,9 +129,38 @@ export type Product = {
   price: string;
   price_per_kg?: string;
   cost: string;
+  sells_by_unit: boolean;
+  units_per_package: number;
+  extra_margin_percent: string;
+  parent_product_id: string | null;
+  unit_product: ProductReference | null;
   active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type ProductReference = {
+  id: string;
+  name: string;
+  sku: string;
+  price: string;
+  active: boolean;
+};
+
+export type ProductConflict = Pick<ProductReference, "id" | "name" | "sku">;
+
+export type ProductPayload = {
+  sku: string;
+  barcode?: string;
+  name: string;
+  category_id: string;
+  unit_type: "unitario" | "pesable";
+  price: string;
+  price_per_kg?: string;
+  cost: string;
+  sells_by_unit?: boolean;
+  units_per_package?: number;
+  extra_margin_percent?: string;
 };
 
 export type ProductList = {

@@ -165,9 +165,10 @@ export function ProductsView() {
                   className="block rounded-app border border-border bg-surface p-4 shadow-soft transition-colors hover:border-border-hover"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p title={p.name} className="min-w-0 flex-1 truncate font-medium text-text-primary">
-                      {p.name}
-                    </p>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <p title={p.name} className="min-w-0 truncate font-medium text-text-primary">{p.name}</p>
+                      {p.parent_product_id && <Badge tone="neutral">Por unidad</Badge>}
+                    </div>
                     <Badge tone={pastelFor(p.category_id)}>
                       {categoryName.get(p.category_id) ?? p.category_id}
                     </Badge>
@@ -222,6 +223,7 @@ export function ProductsView() {
                       >
                         {p.name}
                       </Link>
+                      {p.parent_product_id && <Badge tone="neutral" className="ml-2">Por unidad</Badge>}
                     </Td>
                     <Td className="data">{p.sku}</Td>
                     <Td className="data">{p.barcode ?? "—"}</Td>

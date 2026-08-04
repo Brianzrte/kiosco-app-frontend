@@ -1,5 +1,5 @@
 import { computePageSize } from "./pagination";
-import { subtractMoney, toCents } from "./money";
+import { formatMoney, fromCents, subtractMoney, toCents } from "./money";
 import type { Role } from "./types";
 
 export function getLastCartLineProductId(
@@ -17,6 +17,19 @@ export function canInitializeStockFromPos(roles: readonly Role[]): boolean {
 export const PRODUCTS_MIN_PAGE_SIZE = 5;
 export const PRODUCTS_MAX_PAGE_SIZE = 15;
 export const PRODUCTS_DEFAULT_PAGE_SIZE = 15;
+
+const DEFAULT_MARGIN_PERCENT_FALLBACK = 35;
+const configuredDefaultMarginPercentValue =
+  process.env.NEXT_PUBLIC_DEFAULT_MARGIN_PERCENT;
+const configuredDefaultMarginPercent =
+  configuredDefaultMarginPercentValue?.trim() === ""
+    ? Number.NaN
+    : Number(configuredDefaultMarginPercentValue);
+export const DEFAULT_MARGIN_PERCENT = Number.isFinite(
+  configuredDefaultMarginPercent,
+)
+  ? configuredDefaultMarginPercent
+  : DEFAULT_MARGIN_PERCENT_FALLBACK;
 
 const MONEY_PATTERN = /^-?\d+(\.\d{1,2})?$/;
 
@@ -43,6 +56,24 @@ export function computeSalePriceFromCost(
   return roundPriceToSuggestedAmount(String(Math.round(salePriceCents) / 100));
 }
 
+export function computeCostFromSalePrice(
+  price: string,
+  percent: number,
+): string | null {
+  if (!isValidMoney(price) || toCents(price) <= 0 || !Number.isFinite(percent)) {
+    return null;
+  }
+
+  const multiplier = 1 + percent / 100;
+  if (multiplier <= 0) return null;
+
+  return fromCents(Math.round(toCents(price) / multiplier));
+}
+
+export function hasMinimumSalePriceDigits(price: string): boolean {
+  return price.replace(/\D/g, "").length >= 3;
+}
+
 export function computePercentFromPrices(
   cost: string,
   price: string,
@@ -60,6 +91,75 @@ export function computeMarginAmount(cost: string, price: string): string | null 
   }
 
   return subtractMoney(price, cost);
+}
+
+export function computeUnitSalePrice(
+  packagePrice: string,
+  unitsPerPackage: number,
+  extraMarginPercent: number,
+): string | null {
+  if (
+    !isValidMoney(packagePrice) ||
+    toCents(packagePrice) < 0 ||
+    !Number.isInteger(unitsPerPackage) ||
+    unitsPerPackage < 2 ||
+    !Number.isFinite(extraMarginPercent) ||
+    extraMarginPercent < 0
+  ) {
+    return null;
+  }
+
+  const unitPriceCents = Math.round(
+    (toCents(packagePrice) / unitsPerPackage) *
+      (1 + extraMarginPercent / 100),
+  );
+  return roundPriceToSuggestedAmount(fromCents(unitPriceCents));
+}
+
+export function computeExtraMarginPercent(
+  packagePrice: string,
+  unitsPerPackage: number,
+  unitPrice: string,
+): number | null {
+  if (
+    !isValidMoney(packagePrice) ||
+    !isValidMoney(unitPrice) ||
+    toCents(packagePrice) <= 0 ||
+    !Number.isInteger(unitsPerPackage) ||
+    unitsPerPackage < 2
+  ) {
+    return null;
+  }
+
+  const baseUnitPriceCents = toCents(packagePrice) / unitsPerPackage;
+  if (baseUnitPriceCents === 0) return null;
+
+  return Math.round(
+    ((toCents(unitPrice) / baseUnitPriceCents - 1) * 100) * 100,
+  ) / 100;
+}
+
+export function formatUnitSaleCalculation(
+  packagePrice: string,
+  unitsPerPackage: number,
+  extraMarginPercent: number,
+  unitPrice: string,
+): string | null {
+  if (
+    !isValidMoney(packagePrice) ||
+    !isValidMoney(unitPrice) ||
+    !Number.isInteger(unitsPerPackage) ||
+    unitsPerPackage < 2 ||
+    !Number.isFinite(extraMarginPercent)
+  ) {
+    return null;
+  }
+
+  return `Base: ${formatMoney(fromCents(Math.round(toCents(packagePrice) / unitsPerPackage)))} · +${extraMarginPercent}% = ${formatMoney(unitPrice)}`;
+}
+
+export function deriveUnitProductName(packageName: string): string {
+  return `${packageName.trimEnd()} (unidad)`;
 }
 
 export function computeProductsPageSize(opts: {

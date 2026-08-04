@@ -22,13 +22,19 @@ ni enviado al backend, y vive sólo mientras el formulario está abierto.
 **Goals:**
 
 - Reducir el trabajo manual de calcular el precio de venta a partir del costo
-  y un margen deseado, con un porcentaje editable que arranca en 30%.
-- Mantener costo, precio y porcentaje siempre consistentes entre sí, sin
-  importar cuál de los tres campos editó la persona usuaria en último lugar.
+  y un margen deseado, con un porcentaje editable que arranca en 35%.
+- Cubrir también el caso inverso: cuando se conoce el precio de venta pero no
+  el costo (alta rápida de stock de kiosco), estimar el costo hacia atrás a
+  partir del precio y el margen vigente.
+- Mantener costo, precio y porcentaje consistentes entre sí, con una única
+  excepción intencional: un costo ya cargado (no-cero) nunca se pisa desde el
+  precio (ver Decisions, punto 2).
 - Mostrar el margen resultante (monto y porcentaje) de forma legible junto al
   precio, como texto derivado no editable.
 - Que el porcentaje inicial al editar un producto existente refleje su
-  costo/precio ya guardados, en vez de resetear siempre a 30%.
+  costo/precio ya guardados, en vez de resetear siempre al default.
+- Que el porcentaje por defecto sea configurable por variable de entorno, sin
+  volver a hardcodear un valor fijo si la operación del kiosco cambia.
 - No cambiar el contrato con el backend ni el payload enviado hoy.
 
 **Non-Goals:**
@@ -36,19 +42,22 @@ ni enviado al backend, y vive sólo mientras el formulario está abierto.
 - Persistir el porcentaje de ganancia en el backend.
 - Cambiar `/reports/products` o cualquier cálculo de margen server-side.
 - Aplicar este cálculo en POS, compras o cualquier otra pantalla.
-- Agregar una configuración de porcentaje por defecto a nivel tienda; 30%
-  queda hardcodeado en el frontend.
+- Agregar una configuración de porcentaje por categoría, por usuario o por
+  producto — sólo una variable de entorno global.
+- Ofrecer una forma de forzar el recálculo de un costo ya cargado desde el
+  precio; si el costo es real, prevalece.
 - Validar reglas de negocio de pricing (mínimos, máximos, políticas de
   descuento); esto es sólo una calculadora de conveniencia en el formulario.
 
 ## User flow
 
 1. La persona abre el formulario (alta o edición).
-   - **Alta:** el porcentaje arranca en 30%, costo y precio están vacíos.
+   - **Alta:** el porcentaje arranca en el default configurado (35% salvo
+     override por variable de entorno), costo y precio están vacíos.
    - **Edición:** el porcentaje inicial se deriva de `cost`/`price` (o
      `price_per_kg` si `unit_type` es `pesable`) ya guardados con
      `% = ((precio − costo) / costo) × 100`, redondeado a un entero visible.
-     Si `cost` es `0` o está vacío, se usa 30% como valor inicial en su lugar.
+     Si `cost` es `0` o está vacío, se usa el default como valor inicial.
 2. La persona escribe o modifica el costo.
    - Si el porcentaje tiene un valor válido, el precio de venta se recalcula
      automáticamente: `precio = costo × (1 + %/100)`.
@@ -58,13 +67,21 @@ ni enviado al backend, y vive sólo mientras el formulario está abierto.
 3. La persona edita el porcentaje directamente.
    - El precio de venta se recalcula con la misma fórmula, usando el costo
      actual.
-4. La persona edita el precio de venta a mano (en vez de tocar el
-   porcentaje).
-   - El porcentaje mostrado se recalcula para reflejar ese precio manual:
-     `% = ((precio − costo) / costo) × 100`, redondeado para mostrarse.
-   - Esto es intencional: el porcentaje nunca queda "congelado" ni
-     desincronizado respecto del costo/precio vigentes; siempre es una
-     proyección de los dos valores de dinero actuales.
+4. La persona edita el precio de venta a mano (en vez de tocar el costo o el
+   porcentaje). El comportamiento depende de si ya hay un costo cargado:
+   - **Costo ya tiene un valor no-cero:** el costo no se toca. El porcentaje
+     mostrado se recalcula para reflejar ese precio manual:
+     `% = ((precio − costo) / costo) × 100`, redondeado para mostrarse. Mismo
+     comportamiento que hoy.
+   - **Costo está vacío o en `0` (alta rápida sin costo a mano — ver Context):**
+     luego de una pausa de 500 ms sin nuevas teclas y sólo cuando el precio
+     tenga al menos tres dígitos, el costo se calcula hacia atrás como
+     `costo = precio / (1 + %/100)`, usando el porcentaje vigente (el default
+     configurado si el campo de porcentaje también está vacío o inválido),
+     redondeado al centavo más cercano igual que el resto del dinero.
+   - Este es el único caso en que un campo tiene "prioridad" sobre otro: un
+     costo real ya tipeado nunca se pisa desde el precio (ver Decisions,
+     punto 2, para el porqué).
 5. El texto de margen (monto y porcentaje) se actualiza en cada uno de los
    pasos anteriores, como texto derivado.
 6. Al enviar el formulario, el payload sigue siendo exactamente el de hoy; el
@@ -76,10 +93,17 @@ contra cualquiera de los dos que esté activo según el tipo elegido.
 
 ## UI states
 
-- **Costo vacío o `0`:** el campo de porcentaje se muestra editable (con su
-  valor actual, 30% por defecto), pero no dispara ningún recálculo de precio
-  ni de margen. El texto de margen no se muestra (se omite en vez de mostrar
-  `$ 0,00 (30%)`, que sería engañoso porque no hay costo real).
+- **Costo vacío o `0`, sin editar el precio todavía:** el campo de porcentaje
+  se muestra editable (con su valor actual, el default por defecto), pero no
+  dispara ningún recálculo de precio ni de margen. El texto de margen no se
+  muestra (se omite en vez de mostrar `$ 0,00 (35%)`, que sería engañoso
+  porque no hay costo real).
+- **Costo vacío o `0`, y se edita el precio de venta:** al llegar a tres
+  dígitos y pausar 500 ms, el costo se calcula hacia atrás (ver User flow,
+  paso 4) y deja de estar vacío; a partir de ahí
+  el campo de costo muestra ese valor estimado como cualquier costo tipeado a
+  mano — la persona puede corregirlo si lo conoce con más precisión, y esa
+  corrección vuelve a comportarse como "costo ya cargado" (prevalece).
 - **Costo no numérico / inválido según el `pattern` existente
   (`\d+(\.\d{1,2})?`):** mismo tratamiento que hoy — el campo nativo bloquea
   el submit por validación HTML5; mientras el valor no matchea el patrón, no
@@ -93,11 +117,12 @@ contra cualquiera de los dos que esté activo según el tipo elegido.
   `Margen: -$ 50,00 (-5%)`), sin bloquear el campo ni el submit — esto no es
   peor que la situación actual, donde ya es posible guardar un precio menor
   al costo sin ninguna advertencia.
-- **Porcentaje vacío o no numérico:** se trata como "sin porcentaje cargado";
-  no dispara recálculo del precio al cambiar el costo, y el texto de margen
-  se sigue mostrando en base al costo/precio actuales si ambos son válidos
-  (el margen mostrado no depende de que el campo de porcentaje tenga un valor
-  editable en ese instante, sólo de costo y precio).
+- **Porcentaje vacío o no numérico:** a diferencia del campo de porcentaje
+  mostrado (que puede estar en blanco mientras se edita), todo cálculo que
+  necesite un `%` — costo→precio o precio→costo — usa el default configurado
+  (35% salvo override por variable de entorno) en su lugar; el porcentaje
+  nunca es tratado como "ausente" a los fines del cálculo. El texto de margen
+  se sigue mostrando en base al costo/precio actuales si ambos son válidos.
 
 ## Decisions
 
@@ -109,15 +134,17 @@ contra cualquiera de los dos que esté activo según el tipo elegido.
    un dato derivado con el modelo de dominio y podría filtrarse por error al
    payload en un refactor futuro.
 
-2. **La relación entre costo, precio y porcentaje es siempre bidireccional y
-   derivada, sin "campo dueño".**
+2. **La relación entre costo, precio y porcentaje es bidireccional, con una
+   única excepción intencional para el costo (ver Decision 7).**
    En vez de marcar un campo como fuente de verdad y freezar el porcentaje
-   tras la primera edición manual del precio, cada cambio de cualquiera de
-   los tres recalcula los otros dos según cuál se tocó. Esto evita el caso
-   confuso de un porcentaje mostrado que ya no corresponde al precio/costo
-   visibles. Alternativa descartada: congelar el porcentaje una vez que el
-   precio se edita a mano, descartada explícitamente por el pedido del
-   usuario ("evitando que quede desincronizado").
+   tras la primera edición manual del precio, cada cambio de costo o
+   porcentaje recalcula el precio, y cada cambio de precio recalcula el
+   porcentaje. Esto evita el caso confuso de un porcentaje mostrado que ya no
+   corresponde al precio/costo visibles. Alternativa descartada: congelar el
+   porcentaje una vez que el precio se edita a mano, descartada
+   explícitamente por el pedido del usuario ("evitando que quede
+   desincronizado"). El costo es la única excepción a esta simetría: una vez
+   cargado, editar el precio no lo recalcula (Decision 7).
 
 3. **Extraer el cálculo a funciones puras en `src/lib/`, testeadas con
    Vitest, en vez de calcular inline en el componente.**
@@ -150,13 +177,49 @@ contra cualquiera de los dos que esté activo según el tipo elegido.
    de dinero con dos decimales, descartada por ser precisión innecesaria para
    un porcentaje de conveniencia que no se persiste.
 
-6. **Costo `0` o vacío deshabilita el auto-cálculo en vez de mostrar un
-   margen `0%`/`100%` engañoso.**
+6. **Costo `0` o vacío deshabilita el auto-cálculo costo→precio en vez de
+   mostrar un margen `0%`/`100%` engañoso, pero sí habilita el cálculo
+   inverso precio→costo.**
    Dividir por costo `0` para obtener un porcentaje no tiene un resultado
    significativo; mostrar `100%` (o `Infinity`) sería incorrecto y confuso.
-   En su lugar, mientras el costo no sea un número positivo válido, el
-   porcentaje conserva el último valor editado (o 30% por defecto) sin
-   disparar ningún recálculo, y el texto de margen no se muestra.
+   Mientras el costo no sea un número positivo válido, el porcentaje conserva
+   el último valor editado (o el default por defecto) sin disparar ningún
+   recálculo de precio, y el texto de margen no se muestra — pero ese mismo
+   estado ("sin costo real todavía") es exactamente el que dispara el cálculo
+   inverso cuando se edita el precio (punto 7).
+
+7. **El costo tiene prioridad sobre el precio una vez cargado: nunca se
+   recalcula hacia atrás si ya tiene un valor no-cero.**
+   El pedido original es específico: "no siempre se tiene a mano el precio de
+   costo" al cargar productos de kiosco, lo que describe el caso costo vacío,
+   no un reemplazo general de un dato ya tipeado. Alternativa descartada:
+   recalcular el costo desde el precio en cualquier edición del precio
+   (bidireccional total, como ya ocurre entre precio y porcentaje) —
+   descartada explícitamente por el usuario porque un ajuste menor al precio
+   sugerido (para redondear o afinar el margen) no debe pisar silenciosamente
+   un costo real ya cargado, que además alimenta reportes de margen
+   (`add-frontend-estimated-product-margins`). Esta es la única relación no
+   simétrica entre los tres campos; todo el resto (costo↔precio,
+   porcentaje↔precio) sigue siendo bidireccional como ya describe la
+   Decision 2.
+
+8. **El default de margen es una constante configurable por
+   `NEXT_PUBLIC_DEFAULT_MARGIN_PERCENT` (o nombre equivalente final), con
+   fallback a 35 si la variable no existe o no es un número finito.**
+   El pedido explícito es no volver a hardcodear el valor si la operación del
+   kiosco cambia de margen objetivo. Es la primera variable de entorno
+   `NEXT_PUBLIC_*` del repo (sin precedente); se declara pública porque
+   `ProductForm` es un client component y el valor no es sensible. Se lee una
+   sola vez como constante de módulo en `lib/products.ts`, no en cada
+   render. Alternativa descartada: exponerlo como configuración editable en
+   la UI (por tienda o por usuario) — fuera de alcance, este kiosco es de una
+   sola sucursal y el pedido fue explícitamente "variable de entorno", no una
+   pantalla de configuración.
+
+9. **El cálculo inverso espera una pausa breve y un precio mínimamente
+   completo.** Se demora 500 ms desde la última tecla y requiere al menos tres
+   dígitos para no completar visualmente el costo mientras la persona sigue
+   ingresando el precio. Cada nueva tecla cancela el cálculo pendiente.
 
 ## Accessibility
 
@@ -243,21 +306,32 @@ no existe `backend-request.md` en este change.
   importa y se persiste siempre es el precio en dinero, no el porcentaje.
 - [Costo `0` en productos existentes] Un producto ya guardado con `cost`
   `"0.00"` o vacío no tiene de dónde derivar un porcentaje real al abrir la
-  edición. → Se usa 30% como default en ese caso, igual que en alta, en vez
-  de mostrar un porcentaje sin sentido (indefinido o `100%`).
+  edición. → Se usa el default como valor en ese caso, igual que en alta, en
+  vez de mostrar un porcentaje sin sentido (indefinido o `100%`).
+- [Costo estimado, no real] El costo calculado hacia atrás desde el precio de
+  venta es una estimación basada en el margen vigente, no el costo real de
+  compra — puede quedar guardado como tal si la persona nunca lo corrige. →
+  Es un trade-off aceptado explícitamente por el pedido del usuario: sirve
+  para altas rápidas de kiosco sin factura a mano, y el costo sigue siendo
+  100% editable después; una vez editado a mano, ese valor pasa a prevalecer
+  (Decision 7) y ya no se recalcula.
 
 ## Migration Plan
 
 No aplica migración de datos ni de contrato: no hay estado persistido nuevo
 y el payload no cambia. El cambio se puede desplegar de forma independiente,
-sin coordinar con el backend ni con otro change frontend.
+sin coordinar con el backend ni con otro change frontend. La variable de
+entorno es opcional: si no se setea en Vercel, el default (35) aplica sin
+requerir ninguna acción de despliegue adicional.
 
 ## Rollback
 
-Revertir el cambio en `ProductForm.tsx` (y el helper puro agregado en
+Revertir el cambio en `ProductForm.tsx` (y los helpers puros agregados en
 `src/lib/`) restaura el comportamiento actual de tres campos de dinero
 independientes, sin ningún dato persistido que deshacer, porque el
-porcentaje nunca se guardó en ningún lado.
+porcentaje nunca se guardó en ningún lado. La variable de entorno, si quedó
+seteada en Vercel tras un rollback, no rompe nada — simplemente deja de
+leerse.
 
 ## Open Questions
 
