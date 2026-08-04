@@ -60,6 +60,7 @@ export function PurchaseOrderForm() {
   const itemRemoveButtonRefs = useRef<Record<string, HTMLButtonElement | null>>(
     {},
   );
+  const preloadRequestRef = useRef(0);
   const itemsRef = useRef(items);
   useEffect(() => {
     itemsRef.current = items;
@@ -91,6 +92,8 @@ export function PurchaseOrderForm() {
   const runPreload = useCallback(
     async (targetSupplierId: string) => {
       if (!data) return;
+      const requestId = preloadRequestRef.current + 1;
+      preloadRequestRef.current = requestId;
       const [, catalogProducts] = data;
       setPreloadStatus("loading");
       setPreloadError(null);
@@ -98,6 +101,7 @@ export function PurchaseOrderForm() {
         const query = buildLastPurchaseOrderQuery(targetSupplierId);
         const list = await api<PurchaseOrdersList>(`/purchase-orders?${query}`);
         const [lastOrderSummary] = list.purchase_orders;
+        if (requestId !== preloadRequestRef.current) return;
         if (!lastOrderSummary) {
           setPreloadStatus("empty");
           setPreloadSourceOrder(null);
@@ -107,6 +111,7 @@ export function PurchaseOrderForm() {
         const order = await api<PurchaseOrder>(
           `/purchase-orders/${lastOrderSummary.id}`,
         );
+        if (requestId !== preloadRequestRef.current) return;
         const draft = derivePurchaseOrderPreloadDraft(order, catalogProducts);
         setPreloadSourceOrder(order);
         setPreloadDraft(draft);
@@ -122,6 +127,7 @@ export function PurchaseOrderForm() {
             : [emptyDraftItem()],
         );
       } catch (cause) {
+        if (requestId !== preloadRequestRef.current) return;
         setPreloadStatus("error");
         setPreloadError((cause as ApiError).message);
       }
@@ -139,6 +145,13 @@ export function PurchaseOrderForm() {
     void runPreload(supplierId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supplierId, data]);
+
+  function changeSupplier(nextSupplierId: string) {
+    // A result for the previous supplier must never replace the current draft
+    // while the new supplier's preload is still being requested.
+    preloadRequestRef.current += 1;
+    setSupplierId(nextSupplierId);
+  }
 
   function updateItem(
     index: number,
@@ -256,7 +269,7 @@ export function PurchaseOrderForm() {
           <Select
             label="Proveedor"
             value={supplierId}
-            onChange={(event) => setSupplierId(event.target.value)}
+            onChange={(event) => changeSupplier(event.target.value)}
           >
             <option value="">Elegí un proveedor</option>
             {activeSuppliers.map((supplier: Supplier) => (

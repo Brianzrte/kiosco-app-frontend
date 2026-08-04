@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;}
+a{color:#7c3aed;text-decoration:none;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#f8f8fb;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;color:#211f2b">
+
+  <div style="display:flex;align-items:center;gap:6px;padding:14px 24px;background:#ffffff;border-bottom:1px solid #dcd9e6;flex-wrap:wrap">
+    <span style="font-weight:700;color:#211f2b;margin-right:16px;font-size:14px">Compras y proveedores — rediseño</span>
+    <a href="PurchasingHub.dc.html" style="padding:6px 12px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:600">1. Hub</a>
+    <a href="PurchaseOrderDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">2. Detalle de pedido</a>
+    <a href="AddUncatalogedItem.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">3. Alta ítem no pedido</a>
+    <a href="SupplierDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">4. Ficha proveedor</a>
+    <a href="NewPurchaseOrder.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">5. Nuevo pedido</a>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:32px 24px 80px;display:flex;flex-wrap:wrap;gap:32px">
+
+    <div style="flex:3 1 720px;min-width:0;display:flex;flex-direction:column;gap:28px">
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <h1 style="font-size:26px;font-weight:700;letter-spacing:-0.01em;margin:0">Compras y proveedores</h1>
+          <p style="margin:6px 0 0;font-size:14px;color:#615e6e">Qué llega, qué recibir y con quién.</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button style-hover="background:#f3f1f9" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:500;cursor:pointer;min-height:44px">Historial de pedidos</button>
+          <button style-hover="background:#f3f1f9" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:500;cursor:pointer;min-height:44px">Lista de proveedores</button>
+          <a href="NewPurchaseOrder.dc.html" style-hover="background:#6d28d9" style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:12px;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:600;min-height:44px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Crear pedido
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;flex-shrink:0">1</span>
+          <h2 style="font-size:19px;font-weight:700;margin:0">Qué llega hoy</h2>
+          <span style="display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:rgba(239,68,68,0.12);color:#ef4444;font-size:12px;font-weight:600">3 pedidos, 1 atrasado</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+
+          <a href="PurchaseOrderDetail.dc.html" style-hover="border-color:#c9c5db;background:#fcfbfd" style="display:flex;align-items:center;gap:16px;padding:20px 22px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#ece9f7;color:#5b21b6;flex-shrink:0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5h11v8H2z"></path><path d="M13 10.5h3.7l3.3 3v2h-7z"></path><circle cx="6.7" cy="18" r="1.6"></circle><circle cx="16.8" cy="18" r="1.6"></circle></svg>
+            </span>
+            <div style="flex:1;min-width:0">
+              <p style="margin:0;font-size:17px;font-weight:700;color:#211f2b">Distribuidora Cuyo Bebidas</p>
+              <p style="margin:3px 0 0;font-size:13px;color:#615e6e">18 ítems · objetivo hoy, 4 ago.</p>
+            </div>
+            <span style="font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:600;color:#211f2b">$184.500</span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:12px;font-weight:600;flex-shrink:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+              Pendiente
+            </span>
+            <span style-hover="background:#6d28d9" style="display:inline-flex;align-items:center;padding:9px 16px;border-radius:10px;background:#7c3aed;color:#ffffff;font-size:13px;font-weight:600;flex-shrink:0;min-height:40px">Recibir</span>
+          </a>
+
+          <a href="PurchaseOrderDetail.dc.html" style-hover="border-color:#c9c5db;background:#fcfbfd" style="display:flex;align-items:center;gap:16px;padding:20px 22px;border-radius:12px;border:1px solid #fca5a5;background:#ffffff;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#ece9f7;color:#5b21b6;flex-shrink:0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5h11v8H2z"></path><path d="M13 10.5h3.7l3.3 3v2h-7z"></path><circle cx="6.7" cy="18" r="1.6"></circle><circle cx="16.8" cy="18" r="1.6"></circle></svg>
+            </span>
+            <div style="flex:1;min-width:0">
+              <p style="margin:0;font-size:17px;font-weight:700;color:#211f2b">Golosinas del Sur SRL</p>
+              <p style="margin:3px 0 0;font-size:13px;color:#615e6e">9 ítems · objetivo venció hace 2 días</p>
+            </div>
+            <span style="font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:600;color:#211f2b">$76.200</span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:rgba(239,68,68,0.15);color:#ef4444;font-size:12px;font-weight:600;flex-shrink:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"></circle></svg>
+              Atrasado
+            </span>
+            <span style-hover="background:#6d28d9" style="display:inline-flex;align-items:center;padding:9px 16px;border-radius:10px;background:#7c3aed;color:#ffffff;font-size:13px;font-weight:600;flex-shrink:0;min-height:40px">Recibir</span>
+          </a>
+
+          <a href="PurchaseOrderDetail.dc.html" style-hover="border-color:#c9c5db;background:#fcfbfd" style="display:flex;align-items:center;gap:16px;padding:20px 22px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#ece9f7;color:#5b21b6;flex-shrink:0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5h11v8H2z"></path><path d="M13 10.5h3.7l3.3 3v2h-7z"></path><circle cx="6.7" cy="18" r="1.6"></circle><circle cx="16.8" cy="18" r="1.6"></circle></svg>
+            </span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <p style="margin:0;font-size:17px;font-weight:700;color:#211f2b">Fiambres La Perla</p>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"></circle></svg>
+                  Pendiente de alta
+                </span>
+              </div>
+              <p style="margin:3px 0 0;font-size:13px;color:#615e6e">5 ítems · objetivo hoy, 4 ago.</p>
+            </div>
+            <span style="font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:17px;font-weight:600;color:#211f2b">$52.900</span>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:12px;font-weight:600;flex-shrink:0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+              Pendiente
+            </span>
+            <span style-hover="background:#6d28d9" style="display:inline-flex;align-items:center;padding:9px 16px;border-radius:10px;background:#7c3aed;color:#ffffff;font-size:13px;font-weight:600;flex-shrink:0;min-height:40px">Recibir</span>
+          </a>
+
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #dcd9e6;padding-top:24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:12px;font-weight:700;flex-shrink:0">2</span>
+          <h2 style="font-size:15px;font-weight:600;margin:0;color:#615e6e">Esta semana</h2>
+        </div>
+        <div style="overflow-x:auto;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+            <thead>
+              <tr>
+                <th style="padding:10px 16px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Proveedor</th>
+                <th style="padding:10px 16px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Objetivo</th>
+                <th style="padding:10px 16px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e;text-align:right">Total</th>
+                <th style="padding:10px 16px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style-hover="background:#f3f1f9" style="cursor:pointer">
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;font-weight:500">Panificados San Justo</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;color:#615e6e">6 ago.</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums">$41.300</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6">
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+                    Pendiente
+                  </span>
+                </td>
+              </tr>
+              <tr style-hover="background:#f3f1f9" style="cursor:pointer">
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;font-weight:500">Almacén Mayorista El Progreso</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;color:#615e6e">8 ago.</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums">$210.750</td>
+                <td style="padding:10px 16px;border-bottom:1px solid #dcd9e6">
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+                    Pendiente
+                  </span>
+                </td>
+              </tr>
+              <tr style-hover="background:#f3f1f9" style="cursor:pointer">
+                <td style="padding:10px 16px;font-weight:500">Kiosco Insumos Once</td>
+                <td style="padding:10px 16px;color:#615e6e">10 ago.</td>
+                <td style="padding:10px 16px;text-align:right;font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums">$63.400</td>
+                <td style="padding:10px 16px">
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+                    Pendiente
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <a href="#" style="display:inline-block;margin-top:10px;font-size:13px;font-weight:600;color:#7c3aed">Ver todos los pedidos pendientes (12) →</a>
+      </div>
+
+      <div style="display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid #dcd9e6;padding-top:24px">
+        <div style="flex:1 1 260px;padding:14px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#fcfbfd;display:flex;align-items:center;gap:12px">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0">3</span>
+          <div style="flex:1;min-width:0">
+            <p style="margin:0;font-size:13px;color:#211f2b"><strong>5 productos</strong> bajos de stock listos para reponer</p>
+          </div>
+          <a href="NewPurchaseOrder.dc.html" style="font-size:13px;font-weight:600;color:#7c3aed;flex-shrink:0">Revisar →</a>
+        </div>
+        <div style="flex:1 1 260px;padding:14px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#fcfbfd;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:12px;font-weight:600;color:#615e6e">Filtrar por</span>
+          <select style="border:1px solid #dcd9e6;border-radius:8px;padding:6px 10px;font-size:12px;background:#ffffff;color:#211f2b">
+            <option>Todos los proveedores</option>
+          </select>
+          <input type="date" style="border:1px solid #dcd9e6;border-radius:8px;padding:6px 10px;font-size:12px;background:#ffffff;color:#211f2b;max-width:120px">
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #dcd9e6;padding-top:20px">
+        <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 12px">Otros estados de esta pantalla</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="flex:1 1 220px;border:1px solid #dcd9e6;border-radius:12px;background:#ffffff;padding:14px">
+            <p style="font-size:11px;font-weight:700;color:#736f85;margin:0 0 10px;text-transform:uppercase">Cargando</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="height:14px;border-radius:6px;background:#ece9f7;width:70%"></div>
+              <div style="height:14px;border-radius:6px;background:#ece9f7;width:45%"></div>
+              <div style="height:14px;border-radius:6px;background:#ece9f7;width:60%"></div>
+            </div>
+          </div>
+          <div style="flex:1 1 220px;border:1px solid #dcd9e6;border-radius:12px;background:#ffffff;padding:14px;text-align:center">
+            <p style="font-size:11px;font-weight:700;color:#736f85;margin:0 0 10px;text-transform:uppercase">Vacío</p>
+            <p style="font-size:12px;color:#615e6e;margin:0 0 10px">No hay pedidos pendientes para recibir.</p>
+            <span style="display:inline-block;padding:6px 12px;border-radius:8px;background:#7c3aed;color:#fff;font-size:12px;font-weight:600">Crear pedido</span>
+          </div>
+          <div style="flex:1 1 220px;border:1px solid #fca5a5;border-radius:12px;background:#fff;padding:14px;text-align:center">
+            <p style="font-size:11px;font-weight:700;color:#736f85;margin:0 0 10px;text-transform:uppercase">Error</p>
+            <p style="font-size:12px;color:#ef4444;margin:0 0 10px;font-weight:500">No pudimos cargar los pedidos pendientes.</p>
+            <span style="display:inline-block;padding:6px 12px;border-radius:8px;border:1px solid #dcd9e6;color:#211f2b;font-size:12px;font-weight:600">Reintentar</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <aside style="flex:1 1 300px;min-width:280px;max-width:340px;position:sticky;top:24px;align-self:flex-start;display:flex;flex-direction:column;gap:14px">
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 14px">Decisiones de jerarquía</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>Qué llega hoy va primero y ocupa el mayor peso visual.</strong> Se agrupa por fecha objetivo (hoy + atrasados), con filas grandes y una acción "Recibir" directa: es la tarea que alguien de pie en el mostrador necesita resolver ya.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>Esta semana es planificación, no urgencia.</strong> Misma información, formato tabla densa, sin CTA destacada — el click en la fila alcanza. Nadie necesita un botón grande para algo que pasa en 5 días.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>Sugerencias y filtros bajan de rango.</strong> Hoy compiten con los pedidos pendientes por atención; en el rediseño son un teaser y un control compacto — el trabajo de fondo de sugerencias vive en Nuevo pedido, donde ya se resuelve producto por producto.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">4</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>"Crear pedido" sube al encabezado.</strong> Historial y Proveedores pasan a acciones secundarias — el aside de "Acciones" que hoy mezcla las tres con igual peso desaparece.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">5</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Estado y "Pendiente de alta" siempre llevan ícono + texto, nunca sólo color — así se leen igual para quien no distingue el tono exacto de un badge.</p>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#a6a2b3;line-height:1.5;margin:0;padding:0 4px">Rol Recepción: ve la misma sección "Qué llega hoy" y puede abrir cualquier pedido, pero no ve "Crear pedido" ni "Lista de proveedores" — su tarea es recibir, no planificar.</p>
+    </aside>
+
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Claude Design previews are OpenSpec reference assets, not application code.
+    "openspec/changes/**/design-mockups/**",
   ]),
 ]);
 

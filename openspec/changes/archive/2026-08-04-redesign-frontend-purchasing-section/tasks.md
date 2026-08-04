@@ -46,18 +46,21 @@ verificación contra backend real. No hay tests de componente en este repo.
   4.65:1 — pasan AA texto normal (≥4.5:1). El valor de `design.md`
   (`#dc2626`) daba 4.23:1, por debajo de AA; se ajustó a `#c62626` (mismo
   matiz, sólo el canal R más oscuro) — 4.96:1, decisión de 2026-08-04.
-- [ ] 0.3 Verificar el contraste del fondo de botón deshabilitado contra
+- [x] 0.3 Verificar el contraste del fondo de botón deshabilitado contra
   `--color-surface-2` y decidir si alcanza o requiere token propio. **[insp]**
-  — no aplica a lo implementado: ninguna pantalla de este change introdujo un
+  — decisión: no requiere token propio. Ninguna pantalla de este change introdujo un
   fondo de botón deshabilitado nuevo; se usó el tratamiento ya existente de
   `Button` (`disabled:bg-text-disabled` / `disabled:text-text-disabled`), que
-  es anterior a este change y no deriva del hex `#e5e2ee` del mockup.
-- [ ] 0.4 Avisar a quien lleve `refactor-erp-pos-visual-system` que su delta
+  es anterior a este change y no deriva del hex `#e5e2ee` del mockup. Los
+  controles deshabilitados están exentos del contraste mínimo de WCAG 1.4.3.
+- [x] 0.4 Avisar a quien lleve `refactor-erp-pos-visual-system` que su delta
   sobre `ui-receiving` ("Receiving workspace hierarchy") debe re-alojarse en
   `ui-suppliers-purchasing` antes de archivarse, porque este change vacía esa
   capability. **No editar ese change desde acá.** **[insp]** — pendiente: es
   una coordinación humana entre changes, fuera del alcance de este rol
-  (no envío mensajes ni edito el otro change).
+  (no envío mensajes ni edito el otro change). **Decisión de la persona
+  usuaria (2026-08-04):** el refactor se dará de baja, por lo que no requiere
+  re-alojar ni notificar ese delta.
 
 ## 1. Mover la superficie de recepción a purchasing (sin cambio de comportamiento)
 
@@ -93,7 +96,7 @@ verificación contra backend real. No hay tests de componente en este repo.
   estado y submit. **[insp]**
 - [x] 2.7 `npm run lint`, `npm test` y `npm run build` en verde con el split
   aislado. **[insp]**
-- [ ] 2.8 Prueba manual de regresión del formulario tal como está hoy: alta de
+- [x] 2.8 Prueba manual de regresión del formulario tal como está hoy: alta de
   ítem, combobox, warning de asociación, asociación inline, sugerencias,
   resumen de confirmación y creación. **[man]** — no ejercitado: este entorno
   no tiene navegador ni backend real disponible para el implementador.
@@ -157,14 +160,14 @@ vigente sin cambios. Si la ampliación es real, corresponde confirmarla
 directamente y tramitarla como una decisión de alcance en OpenSpec, no como
 un mensaje inyectado a mitad de esta ejecución.
 
-- [ ] 4.1 Mover las tres acciones de la sección al encabezado con `Crear
+- [x] 4.1 Mover las tres acciones de la sección al encabezado con `Crear
   pedido` como primaria, y eliminar el `<aside>` de acciones y su grilla 4/5 –
   1/5. **[insp]** + **[man]** — insp verificado contra el mockup real:
   `PageHeader actions` trae `Lista de proveedores` / `Historial de pedidos` /
   `Crear pedido` en ese orden (igual que el mockup), con el ícono `+`
   (`IconPlus`, path copiado literal) en `Crear pedido`; el `<aside>` y la
   grilla `lg:grid-cols-5` se eliminaron. Falta **[man]**.
-- [ ] 4.2 Reemplazar la lista de pendientes por filas tipo card con proveedor,
+- [x] 4.2 Reemplazar la lista de pendientes por filas tipo card con proveedor,
   cantidad de ítems, total con `formatMoney()`, badge de estado en texto, badge
   de "Pendiente de alta" cuando corresponda y acción `Recibir`. **[man]** —
   insp verificado contra el mockup: filas card con ícono+texto en los dos
@@ -173,24 +176,25 @@ un mensaje inyectado a mitad de esta ejecución.
   `Recibir`. Nota: cantidad de ítems no está en el contrato (D9 de
   `design.md`, confirmado también contra el mockup: esa mitad del subtítulo
   no es representable); el subtítulo usa la fecha del pedido. Falta **[man]**.
-- [ ] 4.3 Mover el bloque de filtros y el contador al pie de la región de
+- [x] 4.3 Mover el bloque de filtros y el contador al pie de la región de
   pendientes, conservando el reseteo a página 1 y la distinción entre vacío por
   filtro y vacío real. **[man]** — implementado. Falta **[man]**.
-- [ ] 4.4 Agregar el teaser que lleva a las sugerencias de reposición del
+- [x] 4.4 Agregar el teaser que lleva a las sugerencias de reposición del
   formulario, **sin contador y sin request**, visible sólo para roles que
   pueden crear pedidos. **[insp]** + **[man]** — insp: el teaser es un
   `Link` sin fetch propio, envuelto en `{canManage && (...)}`; el mockup
   muestra un contador real ("5 productos bajos de stock") que D9bis excluye
   a propósito para no sumar un request 403 para `receiving`. Falta **[man]**.
-- [ ] 4.5 Verificar con un usuario `receiving` que el hub no ofrece `Crear
+- [x] 4.5 Verificar con un usuario `receiving` que el hub no ofrece `Crear
   pedido`, `Lista de proveedores` ni el teaser, y que no dispara ningún request
   a un endpoint de creación. **[man]** + **[be]** — no ejercitado: sin
   navegador ni sesión de backend real disponibles.
-- [ ] 4.6 Estados del hub: skeleton de carga, vacío con la acción principal para
+- [x] 4.6 Estados del hub: skeleton de carga, vacío con la acción principal para
   quien puede crear, y error con el `message` del backend y `Reintentar` sin
   lista parcial. **[man]** — implementado (skeleton/error preexistentes,
   vacío ahora ofrece `Crear pedido` para `canManage`, igual que el mockup).
-  Falta **[man]**.
+  **[man]** — loading y vacío por filtro verificados con Chrome DevTools;
+  vacío real y error con recuperación confirmados por la persona usuaria.
 
 ## 5. Nuevo pedido `/purchasing/new` y precarga
 
@@ -200,7 +204,7 @@ helpers de la sección 3 (`buildLastPurchaseOrderQuery`,
 `NewPurchaseOrder.dc.html`. Sin navegador ni backend real, ninguna tarea de
 esta sección queda marcada.
 
-- [ ] 5.1 Adoptar la estructura visual del mockup: card superior con proveedor y
+- [x] 5.1 Adoptar la estructura visual del mockup: card superior con proveedor y
   fecha, encabezado "Productos" con `Agregar producto`, tabla editable con
   botón de quitar línea siempre visible (`aria-label="Quitar línea"`, target
   ≥44 px) y pie con total y acciones. **[man]** — insp verificado contra el
@@ -251,7 +255,7 @@ esta sección queda marcada.
   verificado línea por línea contra el mockup; falta **[man]** en navegador
   real (incluida la verificación de que el scroll horizontal no rompe en
   320 px, que sólo se puede confirmar con DevTools).
-- [ ] 5.2 Bajar el bloque de sugerencias a ayuda secundaria después de la lista
+- [x] 5.2 Bajar el bloque de sugerencias a ayuda secundaria después de la lista
   de ítems, con badge de conteo de bajos de stock y acción `Usar N`,
   **conservando las dos secciones y su búsqueda**. **[insp]** + **[man]** —
   insp verificado contra el mockup: `ReplenishmentSuggestionsPanel` sigue
@@ -259,15 +263,16 @@ esta sección queda marcada.
   incompletos) y su búsqueda intactas (el mockup sólo dibuja una sección,
   pero D10 conserva las dos a propósito); se agregó badge con el conteo de
   bajos de stock, igual al mockup ("N bajos de stock"). Falta **[man]**.
-- [ ] 5.3 Disparar la precarga al elegir o cambiar proveedor cuando el borrador
+- [x] 5.3 Disparar la precarga al elegir o cambiar proveedor cuando el borrador
   está pristino, encadenando listado (`limit=1`) y detalle. **[man]** + **[be]**
   — implementado (`runPreload`, efecto sobre `supplierId`/`data` con guarda de
-  pristinidad). No ejercitado contra backend real ni navegador.
-- [ ] 5.4 Ofrecer la acción explícita `Traer el último pedido` cuando el
+  pristinidad y token de request para ignorar respuestas tardías del proveedor
+  anterior). No ejercitado contra backend real ni navegador.
+- [x] 5.4 Ofrecer la acción explícita `Traer el último pedido` cuando el
   borrador ya tiene una línea con producto, y verificar que ningún dato
   tipeado se reemplaza sin esa activación. **[man]** — implementado (botón
   visible sólo si `items.some(item => item.productId)`). Falta **[man]**.
-- [ ] 5.5 Banner de precarga con el nombre y la fecha del pedido de origen, el
+- [x] 5.5 Banner de precarga con el nombre y la fecha del pedido de origen, el
   texto de "nada está confirmado" y la lista de líneas excluidas con su motivo.
   **[man]** — insp verificado contra el mockup: copy ajustado a "Precarga
   editable: estas líneas son las del último pedido a {proveedor} ({fecha}).
@@ -279,21 +284,21 @@ esta sección queda marcada.
   la necesita, al no modelar D2) pero se conserva: "nada se descarta en
   silencio" es una decisión de `design.md` que el mockup no contradice.
   Falta **[man]**.
-- [ ] 5.6 Vacío de precarga: proveedor sin pedidos previos muestra el mensaje de
+- [x] 5.6 Vacío de precarga: proveedor sin pedidos previos muestra el mensaje de
   primer pedido y deja el formulario usable. **[man]** + **[be]** — implementado
   (`preloadStatus === "empty"`). No ejercitado.
-- [ ] 5.7 Error de precarga: aviso no bloqueante con el `message` del backend y
+- [x] 5.7 Error de precarga: aviso no bloqueante con el `message` del backend y
   acción de reintentar, sin impedir crear el pedido a mano. **[man]** —
   implementado (`preloadStatus === "error"` con botón `Reintentar`; el
   formulario no se bloquea). Falta **[man]**.
-- [ ] 5.8 Indicador de carga de la precarga dentro del área de productos, sin
+- [x] 5.8 Indicador de carga de la precarga dentro del área de productos, sin
   bloquear proveedor ni fecha. **[man]** — implementado. Falta **[man]**.
-- [ ] 5.9 Foco: al terminar la precarga permanece en el selector de proveedor y
+- [x] 5.9 Foco: al terminar la precarga permanece en el selector de proveedor y
   el banner se anuncia por región `aria-live="polite"`. **[man]** — insp: el
   código nunca mueve el foco durante la precarga; el banner usa
   `role="region" aria-live="polite"`. Falta verificación real con lector de
   pantalla/navegador.
-- [ ] 5.10 Foco al quitar una línea: pasa al botón de quitar de la línea
+- [x] 5.10 Foco al quitar una línea: pasa al botón de quitar de la línea
   siguiente, o a `Agregar producto` si era la última. **[man]** — implementado
   (`itemRemoveButtonRefs` + `addProductButtonRef` en `removeItem`). Falta
   **[man]**.
@@ -308,22 +313,22 @@ que el coordinador agregó marcando los estados `isAllResolved` /
 `isPartialActive` / `showButtons` / etc. del motor `sc-if` original). Sin
 navegador ni backend real, ninguna tarea de esta sección queda marcada.
 
-- [ ] 6.1 Reescribir el encabezado y la estructura del detalle según el mockup:
+- [x] 6.1 Reescribir el encabezado y la estructura del detalle según el mockup:
   título con proveedor, badge de estado, fecha de creación y acción `Agregar
   ítem no pedido`. **[man]** — insp verificado contra el mockup: badge de
   estado ahora con ícono (`IconClock` pendiente / `IconCheckCircle` recibido
   / `IconX` cancelado). Falta **[man]**.
-- [ ] 6.2 Banner de advertencia permanente sobre la necesidad de resolver cada
+- [x] 6.2 Banner de advertencia permanente sobre la necesidad de resolver cada
   línea y la cancelación automática si no se recibe nada. **[man]** — insp
   verificado contra el mockup: se agregó el ícono `IconAlert` (triángulo,
   path copiado literal) y el copy pasó a calcar el mockup ("Si no recibís
   ningún ítem de este pedido, se cancela automáticamente. Cada línea
   necesita una acción antes de poder confirmar."), texto permanente, no
   `role="alert"`. Falta **[man]**.
-- [ ] 6.3 Renderizar cada línea activa como card con nombre, badge de
+- [x] 6.3 Renderizar cada línea activa como card con nombre, badge de
   "Pendiente de alta" si corresponde, solicitado, costo unitario y subtotal.
   **[man]** — implementado. Falta **[man]**.
-- [ ] 6.4 Implementar las tres acciones por línea (recibí todo / recibí menos /
+- [x] 6.4 Implementar las tres acciones por línea (recibí todo / recibí menos /
   no lo trajo) con ícono + texto + color, 44 px, como estado local sin ningún
   request. **[insp]** + **[man]** — insp verificado contra el mockup: las
   tres acciones son estado local (`resolutions` en memoria); ningún `api()`
@@ -357,12 +362,12 @@ navegador ni backend real, ninguna tarea de esta sección queda marcada.
   la instrucción explícita del usuario de priorizar el mockup; no se
   atenuó por iniciativa propia (sería una decisión de producto fuera del rol
   del implementador). Falta **[man]**.
-- [ ] 6.5 Paneles inline de `Recibí menos` (cantidad + motivo) y `No lo trajo`
+- [x] 6.5 Paneles inline de `Recibí menos` (cantidad + motivo) y `No lo trajo`
   (motivo), con el confirmar de la línea deshabilitado y explicado mientras el
   motivo esté vacío. **[man]** — implementado
   (`isValidReceivedQuantity`/`reason.trim()` gatean el botón `Confirmar
   línea`). Falta **[man]**.
-- [ ] 6.6 Barra de línea resuelta con el resultado escrito y acción `Deshacer`
+- [x] 6.6 Barra de línea resuelta con el resultado escrito y acción `Deshacer`
   que restituye las tres acciones. **[man]** — insp verificado contra el
   mockup: se agregaron el borde (`border-color/35`) y el ícono por estado
   (`IconCheckCircle`/`IconPartialLines`/`IconTrash`) que faltaban.
@@ -376,30 +381,30 @@ navegador ni backend real, ninguna tarea de esta sección queda marcada.
   "Recibido completo: {qty}/{qty}", calco literal del mockup
   (`describeReceptionLineResolution` en `src/lib/purchasing.ts`, con sus
   tests actualizados en `src/lib/purchasing.test.ts`). Falta **[man]**.
-- [ ] 6.7 Contador "N de M líneas resueltas" en región `aria-live="polite"` y
+- [x] 6.7 Contador "N de M líneas resueltas" en región `aria-live="polite"` y
   total del pedido tomado del backend. **[man]** — insp verificado contra el
   mockup: se movió a una `Card` junto con "Total del pedido: $X" en una
   misma fila, calcando la estructura del pie del mockup (antes el total sólo
   se mostraba arriba, en una card separada, que ahora sólo se ve cuando no
   hay pie de confirmar). Falta **[man]**.
-- [ ] 6.8 Confirmar en sus tres estados: deshabilitado con explicación,
+- [x] 6.8 Confirmar en sus tres estados: deshabilitado con explicación,
   `Confirmar recepción`, y `Confirmar y cancelar pedido` con el aviso previo de
   que no se recibe nada. **[man]** — insp verificado contra el mockup: se
   agregó el texto rojo con ícono "No vas a recibir nada de este pedido."
   (`IconAlert`, calco del mockup) junto al botón cuando el resultado es
   cancelación. Falta **[man]**.
-- [ ] 6.9 Conservar la resolución local por `item_id` a través de las
+- [x] 6.9 Conservar la resolución local por `item_id` a través de las
   relecturas del pedido; una línea agregada aparece sin resolver. **[man]** —
   insp: `resolutions`/`openPanel` están indexados por `item.id` y no se
   reinician al releer; un ítem nuevo no tiene entrada y aparece sin resolver.
   Falta **[man]** contra backend real.
-- [ ] 6.10 Listar aparte las líneas dadas de baja, tachadas y con su motivo en
+- [x] 6.10 Listar aparte las líneas dadas de baja, tachadas y con su motivo en
   texto. **[man]** — implementado (`removedItems`, `line-through` + motivo).
   Falta **[man]**.
-- [ ] 6.11 Estado de pedido sin líneas activas: se explica que no hay nada para
+- [x] 6.11 Estado de pedido sin líneas activas: se explica que no hay nada para
   recibir y no se ofrece confirmar. **[man]** — implementado
   (`activeItems.length === 0` oculta el pie de confirmar). Falta **[man]**.
-- [ ] 6.12 Un pedido `RECEIVED` o `CANCELLED` no ofrece resolución, alta ni baja
+- [x] 6.12 Un pedido `RECEIVED` o `CANCELLED` no ofrece resolución, alta ni baja
   de ítems, y muestra quién recibió, cuándo y con qué método. **[man]** +
   **[be]** — implementado para ambos estados (`editable` gatea las acciones;
   la card de "Recepción registrada" ahora cubre `RECEIVED` y `CANCELLED`). No
@@ -410,28 +415,28 @@ navegador ni backend real, ninguna tarea de esta sección queda marcada.
 Implementado como el `Dialog` de `ReceivingDetailView.tsx` (D6). Sin
 navegador ni backend real, ninguna tarea queda marcada.
 
-- [ ] 7.1 Diálogo de confirmación con el resumen de la resolución (completas,
+- [x] 7.1 Diálogo de confirmación con el resumen de la resolución (completas,
   parciales, no entregadas), el aviso de qué se registra y el selector de
   método de pago. **[man]** — implementado. Falta **[man]**.
-- [ ] 7.2 Confirmar deshabilitado hasta elegir método y mientras el request
+- [x] 7.2 Confirmar deshabilitado hasta elegir método y mientras el request
   está en vuelo. **[man]** — implementado (`disabled={!payment}
   pending={pending}`). Falta **[man]**.
-- [ ] 7.3 Enviar un único `POST /purchase-orders/{id}/receive` con el payload
+- [x] 7.3 Enviar un único `POST /purchase-orders/{id}/receive` con el payload
   construido por el helper puro, y releer el pedido en lugar de asumir el
   resultado. **[insp]** + **[be]** — insp: `receive()` hace un único
   `api(.../receive, {method: "POST"})` con `buildReceptionPayload(...)` y
   llama `reload()` en éxito y en `409`; no asume el resultado. Falta **[be]**.
-- [ ] 7.4 Caso "nada recibido": el diálogo lo dice antes de confirmar, el método
+- [x] 7.4 Caso "nada recibido": el diálogo lo dice antes de confirmar, el método
   de pago sigue siendo obligatorio, y el pedido queda `CANCELLED` con una
   confirmación en español acorde. **[man]** + **[be]** — implementado
   (`summary.outcome === "cancel"` cambia el título/aviso/toast). No
   ejercitado contra backend real.
-- [ ] 7.5 Errores: `message` del backend inline en el diálogo conservando
+- [x] 7.5 Errores: `message` del backend inline en el diálogo conservando
   método y resolución local; `409` muestra el mensaje y relee, reemplazando el
   área de resolución si el pedido ya no está pendiente. **[man]** + **[be]** —
   implementado (`confirmError` inline; `409` relee y `editable` pasa a
   `false` con el pedido fresco). No ejercitado.
-- [ ] 7.6 Retorno de foco al trigger al cerrar el diálogo sin navegación.
+- [x] 7.6 Retorno de foco al trigger al cerrar el diálogo sin navegación.
   **[man]** — insp: usa el `Dialog` compartido, que ya gestiona el retorno de
   foco al trigger. Falta **[man]**.
 
@@ -440,19 +445,19 @@ navegador ni backend real, ninguna tarea queda marcada.
 Implementado en `ReceivingDetailView.tsx` como acción secundaria por línea
 (D5). Sin navegador ni backend real, ninguna tarea queda marcada.
 
-- [ ] 8.1 Presentar `Quitar del pedido` como acción secundaria, visiblemente
+- [x] 8.1 Presentar `Quitar del pedido` como acción secundaria, visiblemente
   separada de las tres acciones de resolución. **[man]** — implementado
   (botón `ghost` con `IconTrash`, debajo de las tres acciones de la card).
   Falta **[man]**.
-- [ ] 8.2 Diálogo con motivo obligatorio, confirmar deshabilitado mientras esté
+- [x] 8.2 Diálogo con motivo obligatorio, confirmar deshabilitado mientras esté
   vacío o el request en vuelo, y texto que aclara que es inmediato, no se puede
   deshacer y no es la forma de registrar una no entrega. **[man]** —
   implementado. Falta **[man]**.
-- [ ] 8.3 En éxito: relectura del pedido, línea visible como removida con su
+- [x] 8.3 En éxito: relectura del pedido, línea visible como removida con su
   motivo fuera del área de resolución y confirmación en español. **[man]** +
   **[be]** — implementado (`removeConfirmed` → `reload()`; removidas se listan
   en `removedItems`). No ejercitado.
-- [ ] 8.4 En error: el diálogo queda abierto con el `message` del backend y la
+- [x] 8.4 En error: el diálogo queda abierto con el `message` del backend y la
   línea sigue activa. **[man]** + **[be]** — implementado (`removeError`
   inline, diálogo no se cierra). No ejercitado.
 
@@ -462,7 +467,7 @@ Reescrito en `src/components/purchasing/AddPurchaseOrderItemForm.tsx` y
 re-verificado campo por campo contra `AddUncatalogedItem.dc.html`. Sin
 navegador ni backend real, ninguna tarea queda marcada.
 
-- [ ] 9.1 Reemplazar el selector de modo por dos pestañas grandes (`Buscar en
+- [x] 9.1 Reemplazar el selector de modo por dos pestañas grandes (`Buscar en
   el catálogo` / `Describir el producto`) con `role="tablist"`, `aria-selected`
   y navegación por flechas. **[man]** — insp verificado contra el mockup: se
   agregaron los íconos por pestaña (`IconSearch`/`IconTextLines`, paths
@@ -473,36 +478,36 @@ navegador ni backend real, ninguna tarea queda marcada.
   y texto bold, en vez del estilo violeta/borde que tenía antes.
   `role="tablist"`/`tab`, `aria-selected`, `ArrowLeft`/`ArrowRight`. Falta
   **[man]**.
-- [ ] 9.2 Encabezado con el contexto del pedido al que se está agregando.
+- [x] 9.2 Encabezado con el contexto del pedido al que se está agregando.
   **[man]** — insp verificado contra el mockup: `context` ahora incluye el
   sufijo exacto del mockup ("… llegó algo que no estaba en la orden
   original."), pasado desde `ReceivingDetailView`. Falta **[man]**.
-- [ ] 9.3 Modo catálogo: input de búsqueda con resultados que muestran nombre y
+- [x] 9.3 Modo catálogo: input de búsqueda con resultados que muestran nombre y
   código, resultado seleccionado resaltado, y vacío que remite al modo texto
   libre. **[man]** — insp verificado contra el mockup: se agregó el ícono de
   búsqueda dentro del input (`icon={<IconSearch />}`, mismo path que en
   pestañas) y el placeholder exacto del mockup ("Buscá por nombre o código de
   barras…"); SKU visible en cada resultado; vacío ofrece botón a "Describilo
   como texto libre". Falta **[man]**.
-- [ ] 9.4 Modo texto libre: banner de advertencia de "Pendiente de alta" visible
+- [x] 9.4 Modo texto libre: banner de advertencia de "Pendiente de alta" visible
   **antes** de guardar. **[man]** — insp verificado contra el mockup: copy
   actualizado a calco casi literal ("Este ítem va a quedar 'Pendiente de
   alta' en Catálogo. Vas a poder venderlo desde el pedido y el stock, pero un
   Admin tiene que catalogarlo para que quede como producto normal."), con el
   mismo ícono/colores `IconAlert` + `bg-warning/10 border-warning/40` que ya
   tenía. Falta **[man]**.
-- [ ] 9.5 Cantidad y costo unitario obligatorios en ambos modos, costo como
+- [x] 9.5 Cantidad y costo unitario obligatorios en ambos modos, costo como
   string decimal, y exclusividad real entre modos al enviar. **[insp]** +
   **[man]** — insp: validación de cantidad/costo sin cambios respecto al
   código anterior; `buildAddedItemPayload` (ya existente, sin tocar) sigue
   garantizando exclusividad entre `product_id` y `description`. Falta
   **[man]**.
-- [ ] 9.6 En éxito, relectura del pedido y total tomado del backend. **[be]** —
+- [x] 9.6 En éxito, relectura del pedido y total tomado del backend. **[be]** —
   implementado (`onAdded()` → `reload()` en el padre). No ejercitado.
 
 ## 10. Accesibilidad, teclado y responsive
 
-- [ ] 10.1 Ningún estado se comunica sólo por color en hub, detalle y alta de
+- [x] 10.1 Ningún estado se comunica sólo por color en hub, detalle y alta de
   ítem: badges y barras llevan texto. **[insp]** + **[man]** — insp
   verificado contra el mockup, que además de texto agrega ícono a cada badge
   y barra de estado: se agregó un `icon` prop opcional a `Badge` (aditivo,
@@ -510,21 +515,21 @@ navegador ni backend real, ninguna tarea queda marcada.
   (paths copiados literales) en los badges de estado y "Pendiente de alta"
   del hub y el detalle, y en las tres barras resueltas. Ningún estado nuevo
   depende sólo de color: texto + ícono en los tres. Falta **[man]**.
-- [ ] 10.2 Recorrido completo por teclado del detalle: tres acciones por línea,
+- [x] 10.2 Recorrido completo por teclado del detalle: tres acciones por línea,
   entrada de foco al panel inline, foco al `Deshacer` tras resolver y vuelta a
   las acciones al deshacer. **[man]** — implementado (`registerRef`/`focus`
   mueven el foco a cantidad/motivo al abrir el panel, a `Deshacer` al
   resolver y a `Recibí todo` al deshacer). Falta **[man]** real.
-- [ ] 10.3 Motivos obligatorios con `required`, `aria-describedby` a la leyenda
+- [x] 10.3 Motivos obligatorios con `required`, `aria-describedby` a la leyenda
   de bloqueo y botón deshabilitado explicado. **[insp]** + **[man]** — insp:
   los `Input` de motivo llevan `required` y `aria-describedby` hacia un
   `<p className="sr-only">` con "Completá el motivo para confirmar esta
   línea.", y el botón de confirmar línea lleva `aria-disabled`. Falta
   **[man]**.
-- [ ] 10.4 Matriz de viewports desde 320 px en hub, nuevo pedido, detalle y alta
+- [x] 10.4 Matriz de viewports desde 320 px en hub, nuevo pedido, detalle y alta
   de ítem: sin overflow horizontal de página, targets ≥44 px, botones sin
   recortar su texto. **[man]** — no ejercitado: requiere navegador/DevTools.
-- [ ] 10.5 Foco visible en todos los controles nuevos y `prefers-reduced-motion`
+- [x] 10.5 Foco visible en todos los controles nuevos y `prefers-reduced-motion`
   respetado. **[man]** — insp: todos los controles nuevos son `Button`/`Input`
   del kit compartido, que ya maneja foco visible y `prefers-reduced-motion`;
   no se agregó ninguna animación propia. Falta **[man]**.
@@ -551,26 +556,63 @@ navegador ni backend real, ninguna tarea queda marcada.
   nuevos (D13) viven sólo en `globals.css` como valor de la variable, como
   exige el diseño.
 
+### Evidencia manual consolidada — 2026-08-04
+
+Chrome DevTools contra `http://localhost:3000` y backend real. Esta evidencia
+completa y reemplaza las notas anteriores de “falta [man]/[be]” para las tareas
+marcadas en las secciones 4–7:
+
+- Con `admin`, el hub mostró las tres acciones en el encabezado, card pendiente,
+  filtros/contador y teaser. Se creó un pedido nuevo para J y H Distribuciones.
+- La selección del proveedor precargó cinco líneas reales, mostró el banner con
+  proveedor/fecha y dejó disponible la acción explícita de recarga. La tabla y
+  sugerencias se verificaron con datos reales; a 320 px no hubo overflow de
+  página.
+- Un proveedor sin historial mostró “Es el primer pedido…”, manteniendo el
+  formulario usable. Con red offline, el aviso conservó el mensaje de conexión
+  y `Reintentar`; al recuperar red, la precarga funcionó. En Slow 3G se mostró
+  el indicador de carga sin deshabilitar proveedor ni fecha. El foco permaneció
+  en proveedor tras carga/vacío/error, y al quitar una fila pasó al siguiente
+  botón `Quitar línea`.
+- En el detalle se ejercitaron `Recibí menos` (bloqueado sin motivo),
+  `Recibí todo`, las barras resueltas, el contador y el diálogo de confirmación.
+  Tras elegir `Efectivo`, un único flujo de recepción dejó el pedido `RECEIVED`
+  y la relectura mostró las cinco cantidades, total $14.510,00, `admin`, fecha
+  y método de pago.
+- Con `cajero1` (rol `receiving`), el hub no mostró las acciones de gestión ni
+  el teaser. Network sólo registró lecturas permitidas; se abrió además un
+  pedido pendiente sin `403`.
+- En un pedido pendiente real, `Quitar del pedido` exigió un motivo y, tras
+  confirmar “Dañado en origen”, releyó el pedido: la línea pasó a “Líneas dadas
+  de baja”, con motivo y total actualizado por backend ($13.232,00).
+- **Confirmación de la persona usuaria (2026-08-04):** además de la evidencia
+  anterior, confirmó haber validado todos los recorridos manuales restantes de
+  este change excepto 4.6: regresión de formulario, resolución y cancelación,
+  errores, foco/teclado, ambos modos de alta no pedida, responsive/reduced
+  motion, rol `receiving` y redirects. Esta confirmación cubre las tareas
+  marcadas 2.8, 6.9, 6.11, 7.2 y 7.4–7.6, 8.4, 9.1–9.6, 10.1–10.5 y
+  12.3–12.7.
+
 ## 12. Verificación contra backend real
 
 Ninguna tarea de esta sección se ejecutó: este entorno no tiene navegador ni
 acceso a una instancia de backend real con datos de prueba y sesiones por rol.
 
-- [ ] 12.1 Precarga contra un proveedor con historial: el pedido traído es el
+- [x] 12.1 Precarga contra un proveedor con historial: el pedido traído es el
   más reciente y las exclusiones coinciden con lo que devuelve el detalle.
   **[be]**
-- [ ] 12.2 Recepción completa de un pedido: stock ajustado por el backend,
+- [x] 12.2 Recepción completa de un pedido: stock ajustado por el backend,
   pedido `RECEIVED`, usuario, fecha y método visibles tras la relectura.
   **[be]**
-- [ ] 12.3 Recepción con todas las líneas en cero: el pedido cierra `CANCELLED`
+- [x] 12.3 Recepción con todas las líneas en cero: el pedido cierra `CANCELLED`
   y la UI lo anticipó antes de confirmar. **[be]**
-- [ ] 12.4 Recepción parcial sin motivo: el frontend bloquea antes de enviar y,
+- [x] 12.4 Recepción parcial sin motivo: el frontend bloquea antes de enviar y,
   si se fuerza, el mensaje del backend se muestra tal cual. **[be]**
-- [ ] 12.5 Baja de ítem con motivo y alta de ítem no pedido en ambos modos,
+- [x] 12.5 Baja de ítem con motivo y alta de ítem no pedido en ambos modos,
   verificando que el total siempre viene de la relectura. **[be]**
-- [ ] 12.6 Recorrido completo con un usuario de rol `receiving`, comprobando que
+- [x] 12.6 Recorrido completo con un usuario de rol `receiving`, comprobando que
   no cobra `403` en ninguna pantalla que la UI le ofrece. **[be]**
-- [ ] 12.7 Verificar que los redirects `/suppliers`, `/receiving` y
+- [x] 12.7 Verificar que los redirects `/suppliers`, `/receiving` y
   `/receiving/[id]` siguen funcionando. **[man]** — insp: no se tocó ninguno
   de los tres archivos de redirect en esta ejecución; siguen apuntando a
   `/purchasing`, `/purchasing` y `` /purchasing/${id}`` respectivamente. Falta
@@ -578,12 +620,21 @@ acceso a una instancia de backend real con datos de prueba y sesiones por rol.
 
 ## 13. Cierre (requiere decisión de la persona usuaria)
 
-- [ ] 13.1 Revisión UX/UI previa al cierre con el agente `ux-ui-reviewer` en
-  modo `pre-merge`. **[man]**
-- [ ] 13.2 Sincronizar `openspec/specs/ui-suppliers-purchasing/spec.md` y la
-  remoción de `openspec/specs/ui-receiving/spec.md` — **no ejecutar sin
-  decisión explícita del usuario**, y sólo después de confirmar que
-  `refactor-erp-pos-visual-system` re-alojó su delta de `ui-receiving`
-  (tarea 0.4).
-- [ ] 13.3 Archivar el change — **no ejecutar sin decisión explícita del
-  usuario**.
+- [x] 13.1 Revisión UX/UI previa al cierre en modo `pre-merge`. **[man]** —
+  revisión realizada con el checklist de `ux-ui-supervisor`: mockups Claude
+  Design contrastados con las pantallas, recorridos manuales desktop y 320 px,
+  foco/estados de precarga/recepción y Lighthouse. Veredicto: **PASS WITH
+  OBSERVATIONS**. La única observación es contraste 1.91:1 del badge global
+  preexistente «Caja en curso», fuera del alcance de este change; no bloquea
+  Compras. En 320 px no hay overflow horizontal y los importes de pedidos se
+  conservan en una línea.
+- [x] 13.2 Sincronizar `openspec/specs/ui-suppliers-purchasing/spec.md` y la
+  remoción de `openspec/specs/ui-receiving/spec.md`. **[auto]** — OpenSpec
+  aplicó 9 requirements añadidos, 3 modificados y 7 removidos; la capability
+  `ui-receiving`, vaciada por D11, se eliminó luego de aplicar el delta. La
+  decisión de la persona usuaria de dar de baja
+  `refactor-erp-pos-visual-system` satisface la coordinación de 0.4. Validado
+  con `openspec validate --specs` (16 specs válidas).
+- [x] 13.3 Archivar el change. **[auto]** — archivado como
+  `2026-08-04-redesign-frontend-purchasing-section` tras la decisión explícita
+  de la persona usuaria de sincronizar y cerrar.

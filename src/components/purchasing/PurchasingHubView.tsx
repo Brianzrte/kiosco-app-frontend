@@ -147,7 +147,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="min-w-0 truncate font-medium text-text-primary">
+                  <p className="min-w-0 truncate text-sm font-medium text-text-primary sm:text-base">
                     {order.supplier_name}
                   </p>
                   {hasUncataloguedItems(order) && (
@@ -169,7 +169,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
                 <Badge tone="warning" icon={<IconClock className="size-3" />}>
                   {purchaseOrderStatusLabel(order.status)}
                 </Badge>
-                <p className="num text-lg font-semibold">
+                <p className="num shrink-0 whitespace-nowrap text-xs font-medium sm:text-base">
                   {formatMoney(order.total)}
                 </p>
                 <Button
@@ -216,6 +216,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
       <PageHeader
         title="Compras y proveedores"
         description="Qué llega, qué recibir y con quién."
+        compactMobile
         actions={
           <>
             {canManage && (
@@ -233,7 +234,11 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
               Historial de pedidos
             </Button>
             {canManage && (
-              <Button onClick={() => router.push("/purchasing/new")}>
+              <Button
+                className="gap-1.5"
+                onClick={() => router.push("/purchasing/new")}
+              >
+                <IconPlus className="size-4" />
                 Crear pedido
               </Button>
             )}

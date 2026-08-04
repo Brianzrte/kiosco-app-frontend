@@ -97,6 +97,7 @@ export function PurchaseOrdersHistoryView() {
       <PageHeader
         title="Historial de pedidos"
         description="Consultá los pedidos creados y su recepción."
+        compactMobile
         actions={
           <Button variant="secondary" onClick={() => router.push("/purchasing")}>
             Volver a compras

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;}
+a{color:#7c3aed;text-decoration:none;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#f8f8fb;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;color:#211f2b">
+
+  <div style="display:flex;align-items:center;gap:6px;padding:14px 24px;background:#ffffff;border-bottom:1px solid #dcd9e6;flex-wrap:wrap">
+    <span style="font-weight:700;color:#211f2b;margin-right:16px;font-size:14px">Compras y proveedores — rediseño</span>
+    <a href="PurchasingHub.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">1. Hub</a>
+    <a href="PurchaseOrderDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">2. Detalle de pedido</a>
+    <a href="AddUncatalogedItem.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">3. Alta ítem no pedido</a>
+    <a href="SupplierDetail.dc.html" style="padding:6px 12px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:600">4. Ficha proveedor</a>
+    <a href="NewPurchaseOrder.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">5. Nuevo pedido</a>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:32px 24px 80px;display:flex;flex-wrap:wrap;gap:32px">
+
+    <div style="flex:3 1 720px;min-width:0;display:flex;flex-direction:column;gap:24px">
+
+      <a href="#" style="font-size:13px;font-weight:600;color:#7c3aed">← Volver a proveedores</a>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.01em;margin:0">Distribuidora Cuyo Bebidas</h1>
+            <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;font-size:12px;font-weight:600">Activo</span>
+          </div>
+          <p style="margin:6px 0 0;font-size:14px;color:#615e6e">Proveedor desde marzo de 2023 · visita cada 2 semanas</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button style-hover="background:#f3f1f9" style="padding:10px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:500;cursor:pointer;min-height:44px">Editar ficha</button>
+          <button style-hover="background:rgba(239,68,68,0.1)" style="padding:10px 16px;border-radius:12px;border:1px solid rgba(239,68,68,0.4);background:#ffffff;color:#ef4444;font-size:14px;font-weight:500;cursor:pointer;min-height:44px">Desactivar</button>
+        </div>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="margin:0 0 16px;font-size:15px;font-weight:700">Datos de contacto</p>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 28px">
+          <div>
+            <p style="margin:0;font-size:12px;font-weight:600;color:#615e6e;text-transform:uppercase;letter-spacing:0.03em">Empresa</p>
+            <p style="margin:4px 0 0;font-size:14px;color:#211f2b">Distribuidora Cuyo Bebidas S.R.L.</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:12px;font-weight:600;color:#615e6e;text-transform:uppercase;letter-spacing:0.03em">Teléfono</p>
+            <p style="margin:4px 0 0;font-size:14px;color:#211f2b;font-family:'Geist Mono',ui-monospace,monospace">+54 9 261 555-0142</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:12px;font-weight:600;color:#615e6e;text-transform:uppercase;letter-spacing:0.03em">Dirección</p>
+            <p style="margin:4px 0 0;font-size:14px;color:#211f2b">Av. San Martín 2140, Godoy Cruz, Mendoza</p>
+          </div>
+          <div>
+            <p style="margin:0;font-size:12px;font-weight:600;color:#615e6e;text-transform:uppercase;letter-spacing:0.03em">Frecuencia de visita</p>
+            <p style="margin:4px 0 0;font-size:14px;color:#211f2b">Cada 2 semanas, jueves</p>
+          </div>
+          <div style="grid-column:1 / -1">
+            <p style="margin:0;font-size:12px;font-weight:600;color:#615e6e;text-transform:uppercase;letter-spacing:0.03em">Notas</p>
+            <p style="margin:4px 0 0;font-size:14px;color:#211f2b;line-height:1.5">Prefiere que el pedido se confirme por WhatsApp el día anterior a la visita. Acepta devoluciones de botellas retornables sólo si están en el packaging original.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <p style="margin:0;font-size:15px;font-weight:700">Productos asociados <span style="color:#615e6e;font-weight:500">(6)</span></p>
+          <button style-hover="background:#f3f1f9" style="padding:8px 14px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:13px;font-weight:600;cursor:pointer;min-height:40px">Asociar producto</button>
+        </div>
+        <div style="overflow-x:auto;border:1px solid #dcd9e6;border-radius:10px">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+            <thead>
+              <tr>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Producto</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Preferido</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Reposición</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Coca-Cola 500ml</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:#fffdf0;color:#a16207;font-size:11px;font-weight:600;border:1px solid #fde68a">★ Preferido</span></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#615e6e">cada 14 días</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Agua Villavicencio 1.5L</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:#fffdf0;color:#a16207;font-size:11px;font-weight:600;border:1px solid #fde68a">★ Preferido</span></td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#615e6e">cada 14 días</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Cerveza Quilmes lata 473ml</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#a6a2b3">—</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#615e6e">cada 14 días</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Speed cola 500ml</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#a6a2b3">—</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;color:#a6a2b3">sin definir</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-weight:500">Sprite 500ml</td>
+                <td style="padding:10px 14px;color:#a6a2b3">—</td>
+                <td style="padding:10px 14px;color:#615e6e">cada 14 días</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+          <p style="margin:0;font-size:15px;font-weight:700">Historial de pedidos con este proveedor</p>
+          <a href="#" style="font-size:13px;font-weight:600">Ver historial completo →</a>
+        </div>
+        <div style="overflow-x:auto;border:1px solid #dcd9e6;border-radius:10px">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+            <thead>
+              <tr>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Fecha</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e;text-align:right">Total</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6">30 jul. 2026</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$184.500</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">Pendiente</span></td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6">16 jul. 2026</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$168.900</td>
+                <td style="padding:10px 14px;border-bottom:1px solid #dcd9e6"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;font-size:11px;font-weight:600">Recibido</span></td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px">2 jul. 2026</td>
+                <td style="padding:10px 14px;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$155.200</td>
+                <td style="padding:10px 14px"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;font-size:11px;font-weight:600">Recibido</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style="margin:12px 0 0;font-size:12px;color:#a6a2b3">Placeholder de contenido — el detalle agregado por proveedor (inversión, cumplimiento) es un reporte separado, fuera de esta ronda.</p>
+      </div>
+
+    </div>
+
+    <aside style="flex:1 1 300px;min-width:280px;max-width:340px;position:sticky;top:24px;align-self:flex-start;display:flex;flex-direction:column;gap:14px">
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 14px">Decisiones</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>De lista + diálogos a ficha dedicada.</strong> Contacto, frecuencia de visita y notas quedan a la vista sin abrir nada — son los datos que alguien busca a mitad de una llamada con el proveedor.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Productos asociados reutiliza el mismo patrón de "preferido" que ya existe en la ficha de producto, pero ahora se lee desde el lado del proveedor.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Historial de pedidos es un teaser (últimos 3), no una duplicación del historial general con sus propios filtros.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">4</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">"Desactivar" queda explícito y separado de "Editar" — conserva el historial, sólo deja de ofrecerse en pedidos nuevos.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

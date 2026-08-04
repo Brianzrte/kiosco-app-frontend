@@ -234,6 +234,7 @@ export function ReceivingDetailView({ id }: { id: string }) {
       </Link>
       <PageHeader
         title={`Pedido de ${order.supplier_name}`}
+        compactMobile
         description={new Intl.DateTimeFormat("es-AR", {
           dateStyle: "long",
         }).format(new Date(order.ordered_at))}
