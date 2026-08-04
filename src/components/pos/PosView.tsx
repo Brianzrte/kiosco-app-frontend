@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/states";
 import { api, ApiError, type ErrorKind } from "@/lib/api";
+import { shouldPoll } from "@/lib/useLoad";
 import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
 import { isValidWeight, weightThousandths } from "@/lib/weightPricing";
@@ -65,6 +66,7 @@ import { MOTION } from "@/lib/motion";
 const CONFIRMED_SALE_AUTO_DISMISS_MS = 6000;
 
 const POS_CART_STORAGE_KEY = "pos:cart:v1";
+const STOCK_POLL_MS = 30_000;
 
 const UNKNOWN_NETWORK_MESSAGE =
   "Falló la conexión y no se sabe si la venta se confirmó. Verificá el estado antes de reintentar; el carrito se conservó.";
@@ -182,6 +184,24 @@ export function PosView() {
     stockRequests.current[productId] = request;
     return request;
   }
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!shouldPoll(document.visibilityState)) return;
+
+      for (const productId of Object.keys(stockByProduct.current)) {
+        void api<Stock>(`/inventory/stock/${productId}`)
+          .then((stock) => {
+            stockByProduct.current[productId] = stock.quantity;
+          })
+          .catch(() => {
+            // Keep the last known availability; the next interval retries.
+          });
+      }
+    }, STOCK_POLL_MS);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const refocus = useCallback(() => {
     setBarcode("");

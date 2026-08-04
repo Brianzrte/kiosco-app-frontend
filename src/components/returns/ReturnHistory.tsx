@@ -7,11 +7,21 @@ import { ApiError } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
 import { Return, SaleItem } from "@/lib/types";
 
+const paymentMethodLabels: Record<string, string> = {
+  CASH: "Efectivo",
+  CARD: "Tarjeta",
+  TRANSFER: "Transferencia",
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("es-AR", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function returnedMeasure(item: Return["items"][number]) {
+  return item.weight === undefined ? `${item.quantity ?? 0} unidades` : `${item.weight} kg`;
 }
 
 /** Best-effort label: resolved to a username when the caller could fetch
@@ -72,6 +82,9 @@ export function ReturnHistory({
                     {performedByLabel(ret.performed_by, usersById)} ·{" "}
                     {ret.reason}
                   </p>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Reintegrado: {ret.refund_payments.map((payment) => `${paymentMethodLabels[payment.method] ?? payment.method} ${formatMoney(payment.amount)}`).join(" · ")}
+                  </p>
                 </div>
                 <p className="num text-lg font-semibold">
                   {formatMoney(ret.total_amount)}
@@ -84,7 +97,9 @@ export function ReturnHistory({
                       <span className="font-medium">{productNameBySaleItemId.get(item.sale_item_id) ?? item.product_id}</span>
                       <span className="num font-medium">{formatMoney(item.subtotal)}</span>
                     </div>
-                    <p className="mt-1 text-sm text-text-secondary">Cantidad: <span className="num">{item.quantity}</span></p>
+                    <p className="mt-1 text-sm text-text-secondary">
+                      Cantidad o peso: <span className="num">{returnedMeasure(item)}</span>
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -93,7 +108,7 @@ export function ReturnHistory({
                 <thead>
                   <tr>
                     <Th>Producto</Th>
-                    <Th className="text-right">Cantidad</Th>
+                    <Th className="text-right">Cantidad o peso</Th>
                     <Th className="text-right">Valor</Th>
                   </tr>
                 </thead>
@@ -104,7 +119,7 @@ export function ReturnHistory({
                         {productNameBySaleItemId.get(item.sale_item_id) ??
                           item.product_id}
                       </Td>
-                      <Td className="num text-right">{item.quantity}</Td>
+                      <Td className="num text-right">{returnedMeasure(item)}</Td>
                       <Td className="num text-right">
                         {formatMoney(item.subtotal)}
                       </Td>

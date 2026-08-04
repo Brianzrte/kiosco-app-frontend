@@ -96,7 +96,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
       ),
     [term, categoryId, lowStockOnly, page, pageSize],
   );
-  const { data, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher, { pollMs: 30_000 });
   const rows = data?.items ?? null;
   const total = data?.total ?? 0;
 
@@ -141,7 +141,9 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
       `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly: true, page: 1, limit: 100 })}`,
     );
   }, [term, categoryId, lowStockOnly]);
-  const { data: lowStockData } = useLoad(lowStockIdsFetcher);
+  const { data: lowStockData } = useLoad(lowStockIdsFetcher, {
+    pollMs: 30_000,
+  });
   const lowStockIds = new Set(
     (lowStockData?.items ?? []).map((item) => item.product_id),
   );

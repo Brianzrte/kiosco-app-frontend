@@ -234,7 +234,7 @@ function SalesReportContent({
     ]);
     return { ...breakdown, summary };
   }, [from, page, to, pageSize]);
-  const { data, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher, { pollMs: 30_000 });
 
   const filters = (
     <SalesReportFilters

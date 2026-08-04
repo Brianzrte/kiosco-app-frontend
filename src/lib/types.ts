@@ -42,6 +42,7 @@ export type Sale = {
   items: SaleItem[];
   created_at: string;
   confirmed_at: string | null;
+  updated_at: string;
 };
 
 export type OperationalSale = {
@@ -51,8 +52,10 @@ export type OperationalSale = {
   sale_number: number | null | undefined;
   payments: SalePayment[];
   total: string | null;
+  has_returns: boolean;
   created_at: string;
   confirmed_at: string | null;
+  updated_at: string;
 };
 
 export type OperationalSalesList = {
@@ -230,7 +233,8 @@ export type ReturnItem = {
   id: string;
   sale_item_id: string;
   product_id: string;
-  quantity: number;
+  quantity?: number;
+  weight?: string;
   unit_price: string;
   subtotal: string;
 };
@@ -243,6 +247,7 @@ export type Return = {
   performed_by: string;
   created_at: string;
   items: ReturnItem[];
+  refund_payments: SalePayment[];
 };
 
 export type ReturnList = { returns: Return[]; total: number };

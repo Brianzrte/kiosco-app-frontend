@@ -14,8 +14,6 @@ import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
 import {
   computeAvailability,
-  computeNetTotal,
-  sumReturnedTotal,
 } from "@/lib/returns";
 import { Return, ReturnList, Role, Sale, SaleStatus, User } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
@@ -63,7 +61,7 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
   const [returnFormOpen, setReturnFormOpen] = useState(false);
 
   const fetcher = useCallback(() => api<Sale>(`/sales/${id}`), [id]);
-  const { data: sale, error, reload } = useLoad(fetcher);
+  const { data: sale, error, reload, refresh } = useLoad(fetcher, { pollMs: 30_000 });
 
   const returnsFetcher = useCallback(
     () => api<ReturnList>(`/sales/${id}/returns`),
@@ -73,7 +71,8 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
     data: returnsData,
     error: returnsError,
     reload: reloadReturns,
-  } = useLoad(returnsFetcher);
+    refresh: refreshReturns,
+  } = useLoad(returnsFetcher, { pollMs: 30_000 });
   const returns: Return[] | null = returnsData?.returns ?? null;
 
   // Best-effort username resolution for the "acting user" column: /users is
@@ -94,12 +93,8 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
     sale?.status === "confirmed" &&
     (roles.includes("admin") || roles.includes("cashier"));
 
-  const hasReturns = !!returns && returns.length > 0;
-  const returnedTotal = hasReturns ? sumReturnedTotal(returns) : null;
-  const netTotal =
-    sale && hasReturns ? computeNetTotal(sale.total, returns) : null;
-
-  // La venta original nunca cambia (design.md): esto es sólo una marca
+  // The sale's total and payments are already net of returns. This remains a
+  // visual mark over the original item snapshots, which stay immutable.
   // visual sobre los mismos ítems, tachado completo únicamente cuando no
   // queda nada vigente de esa línea — un parcial sigue siendo venta real.
   const availabilityByItemId = new Map(
@@ -273,39 +268,24 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                 <dt className="text-sm text-text-secondary">Cantidad de productos</dt>
                 <dd className="num text-sm font-medium">{sale.items.length}</dd>
               </div>
+              {returns && returns.length > 0 && sale.confirmed_at && sale.updated_at !== sale.confirmed_at && (
+                <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
+                  <dt className="text-sm text-text-secondary">Modificada por devolución</dt>
+                  <dd className="text-right text-sm font-medium">
+                    {formatDate(sale.updated_at)}
+                  </dd>
+                </div>
+              )}
             </dl>
           </section>
 
           <div className="mt-auto flex flex-col gap-2 rounded-app bg-primary-hover px-4 py-3 text-text-inverse">
-            {netTotal !== null ? (
-              <>
-                <div className="flex items-center justify-between text-sm text-text-inverse/80">
-                  <span>Total facturado</span>
-                  <span className="num line-through">
-                    {formatMoney(sale.total)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-text-inverse/80">
-                  <span>Devuelto</span>
-                  <span className="num">− {formatMoney(returnedTotal!)}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-text-inverse/20 pt-2">
-                  <span className="text-sm font-medium">
-                    Total
-                  </span>
-                  <span className="num text-xl font-semibold">
-                    {formatMoney(netTotal)}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Total</span>
-                <span className="num text-xl font-semibold">
-                  {formatMoney(sale.total)}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Total</span>
+              <span className="num text-xl font-semibold">
+                {formatMoney(sale.total)}
+              </span>
+            </div>
           </div>
           </aside>
           </div>
@@ -325,15 +305,19 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             open={returnFormOpen}
             title="Registrar devolución"
             onClose={() => setReturnFormOpen(false)}
+            className="!max-h-[calc(100dvh-4rem)] !max-w-4xl"
+            contentClassName="!p-4 sm:!p-6"
           >
             {returnFormOpen && (
               <ReturnForm
                 saleId={sale.id}
                 items={sale.items}
+                payments={sale.payments}
                 returns={returns ?? []}
                 onRegistered={() => {
                   setReturnFormOpen(false);
-                  reloadReturns();
+                  refresh();
+                  refreshReturns();
                 }}
                 onReloadAvailability={reloadReturns}
                 onClose={() => setReturnFormOpen(false)}

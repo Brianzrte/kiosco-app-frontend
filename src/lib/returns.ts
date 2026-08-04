@@ -10,13 +10,19 @@
  */
 
 import { fromCents, toCents } from "./money";
-import { Return, SaleItem } from "./types";
+import { Return, SaleItem, SalePayment } from "./types";
+import {
+  calculateWeightedPrice,
+  isValidWeight,
+  weightThousandths,
+} from "./weightPricing";
 
 export type ReturnAvailability = {
   saleItemId: string;
   productId: string;
   productName: string;
   unitPrice: string;
+  measure: "unit" | "weight";
   sold: number;
   alreadyReturned: number;
   available: number;
@@ -41,9 +47,12 @@ export function sumReturnedByItem(returns: Return[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const ret of returns) {
     for (const item of ret.items) {
+      const amount = item.weight === undefined
+        ? (item.quantity ?? 0)
+        : Number(item.weight);
       map.set(
         item.sale_item_id,
-        (map.get(item.sale_item_id) ?? 0) + item.quantity,
+        (map.get(item.sale_item_id) ?? 0) + amount,
       );
     }
   }
@@ -56,15 +65,24 @@ export function computeAvailability(
 ): ReturnAvailability[] {
   const returnedByItem = sumReturnedByItem(returns);
   return items.map((item) => {
+    const measure = item.weight === undefined ? "unit" : "weight";
+    const sold = measure === "unit" ? item.quantity : Number(item.weight);
     const alreadyReturned = returnedByItem.get(item.id) ?? 0;
+    const available = measure === "unit"
+      ? Math.max(0, sold - alreadyReturned)
+      : Math.max(
+          0,
+          (weightThousandths(item.weight!) - Math.round(alreadyReturned * 1000)) / 1000,
+        );
     return {
       saleItemId: item.id,
       productId: item.product_id,
       productName: item.product_name,
       unitPrice: item.unit_price,
-      sold: item.quantity,
+      measure,
+      sold,
       alreadyReturned,
-      available: Math.max(0, item.quantity - alreadyReturned),
+      available,
     };
   });
 }
@@ -73,25 +91,44 @@ export function isValidReason(reason: string): boolean {
   return reason.trim().length > 0;
 }
 
-export type ReturnLineSelection = { saleItemId: string; quantity: number };
+export type ReturnLineSelection = {
+  saleItemId: string;
+  quantity?: number;
+  weight?: string;
+};
+export type RefundPaymentInput = Pick<SalePayment, "method" | "amount">;
+export type ReturnPayloadItem =
+  | { sale_item_id: string; quantity: number }
+  | { sale_item_id: string; weight: string };
 
 export function hasAnySelection(lines: ReturnLineSelection[]): boolean {
-  return lines.some((line) => line.quantity > 0);
+  return lines.some(
+    (line) => (line.quantity ?? 0) > 0 || (line.weight !== undefined && isValidWeight(line.weight)),
+  );
 }
 
-/** Only lines with quantity > 0 go in the request — zero-quantity rows are UI state, not intent. */
+/** Only positive measures go in the request — zero rows are UI state, not intent. */
 export function buildReturnPayload(
   reason: string,
   lines: ReturnLineSelection[],
-): { reason: string; items: { sale_item_id: string; quantity: number }[] } {
+  refundPayments: RefundPaymentInput[],
+): {
+  reason: string;
+  items: ReturnPayloadItem[];
+  refund_payments: RefundPaymentInput[];
+} {
+  const items: ReturnPayloadItem[] = [];
+  for (const line of lines) {
+    if ((line.quantity ?? 0) > 0) {
+      items.push({ sale_item_id: line.saleItemId, quantity: line.quantity! });
+    } else if (line.weight !== undefined && isValidWeight(line.weight)) {
+      items.push({ sale_item_id: line.saleItemId, weight: line.weight });
+    }
+  }
   return {
     reason: reason.trim(),
-    items: lines
-      .filter((line) => line.quantity > 0)
-      .map((line) => ({
-        sale_item_id: line.saleItemId,
-        quantity: line.quantity,
-      })),
+    items,
+    refund_payments: refundPayments,
   };
 }
 
@@ -107,10 +144,13 @@ export function computeSelectionValue(
   const byId = new Map(availability.map((item) => [item.saleItemId, item]));
   let cents = 0;
   for (const line of lines) {
-    if (line.quantity <= 0) continue;
     const item = byId.get(line.saleItemId);
     if (!item) continue;
-    cents += toCents(item.unitPrice) * line.quantity;
+    if ((line.quantity ?? 0) > 0) {
+      cents += toCents(item.unitPrice) * line.quantity!;
+    } else if (line.weight !== undefined && isValidWeight(line.weight)) {
+      cents += toCents(calculateWeightedPrice(line.weight, item.unitPrice));
+    }
   }
   return fromCents(cents);
 }

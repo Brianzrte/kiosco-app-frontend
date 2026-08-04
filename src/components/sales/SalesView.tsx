@@ -389,7 +389,10 @@ function SalesTable({
                   </Badge>
                 ))
               )}
-              <SaleStatusBadge className="ml-auto" status={sale.status} />
+              <div className="ml-auto flex flex-wrap justify-end gap-1.5">
+                {hasReturns(sale) && <SaleReturnsBadge />}
+                <SaleStatusBadge status={sale.status} />
+              </div>
             </div>
             {/* Total gets the visual weight — it's what a cashier/admin
                 scans for first — set off by a divider from the secondary
@@ -446,7 +449,10 @@ function SalesTable({
                   {sale.sale_number == null ? "—" : `#${sale.sale_number}`}
                 </Td>
                 <Td>
-                  <SaleStatusBadge status={sale.status} />
+                  <div className="flex flex-wrap gap-1.5">
+                    <SaleStatusBadge status={sale.status} />
+                    {hasReturns(sale) && <SaleReturnsBadge />}
+                  </div>
                 </Td>
                 <Td>
                   {sale.payments.length === 0 ? (
@@ -489,6 +495,14 @@ function SalesTable({
   );
 }
 
+function hasReturns(sale: OperationalSale) {
+  return sale.has_returns;
+}
+
+function SaleReturnsBadge() {
+  return <Badge tone="error">Con devoluciones</Badge>;
+}
+
 function SaleStatusBadge({
   status,
   className = "",
@@ -519,7 +533,7 @@ function DailySummaryCards() {
       ),
     [today],
   );
-  const { data, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher, { pollMs: 30_000 });
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={2} />;
@@ -533,7 +547,7 @@ function CashierTodaySummaryCards() {
     () => api<SalesSummaryByPaymentMethod>("/sales/today-summary"),
     [],
   );
-  const { data, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher, { pollMs: 30_000 });
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
   if (data === null) return <ListSkeleton rows={2} />;

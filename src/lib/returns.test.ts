@@ -30,6 +30,16 @@ const items: SaleItem[] = [
   },
 ];
 
+const weighedItem: SaleItem = {
+  id: "item-3",
+  product_id: "prod-3",
+  product_name: "Queso",
+  quantity: 1,
+  weight: "2.500",
+  unit_price: "1000.00",
+  subtotal: "2500.00",
+};
+
 function makeReturn(
   saleItemId: string,
   quantity: number,
@@ -42,6 +52,7 @@ function makeReturn(
     total_amount: (Number(unitPrice) * quantity).toFixed(2),
     performed_by: "user-1",
     created_at: "2026-07-27T10:00:00Z",
+    refund_payments: [{ id: "refund-1", method: "CASH", amount: "1.00" }],
     items: [
       {
         id: `retitem-${saleItemId}`,
@@ -76,6 +87,7 @@ describe("computeAvailability", () => {
         productId: "prod-1",
         productName: "Coca-Cola 600ml",
         unitPrice: "1000.00",
+        measure: "unit",
         sold: 5,
         alreadyReturned: 0,
         available: 5,
@@ -85,6 +97,7 @@ describe("computeAvailability", () => {
         productId: "prod-2",
         productName: "Alfajor",
         unitPrice: "500.00",
+        measure: "unit",
         sold: 2,
         alreadyReturned: 0,
         available: 2,
@@ -110,6 +123,30 @@ describe("computeAvailability", () => {
     const item2 = availability.find((a) => a.saleItemId === "item-2")!;
     expect(item2.available).toBe(0);
     expect(item2.alreadyReturned).toBe(2);
+  });
+
+  it("uses kilogram weight for weighable items and their returns", () => {
+    const weighedReturn: Return = {
+      ...makeReturn("item-3", 1),
+      items: [
+        {
+          id: "retitem-item-3",
+          sale_item_id: "item-3",
+          product_id: "prod-3",
+          weight: "0.750",
+          unit_price: "1000.00",
+          subtotal: "750.00",
+        },
+      ],
+    };
+    const availability = computeAvailability([weighedItem], [weighedReturn]);
+
+    expect(availability[0]).toMatchObject({
+      measure: "weight",
+      sold: 2.5,
+      alreadyReturned: 0.75,
+      available: 1.75,
+    });
   });
 });
 
@@ -146,14 +183,29 @@ describe("hasAnySelection", () => {
 
 describe("buildReturnPayload", () => {
   it("trims the reason and drops zero-quantity lines", () => {
-    const payload = buildReturnPayload("  producto roto  ", [
-      { saleItemId: "item-1", quantity: 2 },
-      { saleItemId: "item-2", quantity: 0 },
-    ]);
+    const payload = buildReturnPayload(
+      "  producto roto  ",
+      [
+        { saleItemId: "item-1", quantity: 2 },
+        { saleItemId: "item-2", quantity: 0 },
+      ],
+      [{ method: "CASH", amount: "2000.00" }],
+    );
     expect(payload).toEqual({
       reason: "producto roto",
       items: [{ sale_item_id: "item-1", quantity: 2 }],
+      refund_payments: [{ method: "CASH", amount: "2000.00" }],
     });
+  });
+
+  it("sends a weight instead of quantity for a weighable line", () => {
+    const payload = buildReturnPayload(
+      " producto en mal estado ",
+      [{ saleItemId: "item-3", weight: "0.750" }],
+      [{ method: "CASH", amount: "750.00" }],
+    );
+
+    expect(payload.items).toEqual([{ sale_item_id: "item-3", weight: "0.750" }]);
   });
 });
 
@@ -210,5 +262,14 @@ describe("computeSelectionValue", () => {
       availability,
     );
     expect(value).toBe("0.00");
+  });
+
+  it("calculates weighable selections using the kilogram price", () => {
+    const value = computeSelectionValue(
+      [{ saleItemId: "item-3", weight: "0.750" }],
+      computeAvailability([weighedItem], []),
+    );
+
+    expect(value).toBe("750.00");
   });
 });

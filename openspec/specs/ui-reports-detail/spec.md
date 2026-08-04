@@ -4,7 +4,8 @@
 TBD - created by archiving change add-frontend-reports-dashboard. Update Purpose after archive.
 ## Requirements
 ### Requirement: Daily sales report
-`/reports/sales` SHALL list one row per calendar day in the selected range, each showing the date, the day's total revenue, how much of it was paid in cash, how much by card, how much by bank transfer, and the cashier. The day grouping and every per-day monetary total SHALL come from a backend aggregation; the frontend SHALL NOT group individual sales by date nor recompute a day's payment amounts client-side. Range-level summary totals SHALL come from backend report aggregations and SHALL NOT be summed from paginated day rows in the client. A payment method the backend does not report for a day SHALL render as zero rather than being omitted, so the columns stay aligned across rows. The day rows SHALL be paginated by the backend, and the report SHALL expose controls to move between available pages. The cashier column SHALL show at most three cashier badges per day; when more than three cashiers exist, it SHALL show an additional `...` badge with the omitted cashier names available through its accessible label and native tooltip.
+
+`/reports/sales` SHALL list one row per calendar day in the selected range, each showing the date, the day's total revenue, how much of it was paid in cash, how much by card, how much by bank transfer, and the cashier. The day grouping and every per-day monetary total SHALL come from a backend aggregation; the frontend SHALL NOT group individual sales by date nor recompute a day's payment amounts client-side. Range-level summary totals SHALL come from backend report aggregations and SHALL NOT be summed from paginated day rows in the client. A payment method the backend does not report for a day SHALL render as zero rather than being omitted, so the columns stay aligned across rows. The day rows SHALL be paginated by the backend, and the report SHALL expose controls to move between available pages. The cashier column SHALL show at most three cashier badges per day; when more than three cashiers exist, it SHALL show an additional `...` badge with the omitted cashier names available through its accessible label and native tooltip. While the sales report screen stays mounted and visible, it SHALL re-fetch the current day-breakdown page and range summary (same range and page already selected) on a fixed interval, so a sale or return registered elsewhere — including from another device — becomes reflected without the Admin navigating away or reloading. A background refresh that fails SHALL be ignored, keeping the previously loaded rows and summary on screen.
 
 #### Scenario: Days listed with payment split
 - **WHEN** an Admin opens the sales report for a range
@@ -33,6 +34,18 @@ TBD - created by archiving change add-frontend-reports-dashboard. Update Purpose
 #### Scenario: Summary appears before filters
 - **WHEN** the sales report has loaded data
 - **THEN** the summary carousel appears before the filters panel, and the filters panel appears before the daily rows
+
+#### Scenario: Report picks up a change registered elsewhere without navigating
+- **WHEN** the sales report stays open on a range and a sale or a return affecting that range is registered by someone else from another device
+- **THEN** within one refresh interval the affected day row and the range summary update to reflect the current backend aggregation, without the Admin reloading or navigating away
+
+#### Scenario: Background refresh failure keeps the last good data
+- **WHEN** a periodic refresh of the day-breakdown or range summary fails while data from a previous successful load is already shown
+- **THEN** the previously loaded rows and summary stay on screen, no error replaces them, and the next interval tick retries
+
+#### Scenario: Background refresh does not reset filters or the current page
+- **WHEN** a periodic refresh tick occurs while the Admin has a specific range and day-row page selected
+- **THEN** the refresh re-fetches that same range and page, and does not reset the selection to the default range or the first page
 
 ### Requirement: Sales report period filters
 `/reports/sales` SHALL offer period presets — today, yesterday, weekly, monthly, and last six months — inside the filters panel, and SHALL leave the explicit range editable. The initial selected period SHALL be the current calendar month, from its first day through today. Selecting a preset SHALL set the date range and re-fetch the report for that range. Editing either date SHALL preserve the custom range and SHALL clear the selected preset state.
