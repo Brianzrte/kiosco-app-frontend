@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { fromCents, formatMoney, toCents } from "@/lib/money";
 import { effectiveLinePrice } from "@/lib/weightPricing";
 import { isMoneyAmount } from "@/lib/paymentComposition";
+import { MOTION } from "@/lib/motion";
 import type { CartLine } from "@/lib/cart";
 import {
   IconEdit,
@@ -90,6 +92,10 @@ function CartLineRow({
   onWeightChange: (value: string) => void;
   onActualPriceChange: (value: string | undefined) => void;
 }) {
+  const shouldReduceMotion = useReducedMotion();
+  const actualPriceInputRef = useRef<HTMLInputElement>(null);
+  const actualPriceToggleRef = useRef<HTMLButtonElement>(null);
+  const actualPriceEditorId = useId();
   // "Precio real" is a plain controlled field committed to the cart only
   // when it parses as money (design.md, Decisión 6) — typing an
   // in-progress/invalid value shows its own error below the field without
@@ -98,6 +104,7 @@ function CartLineRow({
     line.actualPrice ?? "",
   );
   const [actualPriceError, setActualPriceError] = useState<string | null>(null);
+  const [actualPriceEditorOpen, setActualPriceEditorOpen] = useState(false);
   // Reset the draft when the committed price is cleared elsewhere (e.g. a
   // weight change clears it) — adjusted during render, same pattern already
   // used by Button.tsx's pending/prevPending, instead of an effect.
@@ -125,6 +132,20 @@ function CartLineRow({
     setActualPriceError(ACTUAL_PRICE_ERROR);
   }
 
+  function toggleActualPriceEditor() {
+    setActualPriceEditorOpen((open) => {
+      if (!open) {
+        requestAnimationFrame(() => actualPriceInputRef.current?.focus());
+      }
+      return !open;
+    });
+  }
+
+  function closeActualPriceEditor() {
+    setActualPriceEditorOpen(false);
+    requestAnimationFrame(() => actualPriceToggleRef.current?.focus());
+  }
+
   const calculated =
     line.calculatedPrice ??
     fromCents(toCents(line.product.price) * line.quantity);
@@ -146,12 +167,16 @@ function CartLineRow({
         className={`${
           line.product.unit_type === "unitario"
             ? "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 px-3 py-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto] lg:gap-x-3 lg:px-4"
-            : "flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 lg:px-4"
+            : "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-3 py-2 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:gap-x-4 lg:px-4"
         } transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] ${
           flashed !== null ? "flash" : ""
         }`}
       >
-        <div className="min-w-0 flex-1 basis-40">
+        <div
+          className={
+            line.product.unit_type === "pesable" ? "min-w-0" : "min-w-0 flex-1 basis-40"
+          }
+        >
           <p className="truncate font-medium">{line.product.name}</p>
           <p className="num text-sm text-text-secondary">
             {line.product.unit_type === "pesable"
@@ -167,7 +192,7 @@ function CartLineRow({
             value={line.weight ?? ""}
             onChange={(event) => onWeightChange(event.target.value)}
             inputMode="decimal"
-            className="w-36"
+            className="col-span-2 row-start-2 w-36 lg:col-span-1 lg:col-start-2 lg:row-start-1"
             error={line.weightError ?? undefined}
           />
         ) : (
@@ -177,6 +202,7 @@ function CartLineRow({
               variant="ghost"
               size="md"
               iconOnly
+              compactDesktop
               aria-label={`Restar uno a ${line.product.name}`}
               data-line-decrement={line.product.id}
               onClick={onDecrement}
@@ -184,7 +210,7 @@ function CartLineRow({
             >
               <IconMinus className="size-3.5" />
             </Button>
-            <span className="num flex h-11 w-10 items-center justify-center border-x border-border text-sm font-semibold md:h-10">
+            <span className="num flex h-11 w-11 items-center justify-center border-x border-border text-sm font-semibold md:h-9 md:w-9">
               {line.quantity}
             </span>
             <Button
@@ -192,6 +218,7 @@ function CartLineRow({
               variant="ghost"
               size="md"
               iconOnly
+              compactDesktop
               aria-label={`Sumar uno a ${line.product.name}`}
               onClick={onIncrement}
               className="rounded-l-none rounded-r-app text-text-secondary hover:bg-surface-2 focus-visible:relative focus-visible:z-10"
@@ -200,35 +227,98 @@ function CartLineRow({
             </Button>
           </div>
         )}
-        <p className="num w-24 justify-self-end text-right text-base font-semibold">
-          {hasValidSubtotal
-            ? formatMoney(effectiveLinePrice(calculated, line.actualPrice))
-            : "—"}
-        </p>
+        {line.product.unit_type !== "pesable" && (
+          <p className="num w-24 justify-self-end text-right text-base font-semibold">
+            {hasValidSubtotal
+              ? formatMoney(effectiveLinePrice(calculated, line.actualPrice))
+              : "—"}
+          </p>
+        )}
         {line.product.unit_type === "pesable" && (
-          <div className="flex items-end gap-2">
-            <Input
-              label="Precio real"
-              icon={<IconEdit className="size-3.5" />}
-              value={actualPriceDraft}
-              onChange={(event) => handleActualPriceChange(event.target.value)}
-              inputMode="decimal"
-              className="w-32"
-              error={actualPriceError ?? undefined}
-            />
+          <div className="col-start-2 row-start-1 flex items-center justify-self-end gap-1 lg:col-start-3">
+            <div className="relative">
+              <Button
+                ref={actualPriceToggleRef}
+                type="button"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label={`Editar el precio real de ${line.product.name}`}
+                aria-expanded={actualPriceEditorOpen}
+                aria-controls={actualPriceEditorId}
+                title="Editar precio real"
+                className="text-text-secondary hover:bg-surface-2"
+                onClick={toggleActualPriceEditor}
+              >
+                <IconEdit className="size-4" />
+              </Button>
+
+              <AnimatePresence initial={false}>
+                {actualPriceEditorOpen && (
+                  <motion.div
+                    id={actualPriceEditorId}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: shouldReduceMotion ? 0 : MOTION.fast / 1000,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                    className="absolute bottom-full -right-1 z-10 mb-2 w-60 rounded-app border border-border bg-surface-raised p-3 shadow-soft-lg"
+                  >
+                    <p className="mb-2 text-xs text-text-secondary">
+                      Precio real cobrado.
+                    </p>
+                    <Input
+                      ref={actualPriceInputRef}
+                      aria-label="Precio real"
+                      value={actualPriceDraft}
+                      onChange={(event) => handleActualPriceChange(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          closeActualPriceEditor();
+                        }
+                      }}
+                      inputMode="decimal"
+                      className="w-full"
+                      error={actualPriceError ?? undefined}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <p className="num whitespace-nowrap text-base font-semibold">
+              {hasValidSubtotal
+                ? formatMoney(effectiveLinePrice(calculated, line.actualPrice))
+                : "—"}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label={`Quitar ${line.product.name}`}
+              title={`Quitar ${line.product.name}`}
+              className="text-error hover:!bg-error/10 focus-visible:!text-error"
+              onClick={onRemove}
+            >
+              <IconTrash className="size-4" />
+            </Button>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          iconOnly
-          aria-label={`Quitar ${line.product.name}`}
-          title={`Quitar ${line.product.name}`}
-          className="ml-auto text-error hover:!bg-error/10 focus-visible:!text-error"
-          onClick={onRemove}
-        >
-          <IconTrash className="size-4" />
-        </Button>
+        {line.product.unit_type !== "pesable" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            iconOnly
+            aria-label={`Quitar ${line.product.name}`}
+            title={`Quitar ${line.product.name}`}
+            className="ml-auto text-error hover:!bg-error/10 focus-visible:!text-error"
+            onClick={onRemove}
+          >
+            <IconTrash className="size-4" />
+          </Button>
+        )}
       </div>
     </li>
   );

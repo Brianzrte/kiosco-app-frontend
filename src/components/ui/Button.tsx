@@ -56,6 +56,8 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: Size;
   /** Square footprint sized for a single icon, no visible label (still needs `aria-label`). Replaces the `size-11 !p-0 md:size-9` className overrides previously written ad hoc at each call site (PosView's quantity steppers). */
   iconOnly?: boolean;
+  /** Keeps a touch-safe icon target on mobile while using the compact desktop density for controls embedded in operational rows. */
+  compactDesktop?: boolean;
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -64,6 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       iconOnly = false,
+      compactDesktop = false,
       className = "",
       pending = false,
       pendingImmediate = false,
@@ -99,7 +102,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || pending}
         aria-busy={pending || undefined}
-        className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${variants[variant]} ${className}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${iconOnly && compactDesktop && size === "md" ? "md:size-9" : ""} ${variants[variant]} ${className}`}
         {...props}
       >
         {showSpinner && <Spinner />}
