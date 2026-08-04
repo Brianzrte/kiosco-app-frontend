@@ -97,11 +97,7 @@ export type CashierOpeningFund = {
 };
 
 export type CashClosingReconciliationStatus =
-  | "NO_ACTIVITY"
-  | "IN_PROGRESS"
-  | "UNCLOSED"
-  | "CLOSED"
-  | "REQUIRES_UPDATE";
+  "NO_ACTIVITY" | "IN_PROGRESS" | "UNCLOSED" | "CLOSED" | "REQUIRES_UPDATE";
 
 export type CashClosingStatus = {
   business_date: string;
