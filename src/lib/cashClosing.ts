@@ -1,5 +1,5 @@
 import { fromCents, toCents } from "./money";
-import { CashClosingReconciliationStatus } from "./types";
+import { CashClosingReconciliationStatus, CashierOpeningFund } from "./types";
 
 export const CASH_CLOSING_STATUS_CHANGED = "cash-closing-status-changed";
 
@@ -51,4 +51,10 @@ export function cashDifference(
 ): string | null {
   if (!isCountedCash(countedCash)) return null;
   return fromCents(toCents(countedCash) - toCents(expectedCash));
+}
+
+export function openingFundStatusLabel(
+  status: CashierOpeningFund["status"],
+): string {
+  return status === "confirmed" ? "Fondo confirmado" : "Fondo declarado";
 }

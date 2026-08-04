@@ -1,8 +1,5 @@
-# ui-cashier-closing-status Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change add-cashier-closing-status. Update Purpose after archive.
-## Requirements
 ### Requirement: Cashier sees the current reconciliation state
 The frontend SHALL show a visible, textual reconciliation state for the
 authenticated operator's requested operating date in the app shell. The state
@@ -35,21 +32,6 @@ calculate coverage or expected cash from client-side sales data.
 - **WHEN** a backend response attributes sales after midnight to an opening
   operating date
 - **THEN** the shell renders that response without client regrouping
-
-### Requirement: Reconciliation state remains accessible and responsive
-The cashier reconciliation indicator SHALL be operable by keyboard, SHALL
-communicate its status without relying only on color, and SHALL remain usable
-at mobile widths.
-
-#### Scenario: Cashier uses the indicator by keyboard
-- **WHEN** a Cashier reaches the indicator with the keyboard and activates it
-- **THEN** the associated closing action or detail opens and focus returns to
-  the indicator when that interaction closes
-
-#### Scenario: Narrow viewport
-- **WHEN** the app shell is rendered on a mobile-width viewport
-- **THEN** the indicator retains an accessible status name and does not cause
-  horizontal overflow
 
 ### Requirement: Admin can review daily reconciliation states
 The frontend SHALL provide an Admin-only report of daily reconciliation states,

@@ -83,6 +83,17 @@ export type CashClosing = {
   difference: string;
   notes?: string | null;
   closed_at: string;
+  state: "provisional" | "sealed";
+};
+
+export type CashierOpeningFund = {
+  id: string;
+  operator_id: string;
+  business_date: string;
+  amount: string;
+  status: "declared" | "confirmed";
+  declared_by: string;
+  confirmed_at: string | null;
 };
 
 export type CashClosingReconciliationStatus =
@@ -96,6 +107,7 @@ export type CashClosingStatus = {
   business_date: string;
   status: CashClosingReconciliationStatus;
   latest_closing: CashClosing | null;
+  opening_fund: CashierOpeningFund | null;
   sales_after_latest_closing: number;
   cash_after_latest_closing: string;
 };
@@ -113,6 +125,7 @@ export type DailyCashClosingStatusItem = {
   sales_after_latest_closing: number;
   cash_after_latest_closing: string;
   latest_closing: CashClosing | null;
+  opening_fund: Pick<CashierOpeningFund, "amount" | "status"> | null;
 };
 
 export type DailyCashClosingStatusList = {

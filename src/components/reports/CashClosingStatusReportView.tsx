@@ -4,20 +4,24 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
-import { Input } from "@/components/ui/Input";
+import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import {
+  isCountedCash,
+  openingFundStatusLabel,
   reconciliationStatusLabel,
   reconciliationStatusTone,
 } from "@/lib/cashClosing";
 import { formatMoney } from "@/lib/money";
 import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { today } from "@/lib/reports";
-import { DailyCashClosingStatusList } from "@/lib/types";
+import { CashierOpeningFund, DailyCashClosingStatusList, User } from "@/lib/types";
+import { useToast } from "@/components/ui/Toast";
 import { useLoad } from "@/lib/useLoad";
 
 const PAGE_SIZE = 20;
@@ -48,6 +52,7 @@ export function CashClosingStatusReportView() {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(today());
   const [page, setPage] = useState(1);
+  const [reportVersion, setReportVersion] = useState(0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,13 +91,63 @@ export function CashClosingStatusReportView() {
         />
       </CollapsibleFilters>
 
+      <OpeningFundForm onSaved={() => setReportVersion((version) => version + 1)} />
+
       <CashClosingStatusTable
+        key={reportVersion}
         from={from}
         to={to}
         page={page}
         onPageChange={setPage}
       />
     </div>
+  );
+}
+
+function OpeningFundForm({ onSaved }: { onSaved: () => void }) {
+  const toast = useToast();
+  const [operatorID, setOperatorID] = useState("");
+  const [businessDate, setBusinessDate] = useState(today());
+  const [amount, setAmount] = useState("");
+  const [pending, setPending] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const fetcher = useCallback(
+    () => api<{ users: User[]; total: number }>("/users?limit=100").then((response) => response.users),
+    [],
+  );
+  const { data: users, error: usersError } = useLoad(fetcher);
+  const operators = users?.filter((user) => user.active && (user.roles.includes("admin") || user.roles.includes("cashier"))) ?? [];
+  const amountError = amount && !isCountedCash(amount) ? "Ingresá un importe con hasta dos decimales." : undefined;
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!operatorID || !isCountedCash(amount)) return;
+    setPending(true);
+    setFormError(null);
+    try {
+      await api<CashierOpeningFund>("/cashier-opening-funds", {
+        method: "POST",
+        body: { cashier_id: operatorID, business_date: businessDate, amount },
+      });
+      toast("success", "Fondo inicial declarado");
+      setAmount("");
+      onSaved();
+    } catch (cause) {
+      setFormError(cause instanceof ApiError ? cause.message : "Ocurrió un error inesperado.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Card>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <div><h2 className="text-lg font-semibold tracking-tight">Declarar fondo inicial</h2><p className="mt-1 text-sm text-text-secondary">Asignalo a un operador antes de que inicie su turno.</p></div>
+        {usersError ? <p role="alert" className="text-sm text-error">{usersError.message}</p> : <div className="grid gap-4 md:grid-cols-3"><Select label="Operador" value={operatorID} onChange={(event) => setOperatorID(event.target.value)} disabled={!users || pending} required><option value="">Seleccioná un operador</option>{operators.map((user) => <option key={user.id} value={user.id}>{user.username}</option>)}</Select><Input label="Fecha operativa" type="date" value={businessDate} onChange={(event) => setBusinessDate(event.target.value)} disabled={pending} required /><Input label="Monto" type="text" inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} error={amountError} disabled={pending} required /></div>}
+        {formError && <p role="alert" className="text-sm text-error">{formError}</p>}
+        <Button type="submit" className="self-start" pending={pending} disabled={!users || !!usersError || !operatorID || !isCountedCash(amount)}>Declarar fondo</Button>
+      </form>
+    </Card>
   );
 }
 
@@ -160,6 +215,7 @@ function CashClosingStatusTable({
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div><dt className="text-text-secondary">Diferencia</dt><dd className="num font-medium"><AmountCell value={item.difference} /></dd></div>
               <div><dt className="text-text-secondary">Ventas</dt><dd className="num">{item.total_sales} · {formatMoney(item.total_amount)}</dd></div>
+              {item.opening_fund && <div className="col-span-2"><dt className="text-text-secondary">Fondo inicial</dt><dd className="mt-1 flex flex-wrap items-center gap-2"><Badge tone={item.opening_fund.status === "confirmed" ? "success" : "warning"}>{openingFundStatusLabel(item.opening_fund.status)}</Badge><span className="num">{formatMoney(item.opening_fund.amount)}</span></dd></div>}
             </dl>
           </li>
         ))}
@@ -171,6 +227,7 @@ function CashClosingStatusTable({
             <Th>Fecha</Th>
             <Th>Cajero</Th>
             <Th>Estado</Th>
+            <Th>Fondo inicial</Th>
             <Th className="text-right">Ventas</Th>
             <Th className="text-right">Efectivo esperado</Th>
             <Th className="text-right">Contado</Th>
@@ -190,6 +247,7 @@ function CashClosingStatusTable({
                   {reconciliationStatusLabel(item.status)}
                 </Badge>
               </Td>
+              <Td>{item.opening_fund && <span className="flex items-center gap-2 whitespace-nowrap"><Badge tone={item.opening_fund.status === "confirmed" ? "success" : "warning"}>{openingFundStatusLabel(item.opening_fund.status)}</Badge><span className="num text-xs">{formatMoney(item.opening_fund.amount)}</span></span>}</Td>
               <Td className="num text-right">
                 {item.total_sales} · {formatMoney(item.total_amount)}
               </Td>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   cashDifference,
   isCountedCash,
+  openingFundStatusLabel,
   reconciliationStatusLabel,
   reconciliationStatusTone,
 } from "./cashClosing";
@@ -40,5 +41,10 @@ describe("cash closing amounts", () => {
     expect(reconciliationStatusTone("IN_PROGRESS")).toBe("warning");
     expect(reconciliationStatusTone("UNCLOSED")).toBe("error");
     expect(reconciliationStatusTone("NO_ACTIVITY")).toBe("neutral");
+  });
+
+  it("maps opening-fund states to visible text", () => {
+    expect(openingFundStatusLabel("declared")).toBe("Fondo declarado");
+    expect(openingFundStatusLabel("confirmed")).toBe("Fondo confirmado");
   });
 });

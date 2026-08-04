@@ -9,6 +9,7 @@ import { ROLE_META } from "@/lib/roleMeta";
 import { MobileNavDrawer } from "@/components/shell/MobileNavDrawer";
 import { CashierShiftClosingModal } from "@/components/shell/CashierShiftClosingModal";
 import { CashierReconciliationIndicator } from "@/components/shell/CashierReconciliationIndicator";
+import { OpeningFundBanner } from "@/components/shell/OpeningFundBanner";
 import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
 import {
   IconBox,
@@ -63,6 +64,7 @@ export function Nav({ roles }: { roles: Role[] }) {
   // each) are completely unaffected: same bottom tab bar as before.
   const isAdmin = roles.includes("admin");
   const isCashier = roles.includes("cashier");
+  const isOperator = isAdmin || isCashier;
   const useDrawerNav = isAdmin;
   // "Ventas" drops out of the mobile menu when the only reason to see it
   // would be the admin role; a co-occurring cashier role keeps it (product
@@ -125,7 +127,7 @@ export function Nav({ roles }: { roles: Role[] }) {
           <span className="ml-auto hidden shrink-0 rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-text-secondary md:ml-0 md:inline-block">
             {roles.map((role) => ROLE_META[role].label).join(" · ")}
           </span>
-          {isCashier && (
+          {isOperator && (
             <div className="ml-auto shrink-0 md:ml-0">
               <CashierReconciliationIndicator
                 onOpenClosing={() => setCashClosingOpen(true)}
@@ -159,6 +161,7 @@ export function Nav({ roles }: { roles: Role[] }) {
           </button>
         </div>
       </header>
+      {isOperator && <OpeningFundBanner />}
 
       {useDrawerNav ? (
         <MobileNavDrawer

@@ -1,8 +1,5 @@
-# ui-cashier-shift-closing Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change add-frontend-cashier-shift-closing. Update Purpose after archive.
-## Requirements
 ### Requirement: Cash closing entry point for cashiers
 The frontend SHALL provide a "Cerrar caja" entry point visible to roles
 `cashier` and `admin`, reachable from the app shell regardless of which screen
@@ -66,6 +63,8 @@ ability to keep registering sales.
 #### Scenario: POS remains usable after closing
 - **WHEN** an operator confirms a cash closing
 - **THEN** they can immediately continue registering new sales in the POS without restriction
+
+## ADDED Requirements
 
 ### Requirement: Provisional closing can be corrected by its owner
 The frontend SHALL allow the operator to submit a correction only for a
