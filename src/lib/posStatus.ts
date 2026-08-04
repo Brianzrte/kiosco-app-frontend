@@ -13,15 +13,15 @@ export type EntryStatusInput = {
   inactiveProductMessage: string | null;
   /** A stock cap was applied and needs to be explained. */
   stockLimitMessage: string | null;
-  /** The client-side search catalog failed to load. */
-  catalogErrorMessage: string | null;
+  /** A product search request failed. */
+  searchErrorMessage: string | null;
   /** "Buscando…" / "Ningún producto activo coincide…", already resolved by the caller. */
   searchStatusMessage: string | null;
 };
 
 /**
  * Entry region (below the scan/search inputs). Priority, highest to lowest:
- * unknown barcode > inactive product > stock limit > catalog error > search
+ * unknown barcode > inactive product > stock limit > search error > search
  * status.
  */
 export function resolveEntryStatus(input: EntryStatusInput): string | null {
@@ -29,7 +29,7 @@ export function resolveEntryStatus(input: EntryStatusInput): string | null {
     input.unknownBarcodeMessage ??
     input.inactiveProductMessage ??
     input.stockLimitMessage ??
-    input.catalogErrorMessage ??
+    input.searchErrorMessage ??
     input.searchStatusMessage ??
     null
   );

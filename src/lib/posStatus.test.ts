@@ -11,7 +11,7 @@ function entryInput(overrides: Partial<EntryStatusInput> = {}): EntryStatusInput
     unknownBarcodeMessage: null,
     inactiveProductMessage: null,
     stockLimitMessage: null,
-    catalogErrorMessage: null,
+    searchErrorMessage: null,
     searchStatusMessage: null,
     ...overrides,
   };
@@ -38,42 +38,42 @@ describe("resolveEntryStatus", () => {
         unknownBarcodeMessage: "unknown",
         inactiveProductMessage: "inactive",
         stockLimitMessage: "stock",
-        catalogErrorMessage: "catalog",
+        searchErrorMessage: "search",
         searchStatusMessage: "search",
       }),
     );
     expect(result).toBe("unknown");
   });
 
-  it("inactive product outranks stock limit and catalog error", () => {
+  it("inactive product outranks stock limit and search error", () => {
     const result = resolveEntryStatus(
       entryInput({
         inactiveProductMessage: "inactive",
         stockLimitMessage: "stock",
-        catalogErrorMessage: "catalog",
+        searchErrorMessage: "search",
       }),
     );
     expect(result).toBe("inactive");
   });
 
-  it("stock-limit message outranks the search catalog error", () => {
+  it("stock-limit message outranks the search error", () => {
     const result = resolveEntryStatus(
       entryInput({
         stockLimitMessage: "Solo hay 2 unidades disponibles.",
-        catalogErrorMessage: "No se pudo cargar el catálogo",
+        searchErrorMessage: "No se pudo buscar productos",
       }),
     );
     expect(result).toBe("Solo hay 2 unidades disponibles.");
   });
 
-  it("catalog error outranks the search status message", () => {
+  it("search error outranks the search status message", () => {
     const result = resolveEntryStatus(
       entryInput({
-        catalogErrorMessage: "No se pudo cargar el catálogo",
+        searchErrorMessage: "No se pudo buscar productos",
         searchStatusMessage: "Buscando…",
       }),
     );
-    expect(result).toBe("No se pudo cargar el catálogo");
+    expect(result).toBe("No se pudo buscar productos");
   });
 
   it("falls back to the search status message alone", () => {

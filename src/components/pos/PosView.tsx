@@ -29,6 +29,7 @@ import {
   type CartLine,
 } from "@/lib/cart";
 import { resolveCheckoutStatus, resolveEntryStatus } from "@/lib/posStatus";
+import { buildPosSearchQuery } from "@/lib/posSearch";
 import { submitSale } from "@/lib/posSaleSubmission";
 import {
   composeSplitPayment,
@@ -87,7 +88,7 @@ export function PosView() {
     string | null
   >(null);
   const [stockLimitMsg, setStockLimitMsg] = useState<string | null>(null);
-  const [catalogErrorMessage, setCatalogErrorMessage] = useState<string | null>(
+  const [searchErrorMessage, setSearchErrorMessage] = useState<string | null>(
     null,
   );
 
@@ -126,12 +127,14 @@ export function PosView() {
   } | null>(null);
 
   const [totalFlash, setTotalFlash] = useState(0);
-  // manual search: lazy-loaded catalog, filtered client-side (no search endpoint yet)
+  // Manual search is resolved server-side so the result set is not bounded by
+  // the backend's catalog page size.
   const [searchTerm, setSearchTerm] = useState("");
-  const [catalog, setCatalog] = useState<Product[] | null>(null);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchPending, setSearchPending] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const [searchDismissed, setSearchDismissed] = useState(false);
-  const catalogRequested = useRef(false);
   // Stock available per product, fetched lazily the first time it's needed
   // and cached — the cart quantity is capped against it so a cashier can
   // never sell more than what's actually in inventory.
@@ -349,35 +352,38 @@ export function PosView() {
     setQuantity(productId, line.quantity - 1);
   }
 
-  async function loadCatalog() {
-    if (catalogRequested.current) return;
-    catalogRequested.current = true;
-    setCatalogErrorMessage(null);
-    try {
-      // The POS filters this catalog locally for scan-free lookup. Load the
-      // full kiosk-sized catalog instead of the backend's default page of 20;
-      // otherwise products beyond the first page cannot be found here.
-      const list = await api<ProductList>("/products?limit=100");
-      setCatalog(list.products);
-    } catch (e) {
-      catalogRequested.current = false;
-      setCatalogErrorMessage((e as ApiError).message);
-    }
-  }
+  useEffect(() => {
+    if (!searchTerm.trim()) return;
 
-  const searchResults = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term || !catalog) return [];
-    return catalog
-      .filter(
-        (p) => p.active && `${p.name} ${p.sku}`.toLowerCase().includes(term),
-      )
-      .slice(0, 8);
-  }, [catalog, searchTerm]);
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!searchTerm.trim() || searchTerm !== debouncedSearchTerm) return;
+    const term = searchTerm.trim();
+
+    let cancelled = false;
+    void api<ProductList>(`/products?${buildPosSearchQuery(term)}`)
+      .then((list) => {
+        if (cancelled) return;
+        setSearchResults(list.products);
+        setSearchPending(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setSearchErrorMessage((e as ApiError).message);
+        setSearchPending(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearchTerm, searchTerm]);
 
   const searchStatusMessage = !searchTerm.trim()
     ? null
-    : catalog === null
+    : searchPending
       ? "Buscando…"
       : searchResults.length === 0
         ? `Ningún producto activo coincide con “${searchTerm.trim()}”.`
@@ -387,18 +393,27 @@ export function PosView() {
     unknownBarcodeMessage,
     inactiveProductMessage,
     stockLimitMessage: stockLimitMsg,
-    catalogErrorMessage,
+    searchErrorMessage,
     searchStatusMessage,
   });
   const entryStatusIsError =
     entryStatusMessage !== null && entryStatusMessage !== searchStatusMessage;
+
+  function updateSearchTerm(value: string) {
+    setSearchTerm(value);
+    setSearchResults([]);
+    setSearchErrorMessage(null);
+    setSearchPending(value.trim() !== "");
+    setActiveResultIndex(0);
+    setSearchDismissed(false);
+  }
 
   async function pickSearchResult(product: Product) {
     if (scanInFlightRef.current) return;
     scanInFlightRef.current = true;
     try {
       await addToCart(product);
-      setSearchTerm("");
+      updateSearchTerm("");
       if (product.unit_type !== "pesable") refocus();
     } finally {
       scanInFlightRef.current = false;
@@ -729,12 +744,7 @@ export function PosView() {
           onScanSubmit={scan}
           scanInputRef={scanRef}
           searchTerm={searchTerm}
-          onSearchTermChange={(value) => {
-            setSearchTerm(value);
-            setActiveResultIndex(0);
-            setSearchDismissed(false);
-            if (value.trim()) void loadCatalog();
-          }}
+          onSearchTermChange={updateSearchTerm}
           onSearchSubmit={submitSearch}
           onSearchKeyDown={handleSearchKeyDown}
           searchInputRef={searchRef}
