@@ -27,12 +27,21 @@ export function buildPurchaseOrdersQuery(options: {
   status: PurchaseOrderStatus | "";
   page: number;
   limit?: number;
+  /** RFC3339. Backend filters `expected_at >= expectedFrom`. */
+  expectedFrom?: string;
+  /** RFC3339. Backend filters `expected_at < expectedTo` (exclusive). */
+  expectedTo?: string;
+  /** Backend only accepts `expected_at` as a sort key (`order_by`); omit for the default `ordered_at DESC`. */
+  orderByExpected?: boolean;
 }): string {
   const params = new URLSearchParams();
   if (options.supplierId) params.set("supplier_id", options.supplierId);
   if (options.from) params.set("from", options.from);
   if (options.to) params.set("to", options.to);
   if (options.status) params.set("status", options.status);
+  if (options.expectedFrom) params.set("expected_from", options.expectedFrom);
+  if (options.expectedTo) params.set("expected_to", options.expectedTo);
+  if (options.orderByExpected) params.set("order_by", "expected_at");
   params.set("page", String(options.page));
   params.set("limit", String(options.limit ?? PURCHASE_ORDER_PAGE_SIZE));
   return params.toString();

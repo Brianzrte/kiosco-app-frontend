@@ -298,13 +298,19 @@ export type PurchaseOrderListItem = {
   id: string;
   supplier_name: string;
   ordered_at: string;
+  expected_at?: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
   received_by?: string;
   has_uncatalogued_items: boolean;
 };
-export type PurchaseOrdersList = { purchase_orders: PurchaseOrderListItem[]; page: number; limit: number; total: number };
+export type PurchaseOrdersList = {
+  purchase_orders: PurchaseOrderListItem[];
+  page: number;
+  limit: number;
+  total: number;
+};
 export type PurchaseOrderItem = {
   id: string;
   product_id?: string;
@@ -324,6 +330,7 @@ export type PurchaseOrder = {
   supplier_id: string;
   supplier_name: string;
   ordered_at: string;
+  expected_at?: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
