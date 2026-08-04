@@ -21,6 +21,12 @@ en cada venta, no sólo deuda de estilo.
 - **Alta de línea no bloqueada por stock**: la línea aparece en el carrito al
   resolver el producto; el tope de stock se aplica en cuanto la consulta en
   paralelo responde, sin retrasar la aparición de la línea.
+- **Productos con stock inicializado agotado no se venden**: una cantidad de
+  stock `<= 0` impide que el producto permanezca en el carrito. En búsqueda
+  manual permanece visible con el badge "Sin stock", pero no se puede
+  seleccionar. El POS conserva el mensaje de que no tiene stock disponible.
+  Un `404` sin registro de stock, así como otros errores de consulta, siguen
+  siendo disponibilidad desconocida.
 - **Error de peso por línea**: cada línea pesable lleva su propio estado de
   error; ya no se pinta de error toda otra línea pesable del carrito.
 - **Subtotal siempre consistente con el peso mostrado**: un peso inválido deja
@@ -58,9 +64,9 @@ en cada venta, no sólo deuda de estilo.
   cada medio de pago; cada uno impreso junto a su control.
 - **Orden de tabulación agrupado por línea** del carrito, en vez de un tab
   stop por cada botón +/- individual.
-- **El dropdown de resultados de búsqueda no tapa el carrito** (ajuste de
-  superposición/z-index sobre la composición ya existente de
-  `audit-pos-density-and-header-overflow`).
+- **El dropdown de resultados de búsqueda se superpone anclado al campo, sin
+  desplazar el carrito ni el resto del POS** (ajuste de posición/z-index sobre
+  la composición ya existente de `audit-pos-density-and-header-overflow`).
 - **Scroll propio del carrito** que lleva a la vista la línea recién afectada
   cuando el contenido excede el alto disponible.
 - **Persistencia de carrito en `sessionStorage`** (carrito y medio de pago),
@@ -88,13 +94,14 @@ Ninguna.
 ### Modified Capabilities
 
 - `ui-pos`: agrega y modifica requirements de comportamiento del carrito
-  (guarda de escaneo, stock no bloqueante, error de peso por línea, subtotal
+  (guarda de escaneo, stock no bloqueante para disponibilidad desconocida,
+  stock inicializado agotado como no vendible, error de peso por línea, subtotal
   consistente, precio real visible), de la región de cobro (prioridad única de
   mensajes, `confirmError` con `role="alert"` y recuperación, "Efectivo
   entregado" siempre visible con jerarquía tipográfica del total, conteo real
   de unidades, medio de pago preseleccionado, no duplicar el draft de venta al
   reintentar, rastro persistente de la última venta confirmada), de la región
-  de entrada (dropdown de búsqueda que no tapa el carrito), de la operación
+  de entrada (dropdown de búsqueda sin reflujo del carrito), de la operación
   del carrito (vaciar carrito con diálogo, scroll propio, orden de tabulación
   agrupado por línea) y de persistencia local (carrito en `sessionStorage`).
   Ningún requirement vigente sobre roles, rutas, contrato de API o layout de

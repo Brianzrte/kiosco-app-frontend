@@ -32,8 +32,8 @@ grid de filas del carrito) y no se revierte.
 - Hacer que `PosView.tsx` orqueste sub-componentes en vez de contener todo el
   JSX y el estado.
 - Agregar atajos de teclado visibles, agrupar el tab order del carrito por
-  línea, evitar que el dropdown de búsqueda tape el carrito y dar scroll
-  propio al carrito.
+  línea, mantener el dropdown de búsqueda superpuesto sin desplazar el
+  carrito y dar scroll propio al carrito.
 - Persistir carrito y medio de pago en `sessionStorage` para sobrevivir un
   refresh accidental.
 
@@ -42,7 +42,7 @@ grid de filas del carrito) y no se revierte.
 - No cambia la cantidad de columnas ni la composición rail/catálogo/carrito
   de la pantalla (decisión de layout de `refactor-erp-pos-visual-system`).
 - No fusiona el campo de escaneo y el de búsqueda por nombre en un único
-  omnibox; sólo corrige que el dropdown de resultados no tape el carrito.
+  omnibox; sólo corrige que el dropdown de resultados no desplace el carrito.
 - No cambia contrato de `PUT /sales/{id}/payment` ni agrega pago dividido en
   más de dos tramos o con Transferencia.
 - No implementa venta atómica, búsqueda server-side, stock en la respuesta de
@@ -135,6 +135,28 @@ resultante más un mensaje opcional.
 Alternativa descartada: mantener el `await` antes de tocar el carrito (estado
 actual). Es más simple pero retrasa la aparición de la línea en el camino
 crítico en cada primer escaneo de un producto.
+
+### 21. Stock inicializado agotado no se ofrece para la venta
+
+Una respuesta numérica de stock `<= 0` representa disponibilidad cero para el
+POS. Al escanear o seleccionar el producto, su línea optimista se elimina al
+resolver la consulta y la región de entrada muestra
+`“<producto>” no tiene stock disponible.`. La búsqueda manual consulta la
+misma disponibilidad y conserva esos productos visibles con el badge "Sin
+stock", pero sin un control seleccionable ni participación en la navegación
+con flechas o Enter.
+
+Un `404` sin registro de stock, como red, timeout, `403` o `5xx`, significa
+disponibilidad desconocida: no se bloquea ni se anuncia como falta de stock.
+Así se conserva la regla vigente de que la ausencia de registro no equivale a
+inventario cero. No se cambia el endpoint ni los roles; se reutiliza el `GET`
+existente.
+
+Alternativa descartada: ocultar todo producto sin consultar su disponibilidad.
+El catálogo no expone stock, así que la búsqueda no podría distinguir un
+producto agotado de uno con disponibilidad desconocida. También se descarta
+esperar la consulta de stock antes de cada escaneo: degradaría el camino
+crítico del lector; la línea sólo se revierte ante cantidad cero conocida.
 
 ### 3. `weightError` pasa a ser por línea
 
@@ -237,8 +259,11 @@ subconjunto de estado relevante y devolviendo **un solo** mensaje (o
 
 Cada región renderiza como mucho un mensaje visible; el resto de las
 variables de estado existentes pasan a ser entradas de esa función, no
-elementos JSX independientes. `CheckoutStatus` (componente nuevo) no tiene
-lógica propia: sólo renderiza lo que `posStatus.ts` resuelve.
+elementos JSX independientes. La región de entrada reserva siempre la altura
+de un mensaje de una línea (48 px), incluso cuando no hay texto: los mensajes
+de búsqueda, código inexistente o stock no reacomodan verticalmente el
+carrito. `CheckoutStatus` (componente nuevo) no tiene lógica propia: sólo
+renderiza lo que `posStatus.ts` resuelve.
 
 ### 11. `confirmError` con `role="alert"` y recuperación por tipo de error
 
@@ -333,14 +358,15 @@ editar cantidad/peso/precio con teclado) sino que el grupo se anuncia como
 una unidad para que un lector de pantalla no lea 4 controles sueltos sin
 contexto. El nombre accesible de cada botón +/- y "quitar" no cambia.
 
-### 16. Dropdown de resultados no tapa el carrito
+### 16. Dropdown de resultados no desplaza el carrito
 
-Se ajusta la posición/`z-index`/ancho del `<ul id="pos-search-results">`
-actual para que no se superponga visualmente a las filas del carrito ya
-cargadas (hoy es `absolute z-30` con ancho igual al campo de búsqueda, que en
-pantallas angostas cae sobre el carrito). El comportamiento de teclado
-(flechas, Enter, Escape) y `role="combobox"`/`role="option"` existentes no
-cambian. No se toca la composición lado a lado ya commiteada en
+El `<ul id="pos-search-results">` se posiciona como una capa `absolute`
+anclada debajo del campo de búsqueda, con `z-index` por encima del contenido
+del POS. Abrirlo no cambia la posición de las filas del carrito ni del resto
+de la pantalla; la capa puede cubrir visualmente el contenido que queda por
+debajo mientras está abierta. El comportamiento de teclado (flechas, Enter,
+Escape) y `role="combobox"`/`role="option"` existentes no cambian. No se toca
+la composición lado a lado ya commiteada en
 `audit-pos-density-and-header-overflow`.
 
 ### 17. Scroll propio del carrito con auto-scroll a la línea afectada
@@ -458,7 +484,7 @@ punto — el cajero lo necesita después de que el panel ya se cerró.
 - El tab order dentro de una línea del carrito no cambia su alcance por
   teclado, sólo agrega agrupación semántica (punto 15).
 - El dropdown de búsqueda conserva ArrowUp/ArrowDown/Enter/Escape ya
-  existentes; sólo cambia su superposición visual (punto 16), no su
+  existentes; sólo cambia su capa visual sin reflujo (punto 16), no su
   comportamiento de teclado.
 
 ## Responsive behavior
@@ -481,6 +507,9 @@ existentes: `GET /products/barcode/{code}`, `GET /inventory/stock/{id}`,
 
 - Los mensajes de backend se siguen mostrando tal como llegan (`{ message }`),
   sin traducir.
+- Una respuesta numérica `<= 0` de `GET /inventory/stock/{product_id}` se
+  mapea al copy de stock cero definido en la Decisión 21. Un `404` de ese
+  endpoint no se reinterpreta: conserva disponibilidad desconocida.
 - `401`: `api()` ya redirige a `/login` antes de que el componente reciba el
   error; este change no cambia ese comportamiento.
 - `403` (`forbidden`): conserva la sesión; la región de cobro ofrece "Volver"
@@ -526,7 +555,7 @@ del cliente. No existe `backend-request.md` en este change.
 2. Migrar `PosView.tsx` a usar esos módulos y a descomponerse en
    sub-componentes, implementando entrada/carrito (guarda de escaneo, stock no
    bloqueante, pesables unificados, precio real visible, scroll propio,
-   dropdown que no tapa) en un paso, y cobro (vuelto siempre visible cuando el
+   dropdown sin reflujo) en un paso, y cobro (vuelto siempre visible cuando el
    medio incluye Efectivo, default de pago, región de estado, vaciar carrito,
    no duplicar draft, rastro persistente de la última venta) en otro.
 3. Agregar atajos de teclado y agrupación de tab order al final, cuando el

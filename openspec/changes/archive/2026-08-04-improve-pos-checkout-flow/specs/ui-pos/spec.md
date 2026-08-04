@@ -19,7 +19,7 @@ Submitting a barcode SHALL call `GET /api/v1/products/barcode/{barcode}`. A foun
 - **WHEN** a barcode resolves to an inactive product
 - **THEN** the item is rejected with an inline error and never enters the cart
 
-#### Scenario: Weighable product scanned for the first time
+#### Scenario: Weighable product scanned
 - **WHEN** a barcode resolves to an active product with `unit_type` `pesable` that has no line in the cart yet
 - **THEN** a cart line for that product is added immediately with an empty weight, contributing nothing to the total, and its weight input receives focus
 
@@ -92,7 +92,7 @@ While a barcode submission or a search-result selection has a request in flight 
 - **THEN** the stock cap is applied against the cart as it exists when the response arrives, not against an earlier snapshot
 
 ### Requirement: Stock cap is applied without delaying cart entry
-Adding or incrementing a `unitario` line SHALL update the cart immediately upon resolving the product, without waiting for `GET /api/v1/inventory/stock/{product_id}` to resolve first. The stock check SHALL run in parallel; when it resolves, if the line's quantity exceeds the available stock, the quantity SHALL be capped to the available amount and a message naming the product and the available quantity SHALL be shown in the entry status region. An unknown stock result (the stock request fails) SHALL NOT block or cap the line, consistent with stock remaining unknown today.
+Adding or incrementing a `unitario` line SHALL update the cart immediately upon resolving the product, without waiting for `GET /api/v1/inventory/stock/{product_id}` to resolve first. The stock check SHALL run in parallel; when it resolves, if the line's quantity exceeds the available stock, the quantity SHALL be capped to the available amount and a message naming the product and the available quantity SHALL be shown in the entry status region. A numeric stock result less than or equal to zero SHALL be treated as unavailable: the product SHALL not remain in the cart and the entry status region SHALL state that it has no stock available. A `404` stock result or any other stock-request failure SHALL leave availability unknown and SHALL NOT block or cap the line.
 
 #### Scenario: Line appears before the stock check resolves
 - **WHEN** a `unitario` product is scanned for the first time
@@ -102,12 +102,34 @@ Adding or incrementing a `unitario` line SHALL update the cart immediately upon 
 - **WHEN** the stock check for a line resolves and the line's quantity exceeds the available stock
 - **THEN** the quantity is capped to the available amount and a message naming the product and the available quantity appears in the entry status region
 
-#### Scenario: Unknown stock never blocks the line
-- **WHEN** the stock check request for a product fails
+#### Scenario: Initialized zero stock removes the optimistic line
+- **WHEN** the stock check for an optimistically added product resolves with a quantity less than or equal to zero
+- **THEN** its line is removed from the cart and the entry status region states that the named product has no stock available
+
+#### Scenario: A missing stock record keeps availability unknown
+- **WHEN** the stock check request for a product returns HTTP `404`, or fails with another status or transport error
 - **THEN** the line is neither blocked nor capped by that failure, and no stock-limit message is shown for it
 
-### Requirement: Entry status region shows one prioritized message
-The area beneath the scan and search inputs SHALL show at most one message at a time, chosen by this priority from highest to lowest: an unknown-barcode error, an inactive-product error, a stock-limit message, a search-catalog loading error, then a search-status message (searching, or no match). A lower-priority message SHALL NOT be shown while a higher-priority one is active.
+### Requirement: Manual product search marks unavailable products without allowing selection
+The POS SHALL check the availability of each active manual-search result before offering it for selection. A product whose `GET /api/v1/inventory/stock/{product_id}` request resolves to a numeric quantity less than or equal to zero SHALL remain visible with a "Sin stock" badge, but SHALL NOT expose a selectable control or participate in arrow-key/Enter selection. A `404` without a stock record or another availability failure remains selectable.
+
+#### Scenario: An exhausted product is visibly unavailable in search
+- **WHEN** the manual search returns an active product and its stock lookup resolves to a quantity less than or equal to zero
+- **THEN** that product remains visible with a "Sin stock" badge and cannot be selected by pointer, arrows, or Enter
+
+#### Scenario: A missing or failed availability lookup does not hide a search result
+- **WHEN** a manual-search result's stock lookup returns HTTP `404`, fails with another status, or has a transport error
+- **THEN** the product remains visible and selectable, with availability treated as unknown
+
+### MODIFIED Requirement: Weighable products are checked against stock
+The POS SHALL query and cap a `pesable` product's cart line against `GET /api/v1/inventory/stock/{product_id}`. When the product has an initialized stock record, adding or increasing its weight beyond the available quantity SHALL be blocked with an inline message naming the product and available quantity in kilograms. When the lookup resolves to a numeric quantity less than or equal to zero, the product SHALL not remain in the cart and the entry status region SHALL name the product and state that it has no stock available. A `404` without a stock record or any other lookup failure leaves availability unknown and SHALL NOT block the line client-side.
+
+#### Scenario: A weighable product with zero stock is removed
+- **WHEN** the stock lookup for a weighable product resolves to a quantity less than or equal to zero
+- **THEN** the product's cart line is removed and the entry status region states that the named product has no stock available
+
+### Requirement: Entry status region shows one prioritized message without reflow
+The area beneath the scan and search inputs SHALL reserve the height of a one-line message even when it has no text, so showing or clearing a message does not change the layout position of the cart or other POS regions. It SHALL show at most one message at a time, chosen by this priority from highest to lowest: an unknown-barcode error, an inactive-product error, a stock-limit message, a search-catalog loading error, then a search-status message (searching, or no match). A lower-priority message SHALL NOT be shown while a higher-priority one is active.
 
 #### Scenario: Unknown barcode outranks a stale search message
 - **WHEN** an unknown-barcode error and a search-status message are both pending at once
@@ -116,6 +138,10 @@ The area beneath the scan and search inputs SHALL show at most one message at a 
 #### Scenario: Stock-limit message outranks the search catalog error
 - **WHEN** a stock-limit message and a search-catalog loading error are both pending at once
 - **THEN** only the stock-limit message is shown
+
+#### Scenario: Showing or clearing an entry message preserves the cart position
+- **WHEN** the entry status region changes between empty and a one-line search or barcode message
+- **THEN** the cart and other POS regions remain in the same layout position
 
 ### Requirement: Checkout status region shows one prioritized message
 The area between the payment block and the confirm action SHALL show at most one message at a time, chosen by this priority from highest to lowest: an unknown-network-state warning, a confirmation error, a pending payment-balance message, a confirmation-blocked reason, then a settled "Pago cerrado" message. A confirmation-blocked reason caused by a specific cart line (an invalid weight or a stock limit) SHALL name that line's product. A lower-priority message SHALL NOT be shown while a higher-priority one is active.
@@ -206,12 +232,12 @@ Each cart line SHALL expose a group role with an accessible name identifying its
 - **WHEN** a cashier tabs through a cart line
 - **THEN** each of its interactive controls (quantity, weight, real price, remove) remains reachable and keeps its existing accessible name
 
-### Requirement: Search results never cover the cart
-The search-results dropdown SHALL NOT visually overlap any cart line at any viewport width where both are shown. Its existing keyboard behavior (ArrowUp/ArrowDown to move the active result, Enter to select, Escape to dismiss) and combobox semantics (`role="combobox"`, `role="option"`, `aria-expanded`, `aria-activedescendant`) SHALL be unchanged.
+### Requirement: Search results do not reflow the POS
+The search-results dropdown SHALL be displayed as an overlay anchored to the search field and SHALL NOT change the layout position of the cart or other POS regions at any viewport width. Its existing keyboard behavior (ArrowUp/ArrowDown to move the active result, Enter to select, Escape to dismiss) and combobox semantics (`role="combobox"`, `role="option"`, `aria-expanded`, `aria-activedescendant`) SHALL be unchanged.
 
-#### Scenario: Dropdown does not obscure cart lines on a narrow viewport
-- **WHEN** the search dropdown is open on a viewport where it previously overlapped the cart
-- **THEN** no cart line is hidden or obscured behind the dropdown
+#### Scenario: Dropdown preserves the cart position on a narrow viewport
+- **WHEN** the cashier opens the search dropdown on a narrow viewport
+- **THEN** the cart and the rest of the POS remain in the same layout position they had before it opened
 
 #### Scenario: Dropdown keyboard behavior is unchanged
 - **WHEN** the cashier uses ArrowUp, ArrowDown, Enter, or Escape while the dropdown is open

@@ -44,7 +44,7 @@
 
 ## 2. Entrada y carrito
 
-- [ ] 2.1 Agregar la guarda de escaneo/búsqueda en vuelo (`useRef` booleano,
+- [x] 2.1 Agregar la guarda de escaneo/búsqueda en vuelo (`useRef` booleano,
       independiente de `pending`) en el envío del formulario de escaneo y en
       la selección de un resultado de búsqueda; verificar que el segundo
       Enter/selección durante una petición en curso se ignora. Verificado por
@@ -53,9 +53,9 @@
       sola línea.
       Nota: implementado (`scanInFlightRef` en `PosView.tsx`, chequeado y
       fijado sincrónicamente en `scan()` y `pickSearchResult()`, liberado en
-      `finally`). Falta la prueba manual con teclado/lector real — no hay
-      navegador disponible en este entorno de ejecución; queda pendiente de
-      un cajero o de una sesión con navegador real.
+      `finally`). Validado por el usuario en la búsqueda con los cambios
+      completos: una segunda acción mientras la primera está en curso no
+      duplica la selección.
 - [x] 2.2 Reescribir `addToCart` para un producto `unitario` según
       `src/lib/cart.ts` (1.1): agrega/incrementa la línea de inmediato,
       dispara la consulta de stock en paralelo y aplica el tope + mensaje
@@ -110,22 +110,17 @@
       "Precio real" y su `textbox` visibles de entrada, sin ícono ni acción
       de edición previa; el banner de escaneo (región de entrada) no
       participa de esta validación.
-- [x] 2.6 Ajustar el `<ul id="pos-search-results">` para que no se superponga
-      visualmente a las filas del carrito en ningún ancho donde ambos se
-      muestran (posición/ancho/`z-index`), sin cambiar su `role="combobox"`,
+- [x] 2.6 Ajustar el `<ul id="pos-search-results">` para que se superponga
+      anclado al campo sin desplazar visualmente las filas del carrito ni el
+      resto del POS (posición/ancho/`z-index`), sin cambiar su `role="combobox"`,
       `aria-expanded`, `aria-activedescendant` ni el manejo de
       ArrowUp/ArrowDown/Enter/Escape existente. Verificado por prueba manual
       en Chrome DevTools en los anchos donde hoy se superpone (incluido
       320–768px).
-      Nota: implementado quitando `absolute`/`z-30` del `<ul>`
-      (`ScanOmnibox.tsx`) — ahora vive en flujo normal, empujando el
-      contenido siguiente en vez de taparlo; `role`/`aria-*`/teclado sin
-      cambios. Prueba manual (Chrome DevTools MCP): screenshot a 1366px con
-      resultados de "coca" abiertos y un carrito con líneas debajo confirma
-      que la lista se inserta antes del carrito, empujándolo, sin taparlo;
-      repetido a 375px (`emulate` viewport móvil) con el mismo resultado
-      (screenshot adjunto en la sesión). `role="combobox"`/`aria-expanded`
-      sin cambios.
+      Nota: la implementación anterior en flujo normal se revierte porque
+      desplazaba el carrito. Validado por el usuario: la búsqueda funciona
+      correctamente con la capa anclada; se conserva `role="combobox"`,
+      `aria-expanded` y teclado.
 - [x] 2.7 Dar al contenedor de líneas del carrito una altura máxima con
       scroll propio (`overflow-y-auto`) y llevar a la vista la línea recién
       agregada/incrementada dentro de ese contenedor. Verificado por prueba
@@ -159,6 +154,10 @@
       ya resueltos por `PosView.tsx` (`resolveEntryStatus`, `cart.ts`) como
       props y sólo orquestan JSX/handlers (la única lógica local es de
       presentación: el draft del campo "Precio real" en `CartLineRow`).
+- [x] 2.10 Reservar bajo los campos la altura de un mensaje de entrada de una
+      línea aun cuando no haya mensaje, para que mostrar o limpiar un estado
+      de búsqueda/código inexistente no desplace el carrito. Validado por el
+      usuario durante la búsqueda, incluidos sus mensajes.
 
 ## 3. Cobro
 
@@ -208,7 +207,7 @@
       ningún `<p>`/`<div>` independiente para `confirmError`/`unknownState`/
       `balanceMessage`/`confirmDisabledReason` en `PosView.tsx`. `npm test`
       (185 tests, incluye `posStatus.test.ts`) en verde.
-- [ ] 3.4 Dar a `confirmError` un contenedor con `role="alert"` y una acción
+- [x] 3.4 Dar a `confirmError` un contenedor con `role="alert"` y una acción
       de recuperación según `ApiError.kind`: "Volver" para `forbidden`,
       "Reintentar" (invoca `confirmSale()` de nuevo) para el resto.
       Verificado por inspección de código y prueba manual forzando un error
@@ -220,8 +219,8 @@
       (no simulado) durante esta sesión; la UI mostró la región con
       `role="alert"` y el botón "Reintentar", tal como se esperaba para
       `error.kind !== "forbidden"`. Falta ejercitar específicamente el
-      camino `403`/`forbidden` con el botón "Volver" (no se forzó un 403 en
-      esta sesión) — sin navegador dedicado a ese caso todavía.
+      camino `403`/`forbidden` con el botón "Volver". Validado por el usuario
+      junto con el resto de los recorridos manuales del change.
 - [x] 3.5 Migrar la secuencia de `confirmSale()` a `src/lib/posSaleSubmission.ts`
       (1.3), reteniendo el `id` de venta creado en el estado del componente y
       reutilizándolo en un reintento en vez de volver a llamar a `POST
@@ -360,7 +359,7 @@
       estado colapsado ("Calcular vuelto (F4)"), no restaurado. Repetido
       antes con un carrito de 3 líneas (unitario + pesable con peso ya
       cargado): recarga íntegra del carrito y medio de pago.
-- [ ] 4.4 Limpiar `sessionStorage` (clave `pos:cart:v1`) al confirmar una
+- [x] 4.4 Limpiar `sessionStorage` (clave `pos:cart:v1`) al confirmar una
       venta con éxito y al confirmar "Vaciar carrito". Verificado por prueba
       manual: tras confirmar una venta o vaciar el carrito, recargar la
       pestaña y comprobar que el carrito queda vacío.
@@ -370,10 +369,12 @@
       del camino "Vaciar carrito": con 11 líneas cargadas y `pos:cart:v1`
       poblado en `sessionStorage`, confirmar "Vaciar carrito" dejó
       `sessionStorage.getItem('pos:cart:v1') === null`. Falta ejercitar el
-      camino "confirmar una venta con éxito" — los dos intentos de
-      `POST /sales/:id/confirm` en esta sesión fallaron con un 500/422 real
-      del backend (ver 3.4/3.5), así que ninguna venta llegó a confirmarse
-      con éxito para verificar este punto.
+      camino "confirmar una venta con éxito" desde la UI y recargar la
+      pestaña. Seguimiento posterior: la secuencia HTTP real
+      crear → ítem → pago → confirmar sí devolvió una venta `confirmed`
+      (total `$ 500,00`), por lo que el 500/422 previo no es un bloqueo actual
+      del backend. Validado por el usuario junto con el resto de los
+      recorridos manuales del change.
 - [x] 4.5 Confirmar por inspección que un carrito restaurado con un producto
       cuyo precio cambió o que fue desactivado no bloquea preventivamente en
       el cliente ni al agregar ni al confirmar; el backend sigue siendo la
@@ -400,7 +401,7 @@
       error de tipos.
       Evidencia: `npm run build` → "Compiled successfully", "Finished
       TypeScript" sin errores, 25 rutas generadas.
-- [ ] 4.9 Prueba manual completa del flujo feliz en desktop y en un ancho
+- [x] 4.9 Prueba manual completa del flujo feliz en desktop y en un ancho
       móvil (≤390px): escanear un `unitario` y un `pesable`, editar peso y
       precio real, dividir pago, calcular vuelto, confirmar, y repetir para
       una venta con error de red simulado (desconectar antes de confirmar) y
@@ -408,14 +409,15 @@
       Prueba manual (Chrome DevTools MCP, `cajero1`/`cajero123` contra el
       backend local) en 1366px y en 375px: escanear un `unitario` y un
       `pesable`, cargar peso y precio real, calcular vuelto y "Vaciar
-      carrito" — todo verificado (ver 2.x/3.x). Pendiente: pago dividido no
-      ejercitado en esta sesión. Bloqueo real (no de entorno): `POST
-      /sales/:id/confirm` devolvió un 500 genuino del backend en los dos
-      intentos de esta sesión (no simulado), así que el flujo feliz nunca
-      llegó a una confirmación exitosa — sólo se pudo verificar el camino de
-      error (3.4/3.5). Reportado para investigación de backend; fuera del
-      alcance de este change frontend.
-- [ ] 4.10 Prueba manual de foco y teclado: el foco vuelve al campo de
+      carrito" — todo verificado (ver 2.x/3.x). Pendiente: pago dividido y
+      confirmación exitosa desde la UI no se ejercitaron en esta sesión.
+      Seguimiento posterior: la misma secuencia del flujo contra el backend
+      local (crear → ítem → pago → confirmar) devolvió una venta `confirmed`
+      real por `$ 500,00`; por lo tanto, el 500 previo no bloquea ya la prueba
+      manual, pero la evidencia HTTP no reemplaza el recorrido completo en
+      desktop y móvil. Validado por el usuario: venta con pago dividido,
+      recorrido integral en ambos viewports y camino de error de red.
+- [x] 4.10 Prueba manual de foco y teclado: el foco vuelve al campo de
       escaneo tras agregar, fallar, confirmar y cerrar el panel de éxito o el
       diálogo de vaciar carrito; ningún atajo nuevo interfiere con escribir en
       un campo de texto.
@@ -423,21 +425,44 @@
       un producto (búsqueda) y tras confirmar "Vaciar carrito"; ningún atajo
       (F3/F4/F8/F9/Alt+1/2/3) tiene efecto de edición de texto que pudiera
       interferir con escribir en un campo (4.1). Pendiente: foco tras
-      confirmar con éxito y tras cerrar el panel "Venta confirmada" — no
-      alcanzable en esta sesión por el 500 real de backend en `/confirm`
-      (ver 4.9).
-- [ ] 4.11 Prueba manual de `prefers-reduced-motion`: `.flash`,
+      confirmar con éxito y tras cerrar el panel "Venta confirmada". El
+      backend ya confirmó una venta por la secuencia HTTP de seguimiento
+      indicada en 4.9. Validado por el usuario.
+- [x] 4.11 Prueba manual de `prefers-reduced-motion`: `.flash`,
       `.total-flash` y `.confirm-ready` mantienen el comportamiento ya
       normativo (ver `ai/context/ui-system.md`) sin que este change lo altere.
       Nota: por inspección, ninguna de esas tres clases ni su lógica de
       disparo (`flash`/`totalFlash`/`confirmReady`) cambió respecto del
       componente original; `shouldReduceMotion` se sigue pasando igual a
       `ConfirmedSalePanel`. Falta la prueba manual con
-      `prefers-reduced-motion: reduce` real activado — el `emulate` del MCP
-      de Chrome DevTools disponible en esta sesión no expone esa media
-      feature (sólo `colorScheme`, viewport, red, etc.), así que sigue
-      pendiente de una sesión con esa preferencia del sistema operativo
+      `prefers-reduced-motion: reduce` real activado. Validado por el usuario
+      junto con el resto de los recorridos manuales del change.
       activada.
-- [ ] 4.12 Sincronizar specs y archivar el change: **no ejecutar en este
-      paso**; queda condicionado a una decisión explícita del usuario a
-      través del flujo de `ai/roles/change-closer.md`.
+- [x] 4.12 Sincronizar specs y archivar el change mediante el flujo de
+      `ai/roles/change-closer.md`.
+      Evidencia: specs sincronizadas y change archivado el 2026-08-04.
+
+## 5. Productos con stock inicializado agotado
+
+- [x] 5.1 Ajustar la resolución de disponibilidad de `PosView` para distinguir
+      un valor numérico `<= 0` (sin stock) de disponibilidad desconocida,
+      incluido HTTP `404` sin registro. Extraer y testear en `src/lib/` toda
+      lógica pura nueva que determine el resultado de disponibilidad.
+      Evidencia: `stockAvailability.test.ts` cubre `0`, negativo, positivo y
+      `404` desconocido; `cart.test.ts` cubre la eliminación de la línea
+      indisponible. Tests focalizados: 23/23 en verde.
+- [x] 5.2 Al resolver stock numérico `<= 0` para un producto escaneado o seleccionado,
+      quitar su línea optimista del carrito y mostrar `“<producto>” no tiene
+      stock disponible.` en la región de entrada; preservar el comportamiento
+      de disponibilidad desconocida para `404` y otros errores. Verificado por
+      inspección y prueba manual. Validado por el usuario con stock cero.
+- [x] 5.3 Consultar la disponibilidad de los resultados de búsqueda y mantener
+      visible con badge "Sin stock", pero sin permitir selección, un producto
+      cuyo lookup devuelva stock `<= 0`; `404` y otros fallos siguen visibles
+      y seleccionables. Validado por el usuario: stock cero y disponibilidad
+      desconocida en búsqueda funcionan según lo esperado.
+- [x] 5.4 Ejecutar `npm run lint`, `npm test` y `npm run build`; hacer prueba
+      manual en desktop y ≤390px de escaneo, búsqueda, foco de escaneo y
+      mensaje inline para un producto con stock cero. Evidencia parcial: `npm
+      run lint` y `npm test` (205 tests) en verde durante esta sesión; build
+      y recorridos manuales en desktop y ≤390px validados por el usuario.

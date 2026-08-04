@@ -4,6 +4,7 @@ import {
   addOrIncrementUnitLine,
   applyStockCap,
   cartTotalCents,
+  removeCartLine,
   stockLimitMessage,
   summarizeCart,
   updateLineWeight,
@@ -44,6 +45,22 @@ describe("addOrIncrementUnitLine", () => {
     );
     expect(cart).toHaveLength(1);
     expect(cart[0].quantity).toBe(2);
+  });
+});
+
+describe("removeCartLine", () => {
+  it("removes the unavailable product without changing other lines", () => {
+    const unavailable = makeProduct({ id: "out" });
+    const available = makeProduct({ id: "in" });
+    expect(
+      removeCartLine(
+        [
+          { product: unavailable, quantity: 1 },
+          { product: available, quantity: 2 },
+        ],
+        unavailable.id,
+      ),
+    ).toEqual([{ product: available, quantity: 2 }]);
   });
 });
 

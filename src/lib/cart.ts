@@ -46,6 +46,14 @@ export function addOrIncrementUnitLine(
   return [...cart, { product, quantity: 1 }];
 }
 
+/** Removes every cart line for a product that has become unavailable. */
+export function removeCartLine(
+  cart: readonly CartLine[],
+  productId: string,
+): CartLine[] {
+  return cart.filter((line) => line.product.id !== productId);
+}
+
 export function stockLimitMessage(
   productName: string,
   available: number,

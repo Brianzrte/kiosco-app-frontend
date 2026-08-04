@@ -3,7 +3,13 @@
 import { FormEvent, KeyboardEvent, RefObject } from "react";
 import { formatMoney } from "@/lib/money";
 import { Product } from "@/lib/types";
+import { Badge } from "@/components/ui/Badge";
 import { IconBarcode, IconSearch } from "@/components/ui/icons";
+
+export type PosSearchResult = {
+  product: Product;
+  unavailable: boolean;
+};
 
 /**
  * Entry region: the scan-by-barcode field, the search-by-name field with its
@@ -39,7 +45,7 @@ export function ScanOmnibox({
   onSearchSubmit: (event: FormEvent) => void;
   onSearchKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  searchResults: Product[];
+  searchResults: PosSearchResult[];
   activeResultIndex: number;
   onHoverResult: (index: number) => void;
   onPickResult: (product: Product) => void;
@@ -72,7 +78,7 @@ export function ScanOmnibox({
           </div>
         </form>
 
-        <div>
+        <div className="relative">
           <form onSubmit={onSearchSubmit}>
             <label
               htmlFor="pos-search"
@@ -95,8 +101,9 @@ export function ScanOmnibox({
                 aria-expanded={!searchDismissed && searchResults.length > 0}
                 aria-controls="pos-search-results"
                 aria-activedescendant={
-                  searchResults[activeResultIndex]
-                    ? `pos-search-result-${searchResults[activeResultIndex].id}`
+                  searchResults[activeResultIndex] &&
+                  !searchResults[activeResultIndex].unavailable
+                    ? `pos-search-result-${searchResults[activeResultIndex].product.id}`
                     : undefined
                 }
                 className="h-11 w-full rounded-app border border-border bg-surface pl-9 pr-4 shadow-soft placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
@@ -104,51 +111,75 @@ export function ScanOmnibox({
             </div>
           </form>
 
-          {/* Not `position: absolute` (that's what used to overlap the cart
-              rows below on narrow widths — design.md Decisión 16): this
-              renders in normal flow, so the cart below is pushed down while
-              it's open instead of being covered by it. */}
+          {/* The result layer is anchored to its search field. Keeping it out
+              of normal flow avoids moving the cart or the rest of the POS
+              while a cashier searches (design.md, Decisión 16). */}
           {searchTerm.trim() &&
             !searchDismissed &&
             searchResults.length > 0 && (
               <ul
                 id="pos-search-results"
-                className="mt-2 max-h-72 overflow-y-auto rounded-app border border-border bg-surface shadow-soft"
+                className="absolute inset-x-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-app border border-border bg-surface shadow-soft"
               >
-                {searchResults.map((p, index) => (
+                {searchResults.map(({ product, unavailable }, index) => (
                   <li
-                    key={p.id}
-                    id={`pos-search-result-${p.id}`}
+                    key={product.id}
+                    id={`pos-search-result-${product.id}`}
                     role="option"
-                    aria-selected={index === activeResultIndex}
+                    aria-disabled={unavailable || undefined}
+                    aria-selected={!unavailable && index === activeResultIndex}
                     className="border-b border-border last:border-b-0"
                   >
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onMouseEnter={() => onHoverResult(index)}
-                      onClick={() => onPickResult(p)}
-                      className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover focus-visible:bg-surface-hover ${
-                        index === activeResultIndex ? "bg-surface-hover" : ""
-                      }`}
-                    >
+                    {unavailable ? (
+                      <div className="flex items-center justify-between gap-4 px-4 py-3 text-text-secondary">
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">
+                            {product.name}
+                          </span>
+                          <span className="data block text-xs">
+                            {product.sku}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          <Badge tone="warning">Sin stock</Badge>
+                          <span className="num shrink-0 whitespace-nowrap text-sm font-semibold">
+                            {formatMoney(
+                              product.unit_type === "pesable"
+                                ? (product.price_per_kg ?? "0.00")
+                                : product.price,
+                            )}
+                            {product.unit_type === "pesable" && "/kg"}
+                          </span>
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseEnter={() => onHoverResult(index)}
+                        onClick={() => onPickResult(product)}
+                        className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover focus-visible:bg-surface-hover ${
+                          index === activeResultIndex ? "bg-surface-hover" : ""
+                        }`}
+                      >
                       <span className="min-w-0">
-                        <span className="block truncate font-medium">
-                          {p.name}
+                        <span className="block truncate text-sm font-medium">
+                          {product.name}
                         </span>
                         <span className="data block text-xs text-text-secondary">
-                          {p.sku}
+                          {product.sku}
                         </span>
                       </span>
-                      <span className="num font-semibold">
+                      <span className="num shrink-0 whitespace-nowrap text-sm font-semibold">
                         {formatMoney(
-                          p.unit_type === "pesable"
-                            ? (p.price_per_kg ?? "0.00")
-                            : p.price,
+                          product.unit_type === "pesable"
+                            ? (product.price_per_kg ?? "0.00")
+                            : product.price,
                         )}
-                        {p.unit_type === "pesable" && "/kg"}
+                        {product.unit_type === "pesable" && "/kg"}
                       </span>
-                    </button>
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -156,18 +187,20 @@ export function ScanOmnibox({
         </div>
       </div>
 
-      {entryStatusMessage && (
-        <div
-          role={entryStatusIsError ? "alert" : "status"}
-          className={
-            entryStatusIsError
-              ? "rounded-app border border-error/40 bg-error/10 px-4 py-3 text-sm font-medium text-error"
-              : "px-1 text-sm text-text-secondary"
-          }
-        >
-          {entryStatusMessage}
-        </div>
-      )}
+      <div className="min-h-12">
+        {entryStatusMessage && (
+          <div
+            role={entryStatusIsError ? "alert" : "status"}
+            className={
+              entryStatusIsError
+                ? "min-h-12 rounded-app border border-error/40 bg-error/10 px-4 py-3 text-sm font-medium text-error"
+                : "min-h-12 px-1 text-sm text-text-secondary"
+            }
+          >
+            {entryStatusMessage}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

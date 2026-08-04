@@ -24,6 +24,8 @@ import {
   addOrIncrementUnitLine,
   applyStockCap,
   cartTotalCents,
+  removeCartLine,
+  stockLimitMessage,
   summarizeCart,
   updateLineWeight,
   type CartLine,
@@ -32,6 +34,11 @@ import { resolveCheckoutStatus, resolveEntryStatus } from "@/lib/posStatus";
 import { buildPosSearchQuery } from "@/lib/posSearch";
 import { submitSale } from "@/lib/posSaleSubmission";
 import {
+  availabilityFromStockError,
+  isOutOfStock,
+  type StockAvailability,
+} from "@/lib/stockAvailability";
+import {
   composeSplitPayment,
   getPaymentBalance,
   isMoneyAmount,
@@ -39,7 +46,10 @@ import {
   type SplitPaymentMethod,
 } from "@/lib/paymentComposition";
 import { Product, ProductList, Sale, Stock } from "@/lib/types";
-import { ScanOmnibox } from "@/components/pos/ScanOmnibox";
+import {
+  ScanOmnibox,
+  type PosSearchResult,
+} from "@/components/pos/ScanOmnibox";
 import { CartLines } from "@/components/pos/CartLines";
 import { CheckoutPanel } from "@/components/pos/CheckoutPanel";
 import { CheckoutStatus } from "@/components/pos/CheckoutStatus";
@@ -131,32 +141,39 @@ export function PosView() {
   // the backend's catalog page size.
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<PosSearchResult[]>([]);
   const [searchPending, setSearchPending] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const [searchDismissed, setSearchDismissed] = useState(false);
   // Stock available per product, fetched lazily the first time it's needed
   // and cached — the cart quantity is capped against it so a cashier can
   // never sell more than what's actually in inventory.
-  const stockByProduct = useRef<Record<string, number | undefined>>({});
+  const stockByProduct = useRef<Record<string, StockAvailability>>({});
   const stockRequests = useRef<
-    Record<string, Promise<number | undefined> | undefined>
+    Record<string, Promise<StockAvailability> | undefined>
   >({});
 
   async function availableStock(
     productId: string,
-  ): Promise<number | undefined> {
-    if (productId in stockByProduct.current)
-      return stockByProduct.current[productId];
+  ): Promise<StockAvailability> {
+    // Do not cache unknown failures. Besides allowing a retry after a
+    // transient error, this lets a Fast Refresh session that previously
+    // stored `undefined` re-check the product with the current 404 rule.
+    const cached = stockByProduct.current[productId];
+    if (cached !== undefined) return cached;
     if (stockRequests.current[productId])
       return stockRequests.current[productId];
     const request = api<Stock>(`/inventory/stock/${productId}`)
       .then((stock) => stock.quantity)
-      .catch(() => undefined)
+      .catch((error: unknown) =>
+        availabilityFromStockError((error as ApiError).status),
+      )
       .then((quantity) => {
-        // Unknown stock never blocks a scan — the backend remains the
-        // authority and rejects an over-sell at confirm time regardless.
-        stockByProduct.current[productId] = quantity;
+        // A missing record and every technical failure stay unknown. Only a
+        // numeric zero (or less) is unavailable merchandise (Decisión 21).
+        if (quantity !== undefined) {
+          stockByProduct.current[productId] = quantity;
+        }
         return quantity;
       })
       .finally(() => {
@@ -298,7 +315,14 @@ export function PosView() {
       setConfirmedSale(null);
       setInactiveProductMessage(null);
       setCart((prev) => addEmptyWeightLine(prev, product));
-      void availableStock(product.id);
+      const available = await availableStock(product.id);
+      if (isOutOfStock(available)) {
+        setCart((prev) =>
+          removeCartLine(prev, product.id),
+        );
+        setStockLimitMsg(stockLimitMessage(product.name, 0));
+        return;
+      }
       // A single line always exists for this product by now (either it was
       // already there, or it was just added) — one UI for pesables, no
       // separate panel (design.md, Decisión 5).
@@ -322,6 +346,11 @@ export function PosView() {
     // visible (design.md, Decisión 2). The cap is applied against the cart
     // as it stands when the response lands, via the functional update.
     const available = await availableStock(product.id);
+    if (isOutOfStock(available)) {
+      setCart((prev) => removeCartLine(prev, product.id));
+      setStockLimitMsg(stockLimitMessage(product.name, 0));
+      return;
+    }
     if (available === undefined) return;
     let capMessage: string | null = null;
     setCart((prev) => {
@@ -335,6 +364,13 @@ export function PosView() {
   async function incrementQuantity(line: CartLine) {
     if (line.product.unit_type === "pesable") return;
     const available = await availableStock(line.product.id);
+    if (isOutOfStock(available)) {
+      setCart((prev) =>
+        removeCartLine(prev, line.product.id),
+      );
+      setStockLimitMsg(stockLimitMessage(line.product.name, 0));
+      return;
+    }
     if (available !== undefined && line.quantity + 1 > available) {
       setStockLimitMsg(
         `Solo hay ${available} unidad${available === 1 ? "" : "es"} disponible${
@@ -365,9 +401,28 @@ export function PosView() {
 
     let cancelled = false;
     void api<ProductList>(`/products?${buildPosSearchQuery(term)}`)
-      .then((list) => {
+      .then(async (list) => {
         if (cancelled) return;
-        setSearchResults(list.products);
+        const resultsWithAvailability = await Promise.all(
+          list.products.map(async (product) => ({
+            product,
+            availability: await availableStock(product.id),
+          })),
+        );
+        if (cancelled) return;
+        const nextSearchResults = resultsWithAvailability.map(
+          ({ product, availability }) => ({
+            product,
+            unavailable: isOutOfStock(availability),
+          }),
+        );
+        setSearchResults(nextSearchResults);
+        setActiveResultIndex(
+          Math.max(
+            nextSearchResults.findIndex((result) => !result.unavailable),
+            0,
+          ),
+        );
         setSearchPending(false);
       })
       .catch((e) => {
@@ -423,7 +478,7 @@ export function PosView() {
   function submitSearch(event: FormEvent) {
     event.preventDefault();
     const target = searchResults[activeResultIndex] ?? searchResults[0];
-    if (target) pickSearchResult(target);
+    if (target && !target.unavailable) pickSearchResult(target.product);
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -431,13 +486,22 @@ export function PosView() {
       setSearchDismissed(true);
       return;
     }
-    if (searchResults.length === 0) return;
+    const selectableIndices = searchResults.flatMap((result, index) =>
+      result.unavailable ? [] : [index],
+    );
+    if (selectableIndices.length === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveResultIndex((i) => Math.min(i + 1, searchResults.length - 1));
+      setActiveResultIndex((index) =>
+        selectableIndices.find((candidate) => candidate > index) ??
+        selectableIndices[selectableIndices.length - 1],
+      );
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveResultIndex((i) => Math.max(i - 1, 0));
+      setActiveResultIndex((index) =>
+        [...selectableIndices].reverse().find((candidate) => candidate < index) ??
+        selectableIndices[0],
+      );
     }
   }
 
@@ -484,6 +548,13 @@ export function PosView() {
     if (!line) return;
     if (isValidWeight(value)) {
       const available = await availableStock(productId);
+      if (isOutOfStock(available)) {
+        setCart((prev) =>
+          removeCartLine(prev, productId),
+        );
+        setStockLimitMsg(stockLimitMessage(line.product.name, 0));
+        return;
+      }
       if (
         available !== undefined &&
         weightThousandths(value) > weightThousandths(String(available))
@@ -863,7 +934,8 @@ export function PosView() {
             pendingImmediate
             onClick={() => void confirmSale()}
           >
-            {pending ? "Confirmando…" : "Confirmar venta"}
+            {pending ? "Confirmando…" : "Confirmar venta"}{" "}
+            <span className="text-xs font-normal opacity-80">(F9)</span>
           </Button>
         </div>
       )}
