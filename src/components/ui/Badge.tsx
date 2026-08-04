@@ -1,4 +1,4 @@
-import { HTMLAttributes } from "react";
+import { HTMLAttributes, ReactNode } from "react";
 
 export type Tone =
   | "pastel-pink"
@@ -50,13 +50,18 @@ export function pastelFor(id: string): Tone {
 
 export function Badge({
   tone = "neutral",
+  icon,
   className = "",
+  children,
   ...props
-}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
+}: HTMLAttributes<HTMLSpanElement> & { tone?: Tone; icon?: ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]} ${className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${icon ? "gap-1" : ""} ${tones[tone]} ${className}`}
       {...props}
-    />
+    >
+      {icon}
+      {children}
+    </span>
   );
 }

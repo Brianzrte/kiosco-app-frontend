@@ -1,14 +1,21 @@
 "use client";
 
-import { KeyboardEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  KeyboardEvent,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
+import { IconAlert, IconClock, IconPlus } from "@/components/ui/icons";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Table, Td, Th } from "@/components/ui/Table";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { formatMoney } from "@/lib/money";
@@ -32,11 +39,13 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pageSize, setPageSize] = useState(PURCHASE_ORDER_PAGE_SIZE);
-  const mobileListRef = useRef<HTMLUListElement>(null);
-  const desktopListRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const suppliersFetcher = useCallback(
-    () => api<{ suppliers: Supplier[] }>("/suppliers").then((result) => result.suppliers),
+    () =>
+      api<{ suppliers: Supplier[] }>("/suppliers").then(
+        (result) => result.suppliers,
+      ),
     [],
   );
   const { data: suppliers } = useLoad(suppliersFetcher);
@@ -56,9 +65,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   useEffect(() => {
     if (!data || data.purchase_orders.length === 0) return;
     const recompute = () => {
-      const mobile = mobileListRef.current?.getBoundingClientRect();
-      const desktop = desktopListRef.current?.getBoundingClientRect();
-      const rect = mobile && mobile.height > 0 ? mobile : desktop;
+      const rect = listRef.current?.getBoundingClientRect();
       if (!rect) return;
       const next = computePageSize({
         viewportHeight: window.innerHeight,
@@ -112,6 +119,14 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
             <Button variant="secondary" onClick={clearFilters}>
               Limpiar filtros
             </Button>
+          ) : canManage ? (
+            <Button
+              className="gap-1.5"
+              onClick={() => router.push("/purchasing/new")}
+            >
+              <IconPlus className="size-4" />
+              Crear pedido
+            </Button>
           ) : undefined
         }
       />
@@ -120,7 +135,7 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
     const pages = computeTotalPages(data.total, pageSize);
     pendingOrdersContent = (
       <>
-        <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
+        <ul ref={listRef} className="flex flex-col gap-3">
           {data.purchase_orders.map((order) => (
             <li
               key={order.id}
@@ -128,83 +143,66 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
               tabIndex={0}
               onClick={() => openOrder(order.id)}
               onKeyDown={(event) => onRowKeyDown(event, order.id)}
-              className="cursor-pointer rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none"
+              className="flex cursor-pointer flex-col gap-3 rounded-app border border-border bg-surface p-4 shadow-soft transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:outline-none sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex items-start justify-between gap-3">
-                <p className="min-w-0 flex-1 font-medium text-text-primary">
-                  {order.supplier_name}
-                </p>
-                <Badge tone="warning">{purchaseOrderStatusLabel(order.status)}</Badge>
-              </div>
-              {hasUncataloguedItems(order) && (
-                <Badge className="mt-2" tone="warning">
-                  Pendiente de alta
-                </Badge>
-              )}
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <p className="text-xs text-text-secondary">
-                  {new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(
-                    new Date(order.ordered_at),
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="min-w-0 truncate font-medium text-text-primary">
+                    {order.supplier_name}
+                  </p>
+                  {hasUncataloguedItems(order) && (
+                    <Badge
+                      tone="warning"
+                      icon={<IconAlert className="size-3" />}
+                    >
+                      Pendiente de alta
+                    </Badge>
                   )}
+                </div>
+                <p className="mt-1 text-xs text-text-secondary">
+                  {new Intl.DateTimeFormat("es-AR", {
+                    dateStyle: "long",
+                  }).format(new Date(order.ordered_at))}
                 </p>
-                <p className="num text-lg font-semibold">{formatMoney(order.total)}</p>
+              </div>
+              <div className="flex items-center justify-between gap-3 sm:justify-end">
+                <Badge tone="warning" icon={<IconClock className="size-3" />}>
+                  {purchaseOrderStatusLabel(order.status)}
+                </Badge>
+                <p className="num text-lg font-semibold">
+                  {formatMoney(order.total)}
+                </p>
+                <Button
+                  size="sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openOrder(order.id);
+                  }}
+                >
+                  Recibir
+                </Button>
               </div>
             </li>
           ))}
         </ul>
-
-        <div ref={desktopListRef} className="hidden md:block">
-        <Table>
-          <thead>
-            <tr>
-              <Th>Proveedor</Th>
-              <Th>Fecha</Th>
-              <Th className="text-right">Total</Th>
-              <Th>Estado</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.purchase_orders.map((order) => (
-              <tr
-                key={order.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => openOrder(order.id)}
-                onKeyDown={(event) => onRowKeyDown(event, order.id)}
-                className="cursor-pointer transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover focus-visible:bg-surface-hover"
-              >
-                <Td>
-                  {order.supplier_name}
-                  {hasUncataloguedItems(order) && (
-                    <Badge className="ml-2" tone="warning">
-                      Pendiente de alta
-                    </Badge>
-                  )}
-                </Td>
-                <Td>
-                  {new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(
-                    new Date(order.ordered_at),
-                  )}
-                </Td>
-                <Td className="num text-right">{formatMoney(order.total)}</Td>
-                <Td>
-                  <Badge tone="warning">{purchaseOrderStatusLabel(order.status)}</Badge>
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        </div>
 
         {pages > 1 && (
           <div className="flex items-center justify-end gap-2">
             <p className="mr-auto text-sm text-text-secondary">
               Página {page} de {pages}
             </p>
-            <Button variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>
+            <Button
+              variant="secondary"
+              disabled={page === 1}
+              onClick={() => setPage(page - 1)}
+            >
               Anterior
             </Button>
-            <Button variant="secondary" disabled={page === pages} onClick={() => setPage(page + 1)}>
+            <Button
+              variant="secondary"
+              disabled={page === pages}
+              onClick={() => setPage(page + 1)}
+            >
               Siguiente
             </Button>
           </div>
@@ -216,88 +214,116 @@ export function PurchasingHubView({ roles }: { roles: Role[] }) {
   return (
     <section className="flex flex-col gap-6">
       <PageHeader
-        title="Proveedores"
-        description="Revisá los pedidos pendientes de proveedores."
-      />
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="flex min-w-0 flex-col gap-6 lg:col-span-4">
-          {data && (
-            <div className="rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:p-3">
-              <div className="flex items-center justify-between gap-3">
-                <CollapsibleFilters
-                  activeFilterCount={Number(Boolean(supplier)) + Number(Boolean(from)) + Number(Boolean(to))}
-                  open={filtersOpen}
-                  onOpenChange={setFiltersOpen}
-                  className="order-last w-auto md:order-none"
-                >
-                  <Select
-                    label="Proveedor"
-                    value={supplier}
-                    onChange={(event) => {
-                      setSupplier(event.target.value);
-                      setPage(1);
-                    }}
-                    className="w-full sm:w-56"
-                  >
-                    <option value="">Todos</option>
-                    {(suppliers ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </Select>
-                  <Input
-                    label="Desde"
-                    type="date"
-                    compact
-                    value={from}
-                    onChange={(event) => {
-                      setFrom(event.target.value);
-                      setPage(1);
-                    }}
-                    className="w-full sm:w-auto"
-                  />
-                  <Input
-                    label="Hasta"
-                    type="date"
-                    compact
-                    value={to}
-                    onChange={(event) => {
-                      setTo(event.target.value);
-                      setPage(1);
-                    }}
-                    className="w-full sm:w-auto"
-                  />
-                  {hasFilters && (
-                    <Button variant="ghost" onClick={clearFilters}>
-                      Limpiar filtros
-                    </Button>
-                  )}
-                </CollapsibleFilters>
-                <p className={`${filtersOpen ? "hidden md:block" : ""} order-first whitespace-nowrap text-sm text-text-secondary`} aria-live="polite">
-                  {data.total === 1 ? "1 pedido pendiente" : `${data.total} pedidos pendientes`}
-                </p>
-              </div>
-            </div>
-          )}
-          {pendingOrdersContent}
-        </div>
-        <aside aria-label="Acciones de compras" className="order-first md:order-none">
-          <Card className="flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-medium text-text-secondary">Acciones</h2>
+        title="Compras y proveedores"
+        description="Qué llega, qué recibir y con quién."
+        actions={
+          <>
             {canManage && (
-              <Button onClick={() => router.push("/purchasing/new")}>Crear pedido</Button>
-            )}
-            <Button variant={canManage ? "secondary" : "primary"} onClick={() => router.push("/purchasing/history")}>
-              Historial de pedidos
-            </Button>
-            {canManage && (
-              <Button variant="secondary" onClick={() => router.push("/purchasing/suppliers")}>
+              <Button
+                variant="secondary"
+                onClick={() => router.push("/purchasing/suppliers")}
+              >
                 Lista de proveedores
               </Button>
             )}
-          </Card>
-        </aside>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/purchasing/history")}
+            >
+              Historial de pedidos
+            </Button>
+            {canManage && (
+              <Button onClick={() => router.push("/purchasing/new")}>
+                Crear pedido
+              </Button>
+            )}
+          </>
+        }
+      />
+      <div className="flex min-w-0 flex-col gap-4">
+        {pendingOrdersContent}
+        {data && (
+          <div className="rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:p-3">
+            <div className="flex items-center justify-between gap-3">
+              <CollapsibleFilters
+                activeFilterCount={
+                  Number(Boolean(supplier)) +
+                  Number(Boolean(from)) +
+                  Number(Boolean(to))
+                }
+                open={filtersOpen}
+                onOpenChange={setFiltersOpen}
+                className="order-last w-auto md:order-none"
+              >
+                <Select
+                  label="Proveedor"
+                  value={supplier}
+                  onChange={(event) => {
+                    setSupplier(event.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full sm:w-56"
+                >
+                  <option value="">Todos</option>
+                  {(suppliers ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  label="Desde"
+                  type="date"
+                  compact
+                  value={from}
+                  onChange={(event) => {
+                    setFrom(event.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full sm:w-auto"
+                />
+                <Input
+                  label="Hasta"
+                  type="date"
+                  compact
+                  value={to}
+                  onChange={(event) => {
+                    setTo(event.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full sm:w-auto"
+                />
+                {hasFilters && (
+                  <Button variant="ghost" onClick={clearFilters}>
+                    Limpiar filtros
+                  </Button>
+                )}
+              </CollapsibleFilters>
+              <p
+                className={`${filtersOpen ? "hidden md:block" : ""} order-first whitespace-nowrap text-sm text-text-secondary`}
+                aria-live="polite"
+              >
+                {data.total === 1
+                  ? "1 pedido pendiente"
+                  : `${data.total} pedidos pendientes`}
+              </p>
+            </div>
+          </div>
+        )}
+        {canManage && (
+          <Link
+            href="/purchasing/new"
+            className="flex items-center justify-between gap-3 rounded-app border border-dashed border-border bg-surface-subtle px-4 py-3 text-sm text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-border-hover hover:bg-surface-hover"
+          >
+            <span>
+              ¿Buscás qué reponer? Las sugerencias de reposición viven en el
+              formulario de pedido nuevo.
+            </span>
+            <span className="shrink-0 font-medium text-primary">
+              Ir a sugerencias →
+            </span>
+          </Link>
+        )}
       </div>
     </section>
   );

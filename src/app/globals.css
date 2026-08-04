@@ -46,6 +46,24 @@
   --color-error: #ef4444;
   --color-info: #0ea5e9;
 
+  /* Text-on-tinted-fill variants of success/warning/error (redesign-frontend-
+     purchasing-section, decision D13). The base tones above are ~2:1 to
+     ~2.7:1 against their own 10%-opacity fill (e.g. bg-success/10) and don't
+     reach WCAG AA there; these three are darker shades of the same hue,
+     verified >=4.5:1 against that 10% fill, for text sitting on a tinted
+     background (the purchasing detail's resolved-line bars: "Recibido
+     completo", "Recibido parcial", "No entregado"). Defined explicitly with
+     fixed hex values rather than derived with color-mix(), per the user's
+     decision to prioritize guaranteed contrast and control over automatic
+     derivation. Consume only via the variable — never the hex. Not
+     general-purpose "darker success/warning/error": scoped to text over a
+     tinted fill of the same color.
+     --color-error-strong is darkened from the mockup's #dc2626 (~4.23:1,
+     fails AA) to #c62626 (~4.96:1) — same red hue, R channel only. */
+  --color-success-strong: #15803d;
+  --color-warning-strong: #b45309;
+  --color-error-strong: #c62626;
+
   /* POS payment accents — dedicated, muted tones for the payment-method
      chips and the sale-confirmation action in PosView. NOT the same role as
      the generic --color-success above (still used unchanged by Toast, the

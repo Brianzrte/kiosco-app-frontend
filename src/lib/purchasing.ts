@@ -1,6 +1,9 @@
 import { fromCents, toCents } from "./money";
 import {
+  Product,
   ProductSupplier,
+  PurchaseOrder,
+  PurchaseOrderItem,
   PurchaseOrderStatus,
   ReplenishmentSuggestion,
   Supplier,
@@ -71,6 +74,18 @@ export function supplierLabel(supplier: Supplier): string {
   return supplier.active ? supplier.name : `${supplier.name} (inactivo)`;
 }
 
+/** The backend always sends purchase-order item quantities as a fixed
+ * 3-decimal string (`StringFixed(3)`, e.g. "8.000") so it can carry
+ * fractional quantities for weighable items later — a non-goal of this
+ * change. Displaying that raw string reads as "8.000" for an ordinary
+ * whole-unit line; this formats it the way a person expects ("8"), while
+ * still showing real decimals if a fractional quantity is ever present. */
+export function formatQuantity(quantity: number | string): string {
+  return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(
+    Number(quantity),
+  );
+}
+
 export function splitReplenishmentSuggestions(
   suggestions: ReplenishmentSuggestion[],
 ): {
@@ -136,6 +151,223 @@ export function summarizePurchaseOrderDraft(
 /** `<input type="date">` returns YYYY-MM-DD; the backend requires RFC3339. */
 export function toOrderedAtPayload(dateInput: string): string {
   return `${dateInput}T00:00:00Z`;
+}
+
+/** Reuses `buildPurchaseOrdersQuery` to ask for the single most recent order
+ * to a supplier: the backend orders `GET /purchase-orders` by `ordered_at
+ * DESC`, so `page=1&limit=1` is "the last order" (design.md, decision D1). */
+export function buildLastPurchaseOrderQuery(supplierId: string): string {
+  return buildPurchaseOrdersQuery({
+    supplierId,
+    from: "",
+    to: "",
+    status: "",
+    page: 1,
+    limit: 1,
+  });
+}
+
+/** Why a line from a previous order can't be preloaded into a new draft
+ * (design.md, decision D2). Nothing is dropped silently: every exclusion is
+ * reported with this reason next to the line's original name. */
+export type PurchaseOrderPreloadExclusionReason =
+  "removed" | "free_text" | "inactive_product" | "missing_product";
+
+export type PurchaseOrderPreloadLine = {
+  productId: string;
+  productName: string;
+  quantity: string;
+  unitCost: string;
+};
+
+export type PurchaseOrderPreloadExclusion = {
+  productName: string;
+  reason: PurchaseOrderPreloadExclusionReason;
+};
+
+export type PurchaseOrderPreloadDraft = {
+  lines: PurchaseOrderPreloadLine[];
+  exclusions: PurchaseOrderPreloadExclusion[];
+};
+
+/** Derives the preloadable draft from a previous order to the same supplier.
+ * A `CANCELLED` source order is a valid origin: it means nothing arrived and
+ * is exactly when re-ordering the same thing is wanted (design.md, D2). This
+ * function only looks at `items`; the caller decides what to do with
+ * `sourceOrder.status`. */
+export function derivePurchaseOrderPreloadDraft(
+  sourceOrder: Pick<PurchaseOrder, "items">,
+  catalogProducts: Product[],
+): PurchaseOrderPreloadDraft {
+  const lines: PurchaseOrderPreloadLine[] = [];
+  const exclusions: PurchaseOrderPreloadExclusion[] = [];
+  for (const item of sourceOrder.items) {
+    const productName = item.product_name ?? item.description ?? "Producto";
+    if (item.removed_at) {
+      exclusions.push({ productName, reason: "removed" });
+      continue;
+    }
+    if (!item.product_id) {
+      exclusions.push({ productName, reason: "free_text" });
+      continue;
+    }
+    const catalogProduct = catalogProducts.find(
+      (product) => product.id === item.product_id,
+    );
+    if (!catalogProduct) {
+      exclusions.push({ productName, reason: "missing_product" });
+      continue;
+    }
+    if (!catalogProduct.active) {
+      exclusions.push({ productName, reason: "inactive_product" });
+      continue;
+    }
+    lines.push({
+      productId: item.product_id,
+      productName,
+      quantity: formatQuantity(item.quantity),
+      unitCost: item.unit_cost,
+    });
+  }
+  return { lines, exclusions };
+}
+
+const PURCHASE_ORDER_PRELOAD_EXCLUSION_REASON_LABELS: Record<
+  PurchaseOrderPreloadExclusionReason,
+  string
+> = {
+  removed: "se había quitado de aquel pedido",
+  free_text: "era un ítem de texto libre, sin producto del catálogo",
+  inactive_product: "el producto está inactivo en el catálogo",
+  missing_product: "el producto ya no está en el catálogo cargado",
+};
+
+/** Spanish copy for why a line was excluded from the preload banner
+ * (design.md, decision D2 — "nada se descarta en silencio"). */
+export function purchaseOrderPreloadExclusionReasonLabel(
+  reason: PurchaseOrderPreloadExclusionReason,
+): string {
+  return PURCHASE_ORDER_PRELOAD_EXCLUSION_REASON_LABELS[reason];
+}
+
+/** Resolution decided locally for one active line before `POST /receive`
+ * (design.md, decision D4). Mirrors the three mockup actions onto the
+ * existing reception contract; nothing is sent until confirm. */
+export type ReceptionLineResolution =
+  | { action: "received_all" }
+  | { action: "received_partial"; receivedQuantity: number; reason: string }
+  | { action: "not_delivered"; reason: string };
+
+/** Spanish copy for a line's resolved bar in the detail view (design.md,
+ * decision D4). `requestedQuantity` is the item's `quantity`, always coming
+ * from the backend — never recomputed here. */
+export function describeReceptionLineResolution(
+  resolution: ReceptionLineResolution,
+  requestedQuantity: number,
+): string {
+  const requested = formatQuantity(requestedQuantity);
+  if (resolution.action === "received_all") {
+    // "N/N", matching PurchaseOrderDetail.dc.html's isAllResolved state
+    // literally ({{ item.qty }}/{{ item.qty }}), not just "N" (user
+    // decision, 2026-08-04: mockup wins on copy).
+    return `Recibido completo: ${requested}/${requested}`;
+  }
+  if (resolution.action === "received_partial") {
+    return `Recibido parcial: ${formatQuantity(resolution.receivedQuantity)} de ${requested} · Motivo: ${resolution.reason}`;
+  }
+  // Copy matches the mockup's "Fuera del pedido" wording for this resolved
+  // bar (PurchaseOrderDetail.dc.html, isRemovedResolved state), not the
+  // "No entregado" this change had kept from design.md D4's own copy
+  // proposal. The user explicitly authorized the mockup's wording over
+  // design.md here (2026-08-04); the underlying mapping onto
+  // `POST /receive` from D4 is unchanged — this is copy only.
+  return `Fuera del pedido · Motivo: ${resolution.reason}`;
+}
+
+export type ReceptionResolutionState = Record<string, ReceptionLineResolution>;
+
+export type ReceptionPayloadItem = {
+  item_id: string;
+  received_quantity: number;
+  non_delivery_reason?: string;
+};
+
+/** Builds the `POST /purchase-orders/{id}/receive` payload from the local
+ * resolution, one entry per active item. `non_delivery_reason` is present
+ * exactly when `received_quantity` is less than the requested `quantity`
+ * (design.md, decision D4). Throws if an active item has no resolution yet:
+ * callers must keep the confirm action disabled until every active item is
+ * resolved. */
+export function buildReceptionPayload(
+  activeItems: PurchaseOrderItem[],
+  resolutions: ReceptionResolutionState,
+): ReceptionPayloadItem[] {
+  return activeItems.map((item) => {
+    const resolution = resolutions[item.id];
+    if (!resolution) {
+      throw new Error(`No hay resolución local para el ítem ${item.id}.`);
+    }
+    if (resolution.action === "received_all") {
+      return { item_id: item.id, received_quantity: item.quantity };
+    }
+    const receivedQuantity =
+      resolution.action === "received_partial"
+        ? resolution.receivedQuantity
+        : 0;
+    return {
+      item_id: item.id,
+      received_quantity: receivedQuantity,
+      non_delivery_reason: resolution.reason,
+    };
+  });
+}
+
+export type ReceptionResolutionSummary = {
+  resolvedCount: number;
+  totalCount: number;
+  outcome: "receive" | "cancel";
+};
+
+/** How many of the active lines are resolved, and whether confirming now
+ * would receive the order or cancel it — mirrors `ValidateReception` in the
+ * backend: the order cancels when no item has a received quantity greater
+ * than zero (design.md, decision D4). */
+export function summarizeReceptionResolution(
+  activeItems: PurchaseOrderItem[],
+  resolutions: ReceptionResolutionState,
+): ReceptionResolutionSummary {
+  const totalCount = activeItems.length;
+  const resolvedCount = activeItems.filter(
+    (item) => resolutions[item.id] !== undefined,
+  ).length;
+  const anyReceived = activeItems.some((item) => {
+    const resolution = resolutions[item.id];
+    if (!resolution) return false;
+    if (resolution.action === "received_all") return true;
+    if (resolution.action === "received_partial") {
+      return resolution.receivedQuantity > 0;
+    }
+    return false;
+  });
+  return {
+    resolvedCount,
+    totalCount,
+    outcome: anyReceived ? "receive" : "cancel",
+  };
+}
+
+/** Pure validation of a received quantity: an integer between zero and the
+ * requested quantity (inclusive), matching what `ValidateReception` accepts
+ * in the backend. */
+export function isValidReceivedQuantity(
+  receivedQuantity: number,
+  requestedQuantity: number,
+): boolean {
+  return (
+    Number.isInteger(receivedQuantity) &&
+    receivedQuantity >= 0 &&
+    receivedQuantity <= requestedQuantity
+  );
 }
 
 export function appendSupplierAssociation(

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;}
+a{color:#7c3aed;text-decoration:none;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#f8f8fb;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;color:#211f2b">
+
+  <div style="display:flex;align-items:center;gap:6px;padding:14px 24px;background:#ffffff;border-bottom:1px solid #dcd9e6;flex-wrap:wrap">
+    <span style="font-weight:700;color:#211f2b;margin-right:16px;font-size:14px">Compras y proveedores — rediseño</span>
+    <a href="PurchasingHub.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">1. Hub</a>
+    <a href="PurchaseOrderDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">2. Detalle de pedido</a>
+    <a href="AddUncatalogedItem.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">3. Alta ítem no pedido</a>
+    <a href="SupplierDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">4. Ficha proveedor</a>
+    <a href="NewPurchaseOrder.dc.html" style="padding:6px 12px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:600">5. Nuevo pedido</a>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:32px 24px 80px;display:flex;flex-wrap:wrap;gap:32px">
+
+    <div style="flex:3 1 760px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+      <a href="PurchasingHub.dc.html" style="font-size:13px;font-weight:600;color:#7c3aed">← Volver a compras</a>
+      <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin:0">Nuevo pedido</h1>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06);display:flex;flex-direction:column;gap:18px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Proveedor</label>
+            <select style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:11px 14px;font-size:14px;min-height:44px;background:#ffffff">
+              <option>Distribuidora Cuyo Bebidas</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Fecha de creación</label>
+            <input type="date" value="2026-08-04" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:11px 14px;font-size:14px;min-height:44px" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Fecha objetivo <span style="color:#615e6e;font-weight:400">(cuándo debería llegar)</span></label>
+            <input type="date" value="2026-08-11" style="width:100%;box-sizing:border-box;border:1.5px solid #c4b5fd;border-radius:10px;padding:11px 14px;font-size:14px;min-height:44px" />
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:12px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.3)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><circle cx="12" cy="8" r="0.9" fill="#7c3aed" stroke="none"></circle></svg>
+        <p style="margin:0;font-size:13px;color:#211f2b"><strong>Precarga editable:</strong> estas líneas son las del último pedido a Distribuidora Cuyo Bebidas (30 jul.). Nada está confirmado — ajustá cantidades y costos, o quitá lo que no corresponda.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <p style="margin:0;font-size:15px;font-weight:700">Productos</p>
+          <button style-hover="background:#f3f1f9" style="padding:8px 14px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:13px;font-weight:600;cursor:pointer;min-height:40px">+ Agregar producto</button>
+        </div>
+
+        <div style="overflow-x:auto;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">
+            <thead>
+              <tr>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e">Producto</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e;width:110px">Cantidad</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e;width:130px">Costo unit.</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;color:#615e6e;text-align:right;width:110px">Subtotal</th>
+                <th style="padding:9px 14px;background:#fcfbfd;border-bottom:1px solid #b3aec9;width:52px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Coca-Cola 500ml</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input type="number" value="24" style="width:70px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input value="950" style="width:90px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$22.800</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:center">
+                  <button aria-label="Quitar línea" style-hover="background:rgba(239,68,68,0.12)" style="width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Agua Villavicencio 1.5L</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input type="number" value="12" style="width:70px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input value="780" style="width:90px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$9.360</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:center">
+                  <button aria-label="Quitar línea" style-hover="background:rgba(239,68,68,0.12)" style="width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;font-weight:500">Cerveza Quilmes lata 473ml</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input type="number" value="30" style="width:70px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6"><input value="1100" style="width:90px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$33.000</td>
+                <td style="padding:8px 14px;border-bottom:1px solid #dcd9e6;text-align:center">
+                  <button aria-label="Quitar línea" style-hover="background:rgba(239,68,68,0.12)" style="width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:8px 14px;font-weight:500">Speed cola 500ml</td>
+                <td style="padding:8px 14px"><input type="number" value="18" style="width:70px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px"><input value="620" style="width:90px;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:8px 10px;font-size:13px;min-height:40px" /></td>
+                <td style="padding:8px 14px;text-align:right;font-family:'Geist Mono',ui-monospace,monospace">$11.160</td>
+                <td style="padding:8px 14px;text-align:center">
+                  <button aria-label="Quitar línea" style-hover="background:rgba(239,68,68,0.12)" style="width:36px;height:36px;border-radius:8px;border:none;background:transparent;color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;justify-content:center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #dcd9e6;padding-top:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <p style="margin:0;font-size:14px;font-weight:600">Sugerencias de reposición</p>
+          <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,0.15);color:#22c55e;font-size:11px;font-weight:600">3 bajos de stock</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid #dcd9e6;border-radius:10px;background:#ffffff">
+            <div>
+              <p style="margin:0;font-size:13px;font-weight:600">Sprite 500ml</p>
+              <p style="margin:1px 0 0;font-size:12px;color:#615e6e">Quedan 3 unidades, se venden ~8/semana</p>
+            </div>
+            <button style-hover="background:#f3f1f9" style="padding:7px 14px;border-radius:8px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px">Usar 15</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid #dcd9e6;border-radius:10px;background:#ffffff">
+            <div>
+              <p style="margin:0;font-size:13px;font-weight:600">Fanta naranja 500ml</p>
+              <p style="margin:1px 0 0;font-size:12px;color:#615e6e">Quedan 5 unidades, se venden ~6/semana</p>
+            </div>
+            <button style-hover="background:#f3f1f9" style="padding:7px 14px;border-radius:8px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px">Usar 10</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #dcd9e6;padding-top:20px;flex-wrap:wrap">
+        <p style="margin:0;font-size:17px;font-weight:700">Total: <span style="font-family:'Geist Mono',ui-monospace,monospace">$76.320</span></p>
+        <div style="display:flex;gap:10px">
+          <button style-hover="background:#f3f1f9" style="padding:11px 18px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:600;cursor:pointer;min-height:44px">Cancelar</button>
+          <button style-hover="background:#6d28d9" style="padding:11px 22px;border-radius:10px;border:none;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:700;cursor:pointer;min-height:44px">Crear pedido</button>
+        </div>
+      </div>
+
+    </div>
+
+    <aside style="flex:1 1 300px;min-width:280px;max-width:340px;position:sticky;top:24px;align-self:flex-start;display:flex;flex-direction:column;gap:14px">
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 14px">Decisiones</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>La precarga se anuncia, no se asume.</strong> Un banner explícito dice de dónde vienen estas líneas antes de que el usuario llegue a la tabla — nadie debería creer que esto ya está confirmado.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Quitar línea es un ícono de un clic siempre visible en la fila, no un menú de tres puntos — es la acción que más se va a usar sobre una precarga.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Fecha de creación y fecha objetivo van lado a lado con etiquetas distintas y ayuda inline, para que no se confundan con "cuándo pedí" vs. "cuándo debería llegar".</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">4</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Sugerencias de reposición bajan de posición: son ayuda secundaria para completar el pedido, no compiten con la tabla ya precargada por atención.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

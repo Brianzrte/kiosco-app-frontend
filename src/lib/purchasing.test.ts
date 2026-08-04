@@ -1,18 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
   appendSupplierAssociation,
+  buildLastPurchaseOrderQuery,
   buildPurchaseOrdersQuery,
   buildPurchasesBySupplierQuery,
+  buildReceptionPayload,
+  derivePurchaseOrderPreloadDraft,
+  describeReceptionLineResolution,
   filterIncompleteDataSuggestions,
+  formatQuantity,
   hasSupplierAssociation,
+  isValidReceivedQuantity,
+  purchaseOrderPreloadExclusionReasonLabel,
   purchaseOrderStatusLabel,
   purchasePaymentMethodLabel,
+  ReceptionResolutionState,
   splitReplenishmentSuggestions,
   summarizePurchaseOrderDraft,
+  summarizeReceptionResolution,
   supplierLabel,
   toOrderedAtPayload,
 } from "./purchasing";
-import { ProductSupplier, ReplenishmentSuggestion } from "./types";
+import {
+  Product,
+  ProductSupplier,
+  PurchaseOrderItem,
+  ReplenishmentSuggestion,
+} from "./types";
 
 describe("buildPurchaseOrdersQuery", () => {
   it("omits empty filters while preserving pagination", () => {
@@ -81,6 +95,19 @@ describe("purchasing display labels", () => {
     expect(
       supplierLabel({ id: "supplier-1", name: "Mayorista", active: false }),
     ).toBe("Mayorista (inactivo)");
+  });
+});
+
+describe("formatQuantity", () => {
+  it("drops the backend's fixed 3-decimal padding for whole quantities", () => {
+    expect(formatQuantity("8.000")).toBe("8");
+    expect(formatQuantity(8)).toBe("8");
+    expect(formatQuantity("0.000")).toBe("0");
+  });
+
+  it("keeps real decimals for a fractional quantity", () => {
+    expect(formatQuantity("1.500")).toBe("1,5");
+    expect(formatQuantity("2.250")).toBe("2,25");
   });
 });
 
@@ -303,5 +330,311 @@ describe("appendSupplierAssociation", () => {
 describe("toOrderedAtPayload", () => {
   it("appends midnight UTC to a YYYY-MM-DD date input", () => {
     expect(toOrderedAtPayload("2026-07-30")).toBe("2026-07-30T00:00:00Z");
+  });
+});
+
+describe("buildLastPurchaseOrderQuery", () => {
+  it("asks for page=1&limit=1 filtered by supplier", () => {
+    const params = new URLSearchParams(
+      buildLastPurchaseOrderQuery("supplier-1"),
+    );
+    expect(params.get("supplier_id")).toBe("supplier-1");
+    expect(params.get("page")).toBe("1");
+    expect(params.get("limit")).toBe("1");
+  });
+});
+
+function product(overrides: Partial<Product> = {}): Product {
+  return {
+    id: "product-1",
+    sku: "SKU-1",
+    barcode: null,
+    name: "Producto",
+    category_id: "category-1",
+    price: "10.00",
+    cost: "5.00",
+    sells_by_unit: true,
+    units_per_package: 1,
+    extra_margin_percent: "0",
+    parent_product_id: null,
+    unit_product: null,
+    active: true,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function purchaseOrderItem(
+  overrides: Partial<PurchaseOrderItem> = {},
+): PurchaseOrderItem {
+  return {
+    id: "item-1",
+    product_id: "product-1",
+    product_name: "Producto",
+    quantity: 3,
+    received_quantity: 0,
+    unit_cost: "5.00",
+    subtotal: "15.00",
+    ...overrides,
+  };
+}
+
+describe("derivePurchaseOrderPreloadDraft", () => {
+  it("preloads an eligible line with its previous quantity and cost", () => {
+    const catalog = [product({ id: "product-1", active: true })];
+    const result = derivePurchaseOrderPreloadDraft(
+      { items: [purchaseOrderItem()] },
+      catalog,
+    );
+    expect(result.lines).toEqual([
+      {
+        productId: "product-1",
+        productName: "Producto",
+        quantity: "3",
+        unitCost: "5.00",
+      },
+    ]);
+    expect(result.exclusions).toEqual([]);
+  });
+
+  it("excludes a removed line with reason 'removed'", () => {
+    const catalog = [product({ id: "product-1" })];
+    const result = derivePurchaseOrderPreloadDraft(
+      {
+        items: [purchaseOrderItem({ removed_at: "2026-07-01T00:00:00Z" })],
+      },
+      catalog,
+    );
+    expect(result.lines).toEqual([]);
+    expect(result.exclusions).toEqual([
+      { productName: "Producto", reason: "removed" },
+    ]);
+  });
+
+  it("excludes a free-text line with reason 'free_text'", () => {
+    const result = derivePurchaseOrderPreloadDraft(
+      {
+        items: [
+          purchaseOrderItem({
+            product_id: undefined,
+            product_name: undefined,
+            description: "Producto sin catálogo",
+          }),
+        ],
+      },
+      [],
+    );
+    expect(result.lines).toEqual([]);
+    expect(result.exclusions).toEqual([
+      { productName: "Producto sin catálogo", reason: "free_text" },
+    ]);
+  });
+
+  it("excludes a line whose product is inactive in the loaded catalog", () => {
+    const catalog = [product({ id: "product-1", active: false })];
+    const result = derivePurchaseOrderPreloadDraft(
+      { items: [purchaseOrderItem()] },
+      catalog,
+    );
+    expect(result.lines).toEqual([]);
+    expect(result.exclusions).toEqual([
+      { productName: "Producto", reason: "inactive_product" },
+    ]);
+  });
+
+  it("excludes a line whose product is absent from the loaded catalog", () => {
+    const result = derivePurchaseOrderPreloadDraft(
+      { items: [purchaseOrderItem()] },
+      [],
+    );
+    expect(result.lines).toEqual([]);
+    expect(result.exclusions).toEqual([
+      { productName: "Producto", reason: "missing_product" },
+    ]);
+  });
+
+  it("returns no lines for an order with no eligible items", () => {
+    const result = derivePurchaseOrderPreloadDraft(
+      {
+        items: [
+          purchaseOrderItem({ removed_at: "2026-07-01T00:00:00Z" }),
+          purchaseOrderItem({
+            id: "item-2",
+            product_id: undefined,
+            product_name: undefined,
+            description: "Texto libre",
+          }),
+        ],
+      },
+      [],
+    );
+    expect(result.lines).toEqual([]);
+    expect(result.exclusions).toHaveLength(2);
+  });
+
+  it("preloads from a CANCELLED source order the same as any other", () => {
+    const catalog = [product({ id: "product-1" })];
+    const result = derivePurchaseOrderPreloadDraft(
+      { items: [purchaseOrderItem()] },
+      catalog,
+    );
+    expect(result.lines).toHaveLength(1);
+  });
+});
+
+describe("buildReceptionPayload", () => {
+  it("sends full quantity with no reason for a fully received line", () => {
+    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": { action: "received_all" },
+    };
+    expect(buildReceptionPayload(items, resolutions)).toEqual([
+      { item_id: "item-1", received_quantity: 5 },
+    ]);
+  });
+
+  it("includes the reason for a partially received line", () => {
+    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": {
+        action: "received_partial",
+        receivedQuantity: 2,
+        reason: "Faltó stock",
+      },
+    };
+    expect(buildReceptionPayload(items, resolutions)).toEqual([
+      {
+        item_id: "item-1",
+        received_quantity: 2,
+        non_delivery_reason: "Faltó stock",
+      },
+    ]);
+  });
+
+  it("sends zero with the reason for a line that was not delivered", () => {
+    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": { action: "not_delivered", reason: "No llegó" },
+    };
+    expect(buildReceptionPayload(items, resolutions)).toEqual([
+      {
+        item_id: "item-1",
+        received_quantity: 0,
+        non_delivery_reason: "No llegó",
+      },
+    ]);
+  });
+
+  it("throws when an active item has no resolution yet", () => {
+    const items = [purchaseOrderItem({ id: "item-1" })];
+    expect(() => buildReceptionPayload(items, {})).toThrow();
+  });
+});
+
+describe("summarizeReceptionResolution", () => {
+  it("counts resolved lines and outcomes as a reception when something arrived", () => {
+    const items = [
+      purchaseOrderItem({ id: "item-1", quantity: 5 }),
+      purchaseOrderItem({ id: "item-2", quantity: 2 }),
+    ];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": { action: "received_all" },
+    };
+    expect(summarizeReceptionResolution(items, resolutions)).toEqual({
+      resolvedCount: 1,
+      totalCount: 2,
+      outcome: "receive",
+    });
+  });
+
+  it("outcomes as a cancellation when every resolved line received nothing", () => {
+    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": { action: "not_delivered", reason: "No llegó" },
+    };
+    expect(summarizeReceptionResolution(items, resolutions)).toEqual({
+      resolvedCount: 1,
+      totalCount: 1,
+      outcome: "cancel",
+    });
+  });
+
+  it("outcomes as a cancellation when a partial resolution received zero", () => {
+    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const resolutions: ReceptionResolutionState = {
+      "item-1": {
+        action: "received_partial",
+        receivedQuantity: 0,
+        reason: "No llegó nada",
+      },
+    };
+    expect(summarizeReceptionResolution(items, resolutions).outcome).toBe(
+      "cancel",
+    );
+  });
+});
+
+describe("isValidReceivedQuantity", () => {
+  it("accepts an integer between zero and the requested quantity", () => {
+    expect(isValidReceivedQuantity(0, 5)).toBe(true);
+    expect(isValidReceivedQuantity(5, 5)).toBe(true);
+    expect(isValidReceivedQuantity(3, 5)).toBe(true);
+  });
+
+  it("rejects a quantity above what was requested", () => {
+    expect(isValidReceivedQuantity(6, 5)).toBe(false);
+  });
+
+  it("rejects a negative or non-integer quantity", () => {
+    expect(isValidReceivedQuantity(-1, 5)).toBe(false);
+    expect(isValidReceivedQuantity(1.5, 5)).toBe(false);
+  });
+});
+
+describe("purchaseOrderPreloadExclusionReasonLabel", () => {
+  it("has Spanish copy for each exclusion reason", () => {
+    expect(purchaseOrderPreloadExclusionReasonLabel("removed")).toBe(
+      "se había quitado de aquel pedido",
+    );
+    expect(purchaseOrderPreloadExclusionReasonLabel("free_text")).toBe(
+      "era un ítem de texto libre, sin producto del catálogo",
+    );
+    expect(purchaseOrderPreloadExclusionReasonLabel("inactive_product")).toBe(
+      "el producto está inactivo en el catálogo",
+    );
+    expect(purchaseOrderPreloadExclusionReasonLabel("missing_product")).toBe(
+      "el producto ya no está en el catálogo cargado",
+    );
+  });
+});
+
+describe("describeReceptionLineResolution", () => {
+  it("describes a fully received line with the requested quantity", () => {
+    expect(describeReceptionLineResolution({ action: "received_all" }, 5)).toBe(
+      "Recibido completo: 5/5",
+    );
+  });
+
+  it("describes a partially received line with quantity and reason", () => {
+    expect(
+      describeReceptionLineResolution(
+        {
+          action: "received_partial",
+          receivedQuantity: 2,
+          reason: "Faltó stock",
+        },
+        5,
+      ),
+    ).toBe("Recibido parcial: 2 de 5 · Motivo: Faltó stock");
+  });
+
+  it("describes a not-delivered line with its reason", () => {
+    expect(
+      describeReceptionLineResolution(
+        { action: "not_delivered", reason: "No llegó" },
+        5,
+      ),
+    ).toBe("Fuera del pedido · Motivo: No llegó");
   });
 });
