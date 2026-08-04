@@ -32,6 +32,7 @@ import {
   computeSalePriceFromCost,
 } from "@/lib/products";
 import { formatMoney } from "@/lib/money";
+import { isValidStockQuantityKg } from "@/lib/inventory";
 import {
   Category,
   CategoryList,
@@ -106,6 +107,8 @@ export function ProductForm({
   const [stockInitializationError, setStockInitializationError] = useState<
     string | null
   >(null);
+  const [stockInitializationFieldError, setStockInitializationFieldError] =
+    useState<string | null>(null);
   const [stockInitializationPending, setStockInitializationPending] =
     useState(false);
   const [unitSaleError, setUnitSaleError] = useState<string | null>(null);
@@ -496,6 +499,7 @@ export function ProductForm({
     setInitialStockQuantity("0");
     setInitialStockReason("");
     setStockInitializationError(null);
+    setStockInitializationFieldError(null);
     setForm({
       sku: "",
       barcode: "",
@@ -529,6 +533,10 @@ export function ProductForm({
 
   function openStockInitialization() {
     setStockInitializationError(null);
+    setStockInitializationFieldError(null);
+    setInitialStockQuantity(
+      createdProduct?.unit_type === "pesable" ? "0.000" : "0",
+    );
     setStockInitializationOpen(true);
   }
 
@@ -536,13 +544,26 @@ export function ProductForm({
     event.preventDefault();
     if (!createdProduct) return;
     setStockInitializationError(null);
+    const isWeighable = createdProduct.unit_type === "pesable";
+    if (
+      isWeighable &&
+      !isValidStockQuantityKg(initialStockQuantity, true)
+    ) {
+      setStockInitializationFieldError(
+        "Ingresá una cantidad mayor o igual a cero con hasta tres decimales.",
+      );
+      return;
+    }
+    setStockInitializationFieldError(null);
     setStockInitializationPending(true);
     try {
       await api("/inventory/stock", {
         method: "POST",
         body: {
           product_id: createdProduct.id,
-          quantity: parseInt(initialStockQuantity, 10),
+          quantity: isWeighable
+            ? initialStockQuantity
+            : parseInt(initialStockQuantity, 10),
           reason: initialStockReason.trim(),
         },
       });
@@ -1018,16 +1039,32 @@ export function ProductForm({
                 Productos.
               </p>
               <Input
-                label="Cantidad inicial"
+                label={
+                  createdProduct.unit_type === "pesable"
+                    ? "Cantidad inicial (kg)"
+                    : "Cantidad inicial"
+                }
                 type="number"
-                inputMode="numeric"
+                inputMode={
+                  createdProduct.unit_type === "pesable" ? "decimal" : "numeric"
+                }
                 min={0}
+                step={createdProduct.unit_type === "pesable" ? "0.001" : "1"}
+                placeholder={
+                  createdProduct.unit_type === "pesable" ? "0.000" : undefined
+                }
                 value={initialStockQuantity}
                 onChange={(event) =>
                   setInitialStockQuantity(event.target.value)
                 }
                 required
+                error={stockInitializationFieldError ?? undefined}
               />
+              {createdProduct.unit_type === "pesable" && (
+                <p className="text-sm text-text-secondary">
+                  Ingresá los kilogramos con hasta tres decimales.
+                </p>
+              )}
               <Input
                 label="Motivo"
                 value={initialStockReason}

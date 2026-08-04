@@ -2,10 +2,11 @@ import { fromCents, toCents } from "./money";
 
 export function isValidWeight(value: string): boolean {
   return /^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(value) &&
-    parseWeightThousandths(value) > 0;
+    weightThousandths(value) > 0;
 }
 
-function parseWeightThousandths(value: string): number {
+/** Converts a valid kilogram string to integer thousandths. */
+export function weightThousandths(value: string): number {
   const [units, fraction = ""] = value.split(".");
   return Number(units) * 1000 + Number((fraction + "000").slice(0, 3));
 }
@@ -15,7 +16,7 @@ export function calculateWeightedPrice(
   weight: string,
   pricePerKg: string,
 ): string {
-  const weightedCents = parseWeightThousandths(weight) * toCents(pricePerKg);
+  const weightedCents = weightThousandths(weight) * toCents(pricePerKg);
   return fromCents(Math.floor((weightedCents + 500) / 1000));
 }
 

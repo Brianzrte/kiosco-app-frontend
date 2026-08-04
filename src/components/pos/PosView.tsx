@@ -17,7 +17,8 @@ import { EmptyState } from "@/components/ui/states";
 import { api, ApiError, type ErrorKind } from "@/lib/api";
 import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
 import { fromCents, toCents, formatMoney } from "@/lib/money";
-import { isValidWeight } from "@/lib/weightPricing";
+import { isValidWeight, weightThousandths } from "@/lib/weightPricing";
+import { formatStockQuantity, stockLimitMessageKg } from "@/lib/inventory";
 import {
   addEmptyWeightLine,
   addOrIncrementUnitLine,
@@ -36,8 +37,7 @@ import {
   type SplitPaymentInput,
   type SplitPaymentMethod,
 } from "@/lib/paymentComposition";
-import { getLastCartLineProductId } from "@/lib/products";
-import { Product, ProductList, Role, Sale, Stock } from "@/lib/types";
+import { Product, ProductList, Sale, Stock } from "@/lib/types";
 import { ScanOmnibox } from "@/components/pos/ScanOmnibox";
 import { CartLines } from "@/components/pos/CartLines";
 import { CheckoutPanel } from "@/components/pos/CheckoutPanel";
@@ -58,7 +58,7 @@ const POS_CART_STORAGE_KEY = "pos:cart:v1";
 const UNKNOWN_NETWORK_MESSAGE =
   "Falló la conexión y no se sabe si la venta se confirmó. Verificá el estado antes de reintentar; el carrito se conservó.";
 
-export function PosView({ roles }: { roles: Role[] }) {
+export function PosView() {
   const shouldReduceMotion = useReducedMotion();
   const scanRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -114,7 +114,6 @@ export function PosView({ roles }: { roles: Role[] }) {
     id: string;
     total: string;
     saleNumber: number | null;
-    productId: string | null;
   } | null>(null);
   // Persists after `confirmedSale` is dismissed/auto-dismissed (design.md,
   // Decisión 20) — the cashier can still see the last sale's number after
@@ -136,23 +135,32 @@ export function PosView({ roles }: { roles: Role[] }) {
   // Stock available per product, fetched lazily the first time it's needed
   // and cached — the cart quantity is capped against it so a cashier can
   // never sell more than what's actually in inventory.
-  const [stockByProduct, setStockByProduct] = useState<Record<string, number>>(
-    {},
-  );
+  const stockByProduct = useRef<Record<string, number | undefined>>({});
+  const stockRequests = useRef<
+    Record<string, Promise<number | undefined> | undefined>
+  >({});
 
   async function availableStock(
     productId: string,
   ): Promise<number | undefined> {
-    if (productId in stockByProduct) return stockByProduct[productId];
-    try {
-      const stock = await api<Stock>(`/inventory/stock/${productId}`);
-      setStockByProduct((prev) => ({ ...prev, [productId]: stock.quantity }));
-      return stock.quantity;
-    } catch {
-      // Unknown stock never blocks a scan — the backend remains the
-      // authority and rejects an over-sell at confirm time regardless.
-      return undefined;
-    }
+    if (productId in stockByProduct.current)
+      return stockByProduct.current[productId];
+    if (stockRequests.current[productId])
+      return stockRequests.current[productId];
+    const request = api<Stock>(`/inventory/stock/${productId}`)
+      .then((stock) => stock.quantity)
+      .catch(() => undefined)
+      .then((quantity) => {
+        // Unknown stock never blocks a scan — the backend remains the
+        // authority and rejects an over-sell at confirm time regardless.
+        stockByProduct.current[productId] = quantity;
+        return quantity;
+      })
+      .finally(() => {
+        delete stockRequests.current[productId];
+      });
+    stockRequests.current[productId] = request;
+    return request;
   }
 
   const refocus = useCallback(() => {
@@ -287,6 +295,7 @@ export function PosView({ roles }: { roles: Role[] }) {
       setConfirmedSale(null);
       setInactiveProductMessage(null);
       setCart((prev) => addEmptyWeightLine(prev, product));
+      void availableStock(product.id);
       // A single line always exists for this product by now (either it was
       // already there, or it was just added) — one UI for pesables, no
       // separate panel (design.md, Decisión 5).
@@ -455,9 +464,25 @@ export function PosView({ roles }: { roles: Role[] }) {
     }
   }
 
-  function handleWeightChange(productId: string, value: string) {
+  async function handleWeightChange(productId: string, value: string) {
     const line = cart.find((l) => l.product.id === productId);
     if (!line) return;
+    if (isValidWeight(value)) {
+      const available = await availableStock(productId);
+      if (
+        available !== undefined &&
+        weightThousandths(value) > weightThousandths(String(available))
+      ) {
+        setStockLimitMsg(
+          stockLimitMessageKg(
+            line.product.name,
+            formatStockQuantity(available, "pesable"),
+          ),
+        );
+        return;
+      }
+    }
+    setStockLimitMsg(null);
     setCart((prev) =>
       updateLineWeight(prev, productId, value, line.product.price_per_kg!),
     );
@@ -583,7 +608,6 @@ export function PosView({ roles }: { roles: Role[] }) {
     setUnknownNetworkState(false);
     setPending(true);
     const total = formatMoney(saleTotal);
-    const lastCartProductId = getLastCartLineProductId(cart);
     try {
       const confirmed = await submitSale(
         {
@@ -613,7 +637,6 @@ export function PosView({ roles }: { roles: Role[] }) {
         id: confirmed.id,
         total,
         saleNumber: confirmed.sale_number ?? null,
-        productId: lastCartProductId,
       });
       setLastConfirmedSale({
         id: confirmed.id,
@@ -844,7 +867,6 @@ export function PosView({ roles }: { roles: Role[] }) {
 
       <ConfirmedSalePanel
         confirmedSale={confirmedSale}
-        roles={roles}
         shouldReduceMotion={shouldReduceMotion ?? false}
         onDismiss={dismissConfirmedSale}
       />

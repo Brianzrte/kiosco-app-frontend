@@ -1,3 +1,8 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: Weighable products are not checked against stock`
+- TO: `### Requirement: Weighable products are checked against stock`
+
 ## MODIFIED Requirements
 
 ### Requirement: Weighable products are checked against stock
@@ -7,6 +12,10 @@ The POS SHALL query and cap a `pesable` product's cart line against `GET /api/v1
 #### Scenario: Weighable product with initialized stock is checked
 - **WHEN** a `pesable` product with an initialized stock record is added to the cart, or its weight is increased
 - **THEN** a request to `GET /api/v1/inventory/stock/{product_id}` is issued (once per product, cached for the rest of the session like it already is for `unitario`) and the requested weight is compared against the available quantity
+
+#### Scenario: Weighable product is added without a stock check
+- **WHEN** a `pesable` product has no stock record and is added to the cart or its weight is edited
+- **THEN** the unknown availability does not block the line; it is handled by the same unknown-stock rule as a `unitario` product
 
 #### Scenario: Weighable product exceeding available stock is blocked
 - **WHEN** the weight entered or the resulting weight after an increase exceeds the available stock for that product
@@ -19,3 +28,7 @@ The POS SHALL query and cap a `pesable` product's cart line against `GET /api/v1
 #### Scenario: Mixed cart checks stock for both line types
 - **WHEN** a cart contains both `unitario` and `pesable` lines
 - **THEN** stock is checked and enforced for both, using quantity for `unitario` lines and weight (kilograms) for `pesable` lines
+
+#### Scenario: Mixed cart still checks stock for unit-based lines
+- **WHEN** a cart contains both `unitario` and `pesable` products
+- **THEN** stock is checked and enforced for both line types, without relaxing the existing check for `unitario` lines

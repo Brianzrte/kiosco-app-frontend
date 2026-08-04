@@ -190,6 +190,7 @@ export type StockListItem = {
   name: string;
   barcode: string | null;
   active: boolean;
+  unit_type: "unitario" | "pesable";
   initialized: boolean;
   quantity: number;
   minimum_quantity: number;
@@ -206,6 +207,7 @@ export type StockMovement = {
   id: string;
   product_id: string;
   product_name: string;
+  unit_type: "unitario" | "pesable";
   type: string;
   quantity_delta: number;
   previous_quantity: number;

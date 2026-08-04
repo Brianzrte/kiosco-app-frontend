@@ -6,7 +6,38 @@ import {
   computeInventoryPageSize,
   computeTotalPages,
   isRowLow,
+  formatStockQuantity,
+  isValidStockQuantityKg,
+  stockLimitMessageKg,
 } from "./inventory";
+
+describe("weighable stock helpers", () => {
+  it("accepts kilogram quantities with up to three decimals", () => {
+    expect(isValidStockQuantityKg("1", true)).toBe(true);
+    expect(isValidStockQuantityKg("1.2", true)).toBe(true);
+    expect(isValidStockQuantityKg("1.23", true)).toBe(true);
+    expect(isValidStockQuantityKg("1.234", true)).toBe(true);
+    expect(isValidStockQuantityKg("1.2345", true)).toBe(false);
+    expect(isValidStockQuantityKg("-1", true)).toBe(false);
+    expect(isValidStockQuantityKg("abc", true)).toBe(false);
+  });
+
+  it("allows zero only where stock semantics permit it", () => {
+    expect(isValidStockQuantityKg("0", true)).toBe(true);
+    expect(isValidStockQuantityKg("0.000", true)).toBe(true);
+    expect(isValidStockQuantityKg("0", false)).toBe(false);
+  });
+
+  it("formats weighable stock and names the available kilograms", () => {
+    expect(formatStockQuantity(15, "pesable")).toBe("15 kg");
+    expect(formatStockQuantity(2.3, "pesable")).toBe("2,3 kg");
+    expect(formatStockQuantity(0, "pesable")).toBe("0,000 kg");
+    expect(formatStockQuantity(2, "unitario")).toBe("2");
+    expect(stockLimitMessageKg("Jamón cocido", "2,3 kg")).toBe(
+      "Sólo hay 2,3 kg disponibles de “Jamón cocido”.",
+    );
+  });
+});
 
 describe("isDeepLinkedProductId", () => {
   it("accepts non-empty raw query values without normalizing them", () => {
