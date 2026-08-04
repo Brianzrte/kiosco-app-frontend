@@ -3,16 +3,13 @@
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/Button";
-import { canInitializeStockFromPos } from "@/lib/products";
 import { MOTION } from "@/lib/motion";
-import { Role } from "@/lib/types";
 import { IconX } from "@/components/ui/icons";
 
 export type ConfirmedSale = {
   id: string;
   total: string;
   saleNumber: number | null;
-  productId: string | null;
 };
 
 /**
@@ -24,12 +21,10 @@ export type ConfirmedSale = {
  */
 export function ConfirmedSalePanel({
   confirmedSale,
-  roles,
   shouldReduceMotion,
   onDismiss,
 }: {
   confirmedSale: ConfirmedSale | null;
-  roles: Role[];
   shouldReduceMotion: boolean | null;
   onDismiss: () => void;
 }) {
@@ -134,27 +129,8 @@ export function ConfirmedSalePanel({
               </div>
 
               <div className="flex w-full flex-col gap-2">
-                {canInitializeStockFromPos(roles) &&
-                  confirmedSale?.productId && (
-                    <Button
-                      onClick={() =>
-                        window.location.assign(
-                          `/inventory?product_id=${encodeURIComponent(confirmedSale.productId!)}`,
-                        )
-                      }
-                    >
-                      Inicializar stock
-                    </Button>
-                  )}
-                <Button
-                  variant={
-                    canInitializeStockFromPos(roles) && confirmedSale?.productId
-                      ? "secondary"
-                      : "primary"
-                  }
-                  onClick={onDismiss}
-                >
-                  Ahora no
+                <Button variant="primary" onClick={onDismiss}>
+                  Nueva venta
                 </Button>
                 <Link
                   href={`/sales/${confirmedSale?.id}`}

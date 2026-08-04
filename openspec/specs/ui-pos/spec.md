@@ -86,7 +86,7 @@ The cashier SHALL select exactly one payment method (cash or card) before confir
 
 Confirming SHALL create the sale via `POST /api/v1/sales` and confirm it via `POST /api/v1/sales/{id}/confirm`. On success the frontend SHALL show "Venta confirmada" together with the assigned `sale_number` where present, persisting until the next sale begins, without moving focus from the scan input. If the backend rejects confirmation because payments do not equal the total, the frontend SHALL show the backend message and return the cashier to the payment composition with the entered amounts preserved. On any failure the frontend SHALL NOT assume success: the cart is preserved and the backend sale status is treated as authoritative. Each cart line — whether `unitario` or `pesable` — SHALL be sent to `POST /api/v1/sales/{id}/items` with its weight or quantity and, when one was entered, its real price, exactly as composed in the cart.
 
-The success confirmation SHALL offer two actions, "Inicializar stock" and "Ahora no" (replacing the previous "Nueva venta" action with the same close behavior), alongside the existing "Ver detalle" link. "Inicializar stock" SHALL be present only when the current session also has access to the inventory screen; it SHALL navigate to the inventory screen with the product of the last cart line added before confirmation preselected and its stock dialog already open. "Ahora no" SHALL close the confirmation with the same effect the previous "Nueva venta" action had. Neither action, nor the confirmation's appearance itself, SHALL move keyboard focus away from the scan input or otherwise block scanning the next barcode; auto-dismiss, dismissal by any other means, and starting the next scan SHALL all continue to close the confirmation exactly as before this requirement changed.
+The success confirmation SHALL offer "Nueva venta" alongside the existing "Ver detalle" link, and no other action. "Nueva venta" SHALL close the confirmation. Neither "Nueva venta" nor the confirmation's appearance itself SHALL move keyboard focus away from the scan input or otherwise block scanning the next barcode; auto-dismiss, dismissal by any other means, and starting the next scan SHALL all continue to close the confirmation.
 
 #### Scenario: Successful confirmation
 - **WHEN** the cashier confirms a valid sale
@@ -121,33 +121,24 @@ The success confirmation SHALL offer two actions, "Inicializar stock" and "Ahora
 - **THEN** the request for that line carries its weight and its real price, and the effective price used in the frontend total matches what was sent
 
 #### Scenario: Confirmation offers a stock shortcut for the sold product
-- **WHEN** a sale is confirmed successfully and the session has access to the
-  inventory screen
-- **THEN** the confirmation shows "Inicializar stock" alongside "Ahora no"
-  and "Ver detalle"
+- **WHEN** a sale is confirmed successfully, regardless of the confirming session's access to the inventory screen
+- **THEN** the confirmation shows only "Nueva venta" and "Ver detalle", without an action to initialize or navigate to stock
 
 #### Scenario: "Inicializar stock" targets the last line added to the cart
-- **WHEN** the confirmed sale had more than one distinct product and the
-  cashier activates "Inicializar stock"
-- **THEN** the frontend navigates to the inventory screen with the product
-  of the last cart line added before confirmation preselected and its stock
-  dialog already open
+- **WHEN** the confirmed sale had one or more product lines
+- **THEN** the confirmation offers no action that targets a product for stock initialization or opens inventory
 
 #### Scenario: Stock shortcut is absent without inventory access
 - **WHEN** the confirming session has no access to the inventory screen
-- **THEN** the confirmation shows "Ahora no" and "Ver detalle" without
-  "Inicializar stock"
+- **THEN** the confirmation still shows "Nueva venta" and "Ver detalle" only
 
 #### Scenario: "Ahora no" behaves like the previous "Nueva venta"
-- **WHEN** the cashier activates "Ahora no"
-- **THEN** the confirmation closes and the scan input is ready for the next
-  sale, exactly as "Nueva venta" behaved before this requirement changed
+- **WHEN** the cashier activates "Nueva venta"
+- **THEN** the confirmation closes and the scan input is ready for the next sale
 
 #### Scenario: The confirmation never blocks the next scan
-- **WHEN** the confirmation is visible, with or without "Inicializar stock"
-  present
-- **THEN** keyboard focus remains available to the scan input and scanning
-  the next barcode dismisses the confirmation the same way it always has
+- **WHEN** the confirmation is visible
+- **THEN** keyboard focus remains available to the scan input and scanning the next barcode dismisses the confirmation the same way it always has
 
 ### Requirement: Cart feedback on scan
 When an item is added to the cart or an existing line's quantity is incremented, the affected line SHALL be highlighted in place for `--motion-base` and the running total SHALL be visually acknowledged. The line SHALL NOT slide, enter from offscreen, or otherwise displace surrounding rows, and the total SHALL NOT animate as a progressive numeric count. The feedback SHALL NOT alter scan focus behaviour or delay readiness for the next scan.
@@ -225,14 +216,31 @@ The POS payment-method selector SHALL preserve its existing radio-button selecti
 - **WHEN** payment-option colors are unavailable or viewed in grayscale
 - **THEN** the visible text label and icon continue to identify Efectivo, Tarjeta, and Transferencia
 
-### Requirement: Weighable products are not checked against stock
-The POS SHALL NOT query or cap a `pesable` product's cart line against `GET /api/v1/inventory/stock/{product_id}`, unlike a `unitario` product. Adding or increasing a `pesable` line's weight SHALL never be blocked by a client-side stock check.
+### Requirement: Weighable products are checked against stock
+
+The POS SHALL query and cap a `pesable` product's cart line against `GET /api/v1/inventory/stock/{product_id}`, using the same rule already applied to a `unitario` product: when the product has an initialized stock record, adding or increasing its weight beyond the available quantity SHALL be blocked with an inline message naming the product and the available quantity in kilograms; when the product has no stock record yet (unknown availability), adding or increasing its weight SHALL never be blocked by this client-side check, exactly as an unknown-stock `unitario` product is not blocked today.
+
+#### Scenario: Weighable product with initialized stock is checked
+- **WHEN** a `pesable` product with an initialized stock record is added to the cart, or its weight is increased
+- **THEN** a request to `GET /api/v1/inventory/stock/{product_id}` is issued (once per product, cached for the rest of the session like it already is for `unitario`) and the requested weight is compared against the available quantity
 
 #### Scenario: Weighable product is added without a stock check
-- **WHEN** a `pesable` product is added to the cart or its weight is edited
-- **THEN** no request to `GET /api/v1/inventory/stock/{product_id}` is issued for that product, and no stock-limit message is shown for it
+- **WHEN** a `pesable` product has no stock record and is added to the cart or its weight is edited
+- **THEN** the unknown availability does not block the line; it is handled by the same unknown-stock rule as a `unitario` product
+
+#### Scenario: Weighable product exceeding available stock is blocked
+- **WHEN** the weight entered or the resulting weight after an increase exceeds the available stock for that product
+- **THEN** the cart line is not added or updated, and an inline message states the product name and the available quantity in kilograms (for example, `"Sólo hay 2.300 kg disponibles de "Jamón cocido"."`), following the same message pattern already used for a `unitario` product without enough stock
+
+#### Scenario: Weighable product without a stock record is never blocked
+- **WHEN** a `pesable` product has no stock record yet (the stock lookup resolves to "unknown", exactly as it does for a `unitario` product without one)
+- **THEN** adding it to the cart or increasing its weight is never blocked by this client-side check, and the backend remains the authority that rejects an over-sell at confirmation time regardless
+
+#### Scenario: Mixed cart checks stock for both line types
+- **WHEN** a cart contains both `unitario` and `pesable` lines
+- **THEN** stock is checked and enforced for both, using quantity for `unitario` lines and weight (kilograms) for `pesable` lines
 
 #### Scenario: Mixed cart still checks stock for unit-based lines
 - **WHEN** a cart contains both `unitario` and `pesable` products
-- **THEN** stock is checked and enforced only for the `unitario` lines, exactly as it is today
+- **THEN** stock is checked and enforced for both line types, without relaxing the existing check for `unitario` lines
 
