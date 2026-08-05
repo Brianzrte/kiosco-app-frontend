@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;}
+a{color:#7c3aed;text-decoration:none;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#f8f8fb;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;color:#211f2b">
+
+  <div style="display:flex;align-items:center;gap:6px;padding:14px 24px;background:#ffffff;border-bottom:1px solid #dcd9e6;flex-wrap:wrap">
+    <span style="font-weight:700;color:#211f2b;margin-right:16px;font-size:14px">Compras y proveedores — rediseño</span>
+    <a href="PurchasingHub.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">1. Hub</a>
+    <a href="PurchaseOrderDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">2. Detalle de pedido</a>
+    <a href="AddUncatalogedItem.dc.html" style="padding:6px 12px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:600">3. Alta ítem no pedido</a>
+    <a href="SupplierDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">4. Ficha proveedor</a>
+    <a href="NewPurchaseOrder.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">5. Nuevo pedido</a>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:32px 24px 80px;display:flex;flex-wrap:wrap;gap:32px">
+
+    <div style="flex:3 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+      <a href="PurchaseOrderDetail.dc.html" style="font-size:13px;font-weight:600;color:#7c3aed">← Volver al pedido</a>
+      <div>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.01em;margin:0">Agregar ítem no pedido</h1>
+        <p style="margin:6px 0 0;font-size:14px;color:#615e6e">Pedido de Distribuidora Cuyo Bebidas · llegó algo que no estaba en la orden original.</p>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06);display:flex;flex-direction:column;gap:20px">
+
+        <div>
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3">Cómo identificás el producto</p>
+          <div style="display:flex;gap:8px;padding:4px;border-radius:12px;background:#f3f1f9">
+            <button data-mode="catalog" style-hover="background:#ffffff" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:9px;border:none;background:#ffffff;color:#211f2b;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 1px 2px rgba(31,41,55,0.08);min-height:44px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              Buscar en el catálogo
+            </button>
+            <button data-mode="text" style-hover="background:rgba(255,255,255,0.5)" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:9px;border:none;background:transparent;color:#615e6e;font-size:14px;font-weight:600;cursor:pointer;min-height:44px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+              Describir el producto
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Buscar producto</label>
+          <div style="position:relative">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a6a2b3" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:13px;top:50%;transform:translateY(-50%)"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input value="Jugo Cepita" placeholder="Buscá por nombre o código de barras…" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:12px 14px 12px 38px;font-size:14px;min-height:44px" />
+          </div>
+          <div style="margin-top:8px;border:1px solid #dcd9e6;border-radius:10px;overflow:hidden">
+            <div style="padding:12px 14px;background:#f3f1f9;display:flex;align-items:center;justify-content:between;gap:8px">
+              <span style="font-size:13px;font-weight:600;color:#211f2b">Jugo Cepita naranja 200ml</span>
+              <span style="margin-left:auto;font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;color:#615e6e">SKU 10245</span>
+            </div>
+            <div style-hover="background:#f3f1f9" style="padding:12px 14px;font-size:13px;color:#615e6e;cursor:pointer">Jugo Cepita manzana 200ml — SKU 10246</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Cantidad</label>
+            <input type="number" value="20" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:12px 14px;font-size:14px;min-height:44px" />
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Costo unitario</label>
+            <input value="340" placeholder="0.00" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:12px 14px;font-size:14px;min-height:44px" />
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #dcd9e6;padding-top:18px">
+          <button style-hover="background:#f3f1f9" style="padding:11px 18px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:600;cursor:pointer;min-height:44px">Cancelar</button>
+          <button style-hover="background:#6d28d9" style="padding:11px 20px;border-radius:10px;border:none;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:700;cursor:pointer;min-height:44px">Agregar ítem</button>
+        </div>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:22px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06);display:flex;flex-direction:column;gap:20px;opacity:0.55">
+        <p style="margin:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3">Vista alternativa — modo "Describir el producto" (no interactivo en esta maqueta)</p>
+        <div style="display:flex;gap:8px;padding:4px;border-radius:12px;background:#f3f1f9">
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:9px;background:transparent;color:#615e6e;font-size:14px;font-weight:600;min-height:44px">Buscar en el catálogo</div>
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:9px;background:#ffffff;color:#211f2b;font-size:14px;font-weight:700;box-shadow:0 1px 2px rgba(31,41,55,0.08);min-height:44px">Describir el producto</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="#f59e0b" stroke="none"></circle></svg>
+          <p style="margin:0;font-size:13px;color:#211f2b"><strong>Este ítem va a quedar "Pendiente de alta" en Catálogo.</strong> Vas a poder venderlo desde el pedido y el stock, pero un Admin tiene que catalogarlo para que quede como producto normal.</p>
+        </div>
+        <div>
+          <label style="display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:#211f2b">Descripción</label>
+          <input value="Pack promo gaseosa 3x1, sin código de barras" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:10px;padding:12px 14px;font-size:14px;min-height:44px" />
+        </div>
+      </div>
+
+    </div>
+
+    <aside style="flex:1 1 300px;min-width:280px;max-width:340px;position:sticky;top:24px;align-self:flex-start;display:flex;flex-direction:column;gap:14px">
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 14px">Decisiones</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>El modo es lo primero que se ve,</strong> como dos pestañas grandes en vez de un &lt;select&gt; discreto. "Catálogo vs. texto libre" es la decisión más importante del formulario, no un detalle de configuración.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>El aviso de "pendiente de alta" aparece antes de guardar,</strong> apenas se elige el modo texto libre — no es una sorpresa después de confirmar.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Ese estado no es silencioso: la misma insignia "Pendiente de alta" reaparece en la línea del pedido y en el hub hasta que un Admin cataloga el producto.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

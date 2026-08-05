@@ -1,3 +1,5 @@
+import type { ProductConflict } from "./types";
+
 export type ErrorKind =
   | "network"
   | "timeout"
@@ -25,6 +27,7 @@ export class ApiError extends Error {
     public status: number,
     message: string,
     public kind: ErrorKind = "message",
+    public conflict?: ProductConflict,
   ) {
     super(message);
   }
@@ -70,7 +73,7 @@ export async function api<T>(
 
   if (!response.ok) {
     if (body?.message) {
-      throw new ApiError(response.status, body.message, "message");
+      throw new ApiError(response.status, body.message, "message", body.conflict);
     }
     if (response.status === 403) {
       throw new ApiError(403, TRANSPORT_TEXT.forbidden, "forbidden");

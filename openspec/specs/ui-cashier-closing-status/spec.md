@@ -5,12 +5,13 @@ TBD - created by archiving change add-cashier-closing-status. Update Purpose aft
 ## Requirements
 ### Requirement: Cashier sees the current reconciliation state
 The frontend SHALL show a visible, textual reconciliation state for the
-authenticated Cashier's current business day in the app shell. The state SHALL
-be sourced from a backend aggregate scoped to that Cashier and SHALL NOT block
-sales or calculate coverage from client-side sales data.
+authenticated operator's requested operating date in the app shell. The state
+SHALL be sourced from a backend aggregate scoped to that operator, SHALL render
+the backend operating-date attribution as-is, and SHALL NOT block sales or
+calculate coverage or expected cash from client-side sales data.
 
 #### Scenario: Cashier begins a day without a closing
-- **WHEN** a Cashier has activity on the current business day and no closing
+- **WHEN** a Cashier has activity on the current operating date and no closing
   covers the current reconciliation point
 - **THEN** the app shell shows "Caja en curso" and keeps the POS usable
 
@@ -30,6 +31,11 @@ sales or calculate coverage from client-side sales data.
 - **THEN** the app shell communicates that the state could not be updated,
   surfaces the backend message where available, and does not block the POS
 
+#### Scenario: Cross-midnight shift state
+- **WHEN** a backend response attributes sales after midnight to an opening
+  operating date
+- **THEN** the shell renders that response without client regrouping
+
 ### Requirement: Reconciliation state remains accessible and responsive
 The cashier reconciliation indicator SHALL be operable by keyboard, SHALL
 communicate its status without relying only on color, and SHALL remain usable
@@ -47,9 +53,10 @@ at mobile widths.
 
 ### Requirement: Admin can review daily reconciliation states
 The frontend SHALL provide an Admin-only report of daily reconciliation states,
-with one row per Cashier and business day. The report SHALL distinguish a day
-with no activity from a day that has sales but no closing, a current open day,
-a recorded closing, and a closing that needs updating.
+with one row per returned operator and operating business date. The report SHALL
+distinguish a day with no activity from a day that has sales but no closing, a
+current open day, a recorded closing, and a closing that needs updating; it
+SHALL present a nullable opening-fund summary separately from reconciliation.
 
 #### Scenario: Admin reviews a range with mixed states
 - **WHEN** an Admin requests a date range containing Cashiers with recorded,
@@ -64,3 +71,7 @@ a recorded closing, and a closing that needs updating.
 #### Scenario: Non-admin cannot access the report
 - **WHEN** a Cashier or Inventory Manager navigates to the report
 - **THEN** the frontend gates the route and no report request is issued
+
+#### Scenario: Report row has an opening fund
+- **WHEN** daily status includes an opening-fund summary
+- **THEN** the report distinguishes it textually from the reconciliation state

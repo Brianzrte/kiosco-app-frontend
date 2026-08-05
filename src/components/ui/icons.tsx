@@ -345,3 +345,41 @@ export function IconCalculator(props: IconProps) {
     </Icon>
   );
 }
+
+// Clock face — "Pendiente" status badge on purchase orders
+// (redesign-frontend-purchasing-section). Paths copied literally from the
+// Claude Design mockup (PurchasingHub.dc.html / PurchaseOrderDetail.dc.html).
+export function IconClock(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3.5 2" />
+    </Icon>
+  );
+}
+
+// Three uneven text lines — "Describir el producto" tab in the add-uncataloged-
+// item form (redesign-frontend-purchasing-section). Path copied literally
+// from AddUncatalogedItem.dc.html; distinct from IconMenu (three equal
+// full-width lines), which is the app's nav hamburger.
+export function IconTextLines(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h10" />
+    </Icon>
+  );
+}
+
+// Two uneven horizontal lines — "Recibí menos" line action in the purchase
+// order reception detail (redesign-frontend-purchasing-section). Path copied
+// literally from PurchaseOrderDetail.dc.html.
+export function IconPartialLines(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 8h16" />
+      <path d="M4 16h9" />
+    </Icon>
+  );
+}

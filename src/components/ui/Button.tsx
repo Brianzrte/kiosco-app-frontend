@@ -5,7 +5,16 @@ import { MOTION } from "@/lib/motion";
 import { Spinner } from "./Spinner";
 
 type Variant =
-  "primary" | "secondary" | "danger" | "success" | "confirm" | "ghost";
+  | "primary"
+  | "secondary"
+  | "danger"
+  | "success"
+  | "confirm"
+  | "ghost"
+  | "warning"
+  | "success-tint"
+  | "warning-tint"
+  | "danger-tint";
 
 const variants: Record<Variant, string> = {
   primary:
@@ -18,6 +27,13 @@ const variants: Record<Variant, string> = {
   // white text to reach WCAG AA (~2.3:1). Dark text gets ~6.4:1.
   success:
     "bg-success text-text-primary hover:bg-success/90 disabled:bg-text-disabled",
+  // Solid amber, dark text (same contrast reasoning as `success` above:
+  // #f59e0b is too light for white text to reach AA). Used for "Confirmar
+  // recepción parcial" (PurchaseOrderDetail.dc.html) — the mockup's
+  // line-level partial-receipt confirm is amber, not the app's default
+  // violet primary.
+  warning:
+    "bg-warning text-text-primary hover:bg-warning/90 disabled:bg-text-disabled",
   // Dedicated to the POS sale-confirmation button. Deliberately NOT named
   // "success" and NOT backed by --color-success: that token is a generic,
   // brighter green reused by Toast/Badge/inventory deltas, and reusing it
@@ -29,6 +45,20 @@ const variants: Record<Variant, string> = {
     "bg-confirm-sale text-text-inverse hover:bg-confirm-sale/90 disabled:bg-text-disabled",
   ghost:
     "bg-transparent text-primary hover:bg-primary-light disabled:text-text-disabled",
+  // Tinted-fill pills for the purchase-order reception line actions
+  // (redesign-frontend-purchasing-section, PurchaseOrderDetail.dc.html):
+  // "Recibí todo" / "Recibí menos" / "Sacar línea". Deliberately their own
+  // variants rather than `ghost` + a className bg override — Tailwind
+  // resolves same-property utility conflicts by its own internal stylesheet
+  // order, not by position in the class string, so `ghost`'s `bg-transparent`
+  // could silently win over a className-level `bg-success/12` and render a
+  // borderless-looking white button instead of the mockup's tinted pill.
+  "success-tint":
+    "border border-success/40 bg-success/12 text-(--color-success-strong) hover:bg-success/22 disabled:border-border disabled:bg-transparent disabled:text-text-disabled",
+  "warning-tint":
+    "border border-warning/40 bg-warning/12 text-(--color-warning-strong) hover:bg-warning/22 disabled:border-border disabled:bg-transparent disabled:text-text-disabled",
+  "danger-tint":
+    "border border-error/40 bg-error/12 text-(--color-error-strong) hover:bg-error/22 disabled:border-border disabled:bg-transparent disabled:text-text-disabled",
 };
 
 type Size = "md" | "sm";
@@ -56,6 +86,8 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: Size;
   /** Square footprint sized for a single icon, no visible label (still needs `aria-label`). Replaces the `size-11 !p-0 md:size-9` className overrides previously written ad hoc at each call site (PosView's quantity steppers). */
   iconOnly?: boolean;
+  /** Keeps a touch-safe icon target on mobile while using the compact desktop density for controls embedded in operational rows. */
+  compactDesktop?: boolean;
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -64,6 +96,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       iconOnly = false,
+      compactDesktop = false,
       className = "",
       pending = false,
       pendingImmediate = false,
@@ -99,7 +132,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || pending}
         aria-busy={pending || undefined}
-        className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${variants[variant]} ${className}`}
+        className={`inline-flex items-center justify-center gap-2 rounded-app text-sm font-medium transition-[color,background-color,border-color,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${iconOnly ? iconOnlySizes[size] : sizes[size]} ${iconOnly && compactDesktop && size === "md" ? "md:size-9" : ""} ${variants[variant]} ${className}`}
         {...props}
       >
         {showSpinner && <Spinner />}

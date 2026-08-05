@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;}
+a{color:#7c3aed;text-decoration:none;}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#f8f8fb;font-family:'Geist',ui-sans-serif,system-ui,-apple-system,sans-serif;color:#211f2b">
+
+  <div style="display:flex;align-items:center;gap:6px;padding:14px 24px;background:#ffffff;border-bottom:1px solid #dcd9e6;flex-wrap:wrap">
+    <span style="font-weight:700;color:#211f2b;margin-right:16px;font-size:14px">Compras y proveedores — rediseño</span>
+    <a href="PurchasingHub.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">1. Hub</a>
+    <a href="PurchaseOrderDetail.dc.html" style="padding:6px 12px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:13px;font-weight:600">2. Detalle de pedido</a>
+    <a href="AddUncatalogedItem.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">3. Alta ítem no pedido</a>
+    <a href="SupplierDetail.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">4. Ficha proveedor</a>
+    <a href="NewPurchaseOrder.dc.html" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:999px;color:#615e6e;font-size:13px;font-weight:500">5. Nuevo pedido</a>
+  </div>
+
+  <div style="max-width:1400px;margin:0 auto;padding:32px 24px 80px;display:flex;flex-wrap:wrap;gap:32px">
+
+    <div style="flex:3 1 760px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+      <a href="PurchasingHub.dc.html" style="font-size:13px;font-weight:600;color:#7c3aed">← Volver a compras</a>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.01em;margin:0">Pedido de Distribuidora Cuyo Bebidas</h1>
+            <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:12px;font-weight:600">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>
+              Pendiente
+            </span>
+          </div>
+          <p style="margin:6px 0 0;font-size:14px;color:#615e6e">Creado el 30 de julio · objetivo hoy, 4 de agosto</p>
+        </div>
+        <button style-hover="background:#f3f1f9" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:14px;font-weight:500;cursor:pointer;min-height:44px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+          Agregar ítem no pedido
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:12px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="#f59e0b" stroke="none"></circle></svg>
+        <p style="margin:0;font-size:13px;color:#211f2b"><strong>Si no recibís ningún ítem de este pedido, se cancela automáticamente.</strong> Cada línea necesita una acción antes de poder confirmar.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ lines }}" as="item" hint-placeholder-count="5">
+          <div style="border:1px solid #dcd9e6;border-radius:12px;background:#ffffff;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <p style="margin:0;font-size:15px;font-weight:600;color:#211f2b">{{ item.name }}</p>
+                  <sc-if value="{{ item.uncataloged }}">
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:rgba(245,158,11,0.15);color:#f59e0b;font-size:11px;font-weight:600">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"></circle></svg>
+                      Pendiente de alta
+                    </span>
+                  </sc-if>
+                </div>
+                <p style="margin:2px 0 0;font-size:13px;color:#615e6e">Solicitado: {{ item.qty }} · Costo unitario: {{ item.unitCostFmt }}</p>
+              </div>
+              <p style="margin:0;font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:15px;font-weight:600;flex-shrink:0">{{ item.subtotalFmt }}</p>
+            </div>
+
+            <sc-if value="{{ item.isAllResolved }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:10px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.35)">
+                <span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#15803d">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 2.5 2.5L16 9.5"></path></svg>
+                  Recibido completo: {{ item.qty }}/{{ item.qty }}
+                </span>
+                <button onClick="{{ item.doUndo }}" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:8px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px">Deshacer</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.isPartialResolved }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35)">
+                <span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#b45309">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16"></path><path d="M4 16h9"></path></svg>
+                  {{ item.partialLabel }}
+                </span>
+                <button onClick="{{ item.doUndo }}" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:8px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px">Deshacer</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ item.isRemovedResolved }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35)">
+                <span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#dc2626">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  {{ item.removedLabel }}
+                </span>
+                <button onClick="{{ item.doUndo }}" style-hover="background:#f3f1f9" style="padding:6px 12px;border-radius:8px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:12px;font-weight:600;cursor:pointer;min-height:36px">Deshacer</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ item.isPartialActive }}">
+              <div style="padding:14px;border-radius:10px;background:rgba(245,158,11,0.06);border:1.5px solid #f59e0b;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;gap:14px;flex-wrap:wrap">
+                  <div style="flex:0 0 130px">
+                    <label style="display:block;margin-bottom:5px;font-size:12px;font-weight:600;color:#615e6e">Cantidad recibida</label>
+                    <input type="number" min="0" inputmode="numeric" value="{{ draftQty }}" onChange="{{ onDraftQty }}" style="width:100%;box-sizing:border-box;border:1px solid #dcd9e6;border-radius:8px;padding:10px 12px;font-size:14px;min-height:44px" />
+                  </div>
+                  <div style="flex:1;min-width:220px">
+                    <label style="display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:#b45309">Motivo de la diferencia <span aria-hidden="true">*</span> — obligatorio</label>
+                    <input value="{{ draftReason }}" onChange="{{ onDraftReason }}" placeholder="Ej: llegaron rotas, faltante del proveedor…" style="width:100%;box-sizing:border-box;border:1.5px solid #f59e0b;border-radius:8px;padding:10px 12px;font-size:14px;min-height:44px;background:#ffffff" />
+                    <sc-if value="{{ item.partialConfirmDisabled }}">
+                      <p style="margin:6px 0 0;font-size:12px;color:#b45309;font-weight:600">Completá el motivo para confirmar esta línea.</p>
+                    </sc-if>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+                  <button onClick="{{ onCancelAction }}" style-hover="background:#f3f1f9" style="padding:10px 16px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:13px;font-weight:600;cursor:pointer;min-height:44px">Cancelar</button>
+                  <sc-if value="{{ reasonMissing }}">
+                    <button disabled style="padding:10px 18px;border-radius:10px;border:none;background:#e5e2ee;color:#a6a2b3;font-size:13px;font-weight:700;cursor:not-allowed;min-height:44px">Confirmar recepción parcial</button>
+                  </sc-if>
+                  <sc-if value="{{ reasonFilled }}">
+                    <button onClick="{{ onConfirmPartial }}" style-hover="background:#d97706" style="padding:10px 18px;border-radius:10px;border:none;background:#f59e0b;color:#211f2b;font-size:13px;font-weight:700;cursor:pointer;min-height:44px">Confirmar recepción parcial</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ item.isRemoveActive }}">
+              <div style="padding:14px;border-radius:10px;background:rgba(239,68,68,0.06);border:1.5px solid #ef4444;display:flex;flex-direction:column;gap:12px">
+                <div>
+                  <label style="display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:#dc2626">Motivo de no entrega <span aria-hidden="true">*</span> — obligatorio</label>
+                  <input value="{{ draftReason }}" onChange="{{ onDraftReason }}" placeholder="Ej: el proveedor no lo trajo, producto discontinuado…" style="width:100%;box-sizing:border-box;border:1.5px solid #ef4444;border-radius:8px;padding:10px 12px;font-size:14px;min-height:44px;background:#ffffff" />
+                  <sc-if value="{{ item.partialConfirmDisabled }}">
+                    <p style="margin:6px 0 0;font-size:12px;color:#dc2626;font-weight:600">Completá el motivo para sacar esta línea del pedido.</p>
+                  </sc-if>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+                  <button onClick="{{ onCancelAction }}" style-hover="background:#f3f1f9" style="padding:10px 16px;border-radius:10px;border:1px solid #dcd9e6;background:#ffffff;color:#211f2b;font-size:13px;font-weight:600;cursor:pointer;min-height:44px">Cancelar</button>
+                  <sc-if value="{{ reasonMissing }}">
+                    <button disabled style="padding:10px 18px;border-radius:10px;border:none;background:#e5e2ee;color:#a6a2b3;font-size:13px;font-weight:700;cursor:not-allowed;min-height:44px">Confirmar y sacar línea</button>
+                  </sc-if>
+                  <sc-if value="{{ reasonFilled }}">
+                    <button onClick="{{ onConfirmRemove }}" style-hover="background:#dc2626" style="padding:10px 18px;border-radius:10px;border:none;background:#ef4444;color:#ffffff;font-size:13px;font-weight:700;cursor:pointer;min-height:44px">Confirmar y sacar línea</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ item.showButtons }}">
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button onClick="{{ item.doReceiveAll }}" style-hover="background:rgba(34,197,94,0.22)" style="flex:1 1 160px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:10px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.12);color:#15803d;font-size:13px;font-weight:700;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12.5 2.5 2.5L16 9.5"></path></svg>
+                  Recibí todo
+                </button>
+                <button onClick="{{ item.doOpenPartial }}" style-hover="background:rgba(245,158,11,0.22)" style="flex:1 1 160px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:10px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.12);color:#b45309;font-size:13px;font-weight:700;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16"></path><path d="M4 16h9"></path></svg>
+                  Recibí menos
+                </button>
+                <button onClick="{{ item.doOpenRemove }}" style-hover="background:rgba(239,68,68,0.22)" style="flex:1 1 160px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;border-radius:10px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.12);color:#dc2626;font-size:13px;font-weight:700;cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"></path></svg>
+                  Sacar línea
+                </button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <p style="margin:0;font-size:13px;color:#615e6e">{{ resolvedCount }} de {{ totalLines }} líneas resueltas</p>
+          <p style="margin:2px 0 0;font-size:18px;font-weight:700">Total del pedido: {{ grandTotal }}</p>
+        </div>
+        <sc-if value="{{ readyCancel }}">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#dc2626">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v4"></path><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"></circle></svg>
+              No vas a recibir nada de este pedido.
+            </span>
+            <button style="padding:12px 20px;border-radius:10px;border:none;background:#ef4444;color:#ffffff;font-size:14px;font-weight:700;cursor:pointer;min-height:44px">Confirmar y cancelar pedido</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ readyNormal }}">
+          <button style="padding:12px 20px;border-radius:10px;border:none;background:#7c3aed;color:#ffffff;font-size:14px;font-weight:700;cursor:pointer;min-height:44px">Confirmar recepción</button>
+        </sc-if>
+        <sc-if value="{{ notReady }}">
+          <button disabled style="padding:12px 20px;border-radius:10px;border:none;background:#a6a2b3;color:#ffffff;font-size:14px;font-weight:700;cursor:not-allowed;min-height:44px">Resolvé todas las líneas para confirmar</button>
+        </sc-if>
+      </div>
+
+    </div>
+
+    <aside style="flex:1 1 300px;min-width:280px;max-width:340px;position:sticky;top:24px;align-self:flex-start;display:flex;flex-direction:column;gap:14px">
+      <div style="border-radius:12px;border:1px solid #dcd9e6;background:#ffffff;padding:18px;box-shadow:0 1px 2px rgba(31,41,55,0.04),0 2px 8px rgba(31,41,55,0.06)">
+        <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#a6a2b3;margin:0 0 14px">La fila de recepción</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">1</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>Tres acciones, mismo tamaño, imposibles de confundir.</strong> Recibí todo / Recibí menos / Sacar línea llevan ícono + texto + color distinto (éxito / advertencia / peligro) — nunca dependen sólo del color, y nunca comparten forma.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">2</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b"><strong>El motivo bloquea antes de que lo intentes.</strong> Al abrir "Recibí menos" o "Sacar línea", el campo ya se ve requerido (borde + asterisco) y el botón de confirmar esa línea queda gris con la leyenda "Completá el motivo" — no hay sorpresa al tocar confirmar.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">3</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">La advertencia de cancelación es un banner fijo, no un texto dentro de un diálogo que se puede pasar por alto sin leer.</p>
+          </div>
+          <div style="display:flex;gap:10px">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">4</span>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#211f2b">Densidad alta + targets táctiles: se logra con botones de acción de 44px de alto por fila, y expandiendo sólo la línea activa en vez de agrandar toda la tabla.</p>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#a6a2b3;line-height:1.5;margin:0;padding:0 4px">Probá el patrón: tocá "Recibí menos" o "Sacar línea" en cualquier fila.</p>
+    </aside>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SAMPLE_LINES = [
+  { id: "l1", name: "Coca-Cola 500ml", qty: 24, unitCost: 950, catalog: true },
+  { id: "l2", name: "Agua Villavicencio 1.5L", qty: 12, unitCost: 780, catalog: true },
+  { id: "l3", name: "Cerveza Quilmes lata 473ml", qty: 30, unitCost: 1100, catalog: true },
+  { id: "l4", name: "Speed cola 500ml", qty: 18, unitCost: 620, catalog: true },
+  { id: "l5", name: "Jugo Cepita naranja 200ml (pack promo, sin SKU)", qty: 20, unitCost: 340, catalog: false },
+];
+
+class Component extends DCLogic {
+  state = {
+    resolutions: {},
+    activeAction: null,
+    draftQty: "",
+    draftReason: "",
+  };
+
+  openAction(lineId, type) {
+    const line = SAMPLE_LINES.find((l) => l.id === lineId);
+    this.setState({
+      activeAction: { lineId, type },
+      draftQty: type === "partial" ? String(line.qty) : "",
+      draftReason: "",
+    });
+  }
+
+  cancelAction() {
+    this.setState({ activeAction: null, draftQty: "", draftReason: "" });
+  }
+
+  receiveAll(lineId) {
+    this.setState((s) => ({
+      resolutions: { ...s.resolutions, [lineId]: { type: "all" } },
+      activeAction: null,
+    }));
+  }
+
+  confirmPartial() {
+    const { activeAction, draftQty, draftReason } = this.state;
+    if (!activeAction || !draftReason.trim()) return;
+    this.setState((s) => ({
+      resolutions: {
+        ...s.resolutions,
+        [activeAction.lineId]: { type: "partial", qty: draftQty, reason: draftReason.trim() },
+      },
+      activeAction: null,
+      draftQty: "",
+      draftReason: "",
+    }));
+  }
+
+  confirmRemove() {
+    const { activeAction, draftReason } = this.state;
+    if (!activeAction || !draftReason.trim()) return;
+    this.setState((s) => ({
+      resolutions: { ...s.resolutions, [activeAction.lineId]: { type: "removed", reason: draftReason.trim() } },
+      activeAction: null,
+      draftReason: "",
+    }));
+  }
+
+  undo(lineId) {
+    this.setState((s) => {
+      const next = { ...s.resolutions };
+      delete next[lineId];
+      return { resolutions: next };
+    });
+  }
+
+  renderVals() {
+    const { resolutions, activeAction, draftQty, draftReason } = this.state;
+    const resolvedCount = Object.keys(resolutions).length;
+    const allResolved = resolvedCount === SAMPLE_LINES.length;
+    const totalReceived = SAMPLE_LINES.reduce((sum, line) => {
+      const r = resolutions[line.id];
+      if (!r) return sum;
+      if (r.type === "all") return sum + line.qty;
+      if (r.type === "partial") return sum + (Number(r.qty) || 0);
+      return sum;
+    }, 0);
+    const willCancel = allResolved && totalReceived === 0;
+
+    const lines = SAMPLE_LINES.map((line) => {
+      const resolution = resolutions[line.id];
+      const isActive = activeAction && activeAction.lineId === line.id;
+      const subtotal = line.qty * line.unitCost;
+      return {
+        ...line,
+        uncataloged: !line.catalog,
+        subtotalFmt: `$${subtotal.toLocaleString("es-AR")}`,
+        unitCostFmt: `$${line.unitCost.toLocaleString("es-AR")}`,
+        isAllResolved: !!(resolution && resolution.type === "all"),
+        isPartialResolved: !!(resolution && resolution.type === "partial"),
+        isRemovedResolved: !!(resolution && resolution.type === "removed"),
+        partialLabel: resolution && resolution.type === "partial" ? `Recibido ${resolution.qty} de ${line.qty} · Motivo: ${resolution.reason}` : "",
+        removedLabel: resolution && resolution.type === "removed" ? `Fuera del pedido · Motivo: ${resolution.reason}` : "",
+        isPartialActive: !!(isActive && activeAction.type === "partial"),
+        isRemoveActive: !!(isActive && activeAction.type === "removed"),
+        showButtons: !resolution && !isActive,
+        partialConfirmDisabled: !draftReason.trim(),
+        doReceiveAll: () => this.receiveAll(line.id),
+        doOpenPartial: () => this.openAction(line.id, "partial"),
+        doOpenRemove: () => this.openAction(line.id, "removed"),
+        doUndo: () => this.undo(line.id),
+      };
+    });
+
+    return {
+      lines,
+      draftQty,
+      draftReason,
+      onDraftQty: (e) => this.setState({ draftQty: e.target.value }),
+      onDraftReason: (e) => this.setState({ draftReason: e.target.value }),
+      reasonMissing: !draftReason.trim(),
+      reasonFilled: !!draftReason.trim(),
+      onCancelAction: () => this.cancelAction(),
+      onConfirmPartial: () => this.confirmPartial(),
+      onConfirmRemove: () => this.confirmRemove(),
+      resolvedCount,
+      totalLines: SAMPLE_LINES.length,
+      readyNormal: allResolved && !willCancel,
+      readyCancel: allResolved && willCancel,
+      notReady: !allResolved,
+      grandTotal: `$${SAMPLE_LINES.reduce((s, l) => s + l.qty * l.unitCost, 0).toLocaleString("es-AR")}`,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

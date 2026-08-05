@@ -8,13 +8,19 @@ Fuente: `CLAUDE.md` (spec de frontend y design system) y los specs de backend en
 ## Requirements
 ### Requirement: Stock view per product
 
-The frontend SHALL show current stock from the inventory endpoints, displaying quantity, minimum quantity, and last update. Low-stock status SHALL be taken from the backend and SHALL NOT be derived in the client. The list SHALL visually distinguish three states — not initialised, initialised at zero, and below minimum — using text, never colour alone. Pagination SHALL use the backend's `page` parameter.
+The frontend SHALL show current stock from the inventory endpoints, displaying quantity, minimum quantity, and last update. For a `unitario` product, quantity and minimum quantity SHALL be whole numbers, exactly as today. For a `pesable` product, quantity and minimum quantity SHALL be decimal numbers expressed in kilograms with up to 3 decimals, and SHALL be displayed with that precision rather than rounded or truncated to a whole number. Low-stock status SHALL be taken from the backend and SHALL NOT be derived in the client. The list SHALL visually distinguish three states — not initialised, initialised at zero, and below minimum — using text, never colour alone; for a `pesable` product, "initialised at zero" means a quantity of exactly `0.000`. Pagination SHALL use the backend's `page` parameter.
 
 The screen SHALL support opening directly to a specific product's "Gestionar stock" dialog via a `product_id` query parameter in its URL, resolving that product with `GET /api/v1/products/{id}` independently of whichever page of the paginated, filtered list is currently loaded. When that product resolves, its "Gestionar stock" dialog SHALL open immediately — in initialization mode if it has no stock record, or in adjustment mode if it does — with the same content it would show if opened by clicking its row. When `product_id` is absent, the screen's behavior SHALL be unchanged from before this requirement was extended.
+
+While the inventory screen stays mounted and visible, the stock list SHALL re-fetch its current query (same search term, category, low-stock filter, and page) on a fixed interval so a stock change registered elsewhere — including a return's automatic reintegration, or any other movement — becomes reflected without the user navigating away or reloading. A background refresh that fails SHALL be ignored, keeping the previously loaded rows on screen. If a "Gestionar stock" dialog for a product is open when a refresh tick occurs, the refresh SHALL update the underlying list without closing that dialog or altering its in-progress input.
 
 #### Scenario: Stock displayed
 - **WHEN** the inventory screen loads a product's stock
 - **THEN** quantity, minimum quantity, and updated-at are shown
+
+#### Scenario: Weighable product's stock is shown in kilograms with decimals
+- **WHEN** the inventory screen loads a `pesable` product's stock
+- **THEN** quantity and minimum quantity are shown as kilograms with up to 3 decimals, not rounded to a whole number
 
 #### Scenario: Low stock highlighted
 - **WHEN** a product is reported low on stock by the backend
@@ -23,6 +29,10 @@ The screen SHALL support opening directly to a specific product's "Gestionar sto
 #### Scenario: Uninitialised is distinct from zero
 - **WHEN** a product has no stock record and another has quantity zero
 - **THEN** the first reads as not initialised and offers initialisation, and the second reads as zero and offers adjustment
+
+#### Scenario: A weighable product at exactly zero kilograms reads as zero, not uninitialised
+- **WHEN** a `pesable` product has an initialized stock record with quantity `0.000`
+- **THEN** it reads as zero and offers adjustment, exactly like a `unitario` product with quantity `0`
 
 #### Scenario: Threshold rule is never reimplemented
 - **WHEN** the stock list renders
@@ -49,15 +59,35 @@ The screen SHALL support opening directly to a specific product's "Gestionar sto
 - **THEN** its behavior is exactly as it was before this requirement was
   extended
 
+#### Scenario: A return reflects in the stock list without navigating
+- **WHEN** the inventory screen stays open and a return registered by someone else, from another device, reintegrates stock for a listed product
+- **THEN** within one refresh interval the affected row's quantity updates to the backend's current value, without the user reloading or navigating away
+
+#### Scenario: Background refresh does not close an open stock dialog
+- **WHEN** a "Gestionar stock" dialog is open for a product and a periodic refresh tick of the underlying list occurs
+- **THEN** the dialog stays open with its in-progress input untouched; only the background list data updates
+
+#### Scenario: Background refresh failure keeps the last good rows
+- **WHEN** a periodic refresh of the stock list fails while rows from a previous successful load are already shown
+- **THEN** the previously loaded rows stay on screen, no error replaces them, and the next interval tick retries
+
 ### Requirement: Initialize stock
-The frontend SHALL allow initializing stock for a product without stock via `POST /api/v1/inventory/stock` with `{ product_id, quantity, reason }`, where quantity SHALL be ≥ 0.
+The frontend SHALL allow initializing stock for a product without stock via `POST /api/v1/inventory/stock` with `{ product_id, quantity, reason }`, where quantity SHALL be ≥ 0. For a `unitario` product, quantity SHALL be a whole number, exactly as today. For a `pesable` product, quantity SHALL be entered and sent as a decimal number in kilograms with up to 3 decimals, validated with the same rule already used for weight in the POS cart (`isValidWeight`).
 
 #### Scenario: Stock initialized
 - **WHEN** a valid initialization is submitted
 - **THEN** the stock record is created and the view shows the new quantity
 
+#### Scenario: Weighable stock is initialized in kilograms
+- **WHEN** a `pesable` product's stock is initialized with a decimal quantity such as `"12.500"`
+- **THEN** the stock record is created with that exact decimal quantity and the view shows it with up to 3 decimals
+
+#### Scenario: Invalid weight is rejected before any request
+- **WHEN** the entered quantity for a `pesable` product is negative, non-numeric, zero, or has more than 3 decimals
+- **THEN** an inline error is shown and no request is sent to the backend
+
 ### Requirement: Manual stock adjustment requires a reason
-The frontend SHALL provide an adjustment form sending `{ quantity_delta, reason }` to `POST /api/v1/inventory/stock/{product_id}/adjust`. The form SHALL NOT submit with an empty reason, and positive/negative deltas SHALL be clearly distinguished (entrada/salida).
+The frontend SHALL provide an adjustment form sending `{ quantity_delta, reason }` to `POST /api/v1/inventory/stock/{product_id}/adjust`. The form SHALL NOT submit with an empty reason, and positive/negative deltas SHALL be clearly distinguished (entrada/salida). For a `pesable` product, `quantity_delta` SHALL be a decimal number in kilograms with up to 3 decimals, using the same validation as initialization.
 
 #### Scenario: Adjustment without reason blocked
 - **WHEN** the user tries to submit an adjustment with an empty reason
@@ -67,16 +97,24 @@ The frontend SHALL provide an adjustment form sending `{ quantity_delta, reason 
 - **WHEN** a delta with a reason is submitted and accepted
 - **THEN** the displayed quantity updates and a success toast appears
 
+#### Scenario: Successful weighable adjustment
+- **WHEN** a decimal delta with a reason is submitted for a `pesable` product and accepted
+- **THEN** the displayed quantity updates with its decimal precision and a success toast appears
+
 #### Scenario: Backend rejects adjustment
 - **WHEN** the backend rejects the adjustment (e.g. would go below zero)
 - **THEN** the backend message is shown and the form values are preserved
 
 ### Requirement: Set minimum quantity
-The frontend SHALL allow Admin and Inventory Manager to set a product's low-stock threshold via `PATCH /api/v1/inventory/stock/{product_id}/minimum`, from the same dialog as stock adjustment but on a separate tab so the two operations cannot be confused. The value SHALL be a non-negative integer, and the interface SHALL state explicitly that `0` disables the alert. Setting a minimum SHALL NOT require a reason, because it moves no merchandise.
+The frontend SHALL allow Admin and Inventory Manager to set a product's low-stock threshold via `PATCH /api/v1/inventory/stock/{product_id}/minimum`, from the same dialog as stock adjustment but on a separate tab so the two operations cannot be confused. For a `unitario` product, the value SHALL be a non-negative integer, exactly as today. For a `pesable` product, the value SHALL be a non-negative decimal number in kilograms with up to 3 decimals. The interface SHALL state explicitly that `0` disables the alert. Setting a minimum SHALL NOT require a reason, because it moves no merchandise.
 
 #### Scenario: Threshold set
 - **WHEN** a non-negative minimum is submitted and accepted
 - **THEN** the displayed minimum updates and a success toast confirms it
+
+#### Scenario: Weighable threshold set in kilograms
+- **WHEN** a non-negative decimal minimum such as `"0.500"` is submitted for a `pesable` product and accepted
+- **THEN** the displayed minimum updates with its decimal precision and a success toast confirms it
 
 #### Scenario: Zero is explained, not guessed
 - **WHEN** the minimum field is shown
@@ -95,7 +133,8 @@ The frontend SHALL allow Admin and Inventory Manager to set a product's low-stoc
 - **THEN** the backend message is shown and the previous minimum remains displayed
 
 ### Requirement: Low-stock view
-The frontend SHALL offer a low-stock filter on the stock list, driven by the backend's `low_stock_only` parameter. The frontend SHALL NOT compute low-stock status itself under any circumstance. Products without initialised stock SHALL never appear as low stock. When no thresholds are configured, the empty state SHALL explain that no thresholds exist and lead to configuring them, rather than reporting that no products are low.
+
+The frontend SHALL offer a low-stock filter on the stock list, driven by the backend's `low_stock_only` parameter. The frontend SHALL NOT compute low-stock status itself under any circumstance. Products without initialised stock SHALL never appear as low stock. When no thresholds are configured, the empty state SHALL explain that no thresholds exist and lead to configuring them, rather than reporting that no products are low. The set of product ids marked low stock SHALL be refreshed on the same fixed interval as the stock list itself while the screen stays mounted and visible, so a product crossing its threshold because of a change registered elsewhere is marked without navigating away.
 
 #### Scenario: Filter delegates to the backend
 - **WHEN** the low-stock filter is active
@@ -109,8 +148,12 @@ The frontend SHALL offer a low-stock filter on the stock list, driven by the bac
 - **WHEN** the low-stock filter returns nothing and no product has a threshold above zero
 - **THEN** the empty state explains that no thresholds are configured and offers a path to configure them
 
+#### Scenario: Low-stock marking updates without navigating
+- **WHEN** the screen stays open and a product's stock crosses its minimum threshold because of a change registered elsewhere
+- **THEN** within one refresh interval that product's low-stock marking in the list reflects the new state
+
 ### Requirement: Stock movement history
-The frontend SHALL show stock movement history from `GET /api/v1/inventory/movements`, within the inventory section and reachable from a product's row with that product pre-filtered. Each movement SHALL display the quantity transition from previous to new value, the type, the reason, the acting user's name, and the timestamp. Filters for product, movement type, and date range SHALL be available, with type selectable only from the defined values. Results SHALL be paginated.
+The frontend SHALL show stock movement history from `GET /api/v1/inventory/movements`, within the inventory section and reachable from a product's row with that product pre-filtered. Each movement SHALL display the quantity transition from previous to new value, the type, the reason, the acting user's name, and the timestamp. For a `pesable` product, the quantity transition SHALL be shown with up to 3 decimals rather than rounded to a whole number. Filters for product, movement type, and date range SHALL be available, with type selectable only from the defined values. Results SHALL be paginated.
 
 #### Scenario: History from a product
 - **WHEN** the user opens the history from a product's row
@@ -119,6 +162,10 @@ The frontend SHALL show stock movement history from `GET /api/v1/inventory/movem
 #### Scenario: Quantity transition is legible
 - **WHEN** a movement is listed
 - **THEN** it shows the previous and resulting quantities as a transition, not only the delta
+
+#### Scenario: Weighable movement shows decimal precision
+- **WHEN** a movement for a `pesable` product is listed
+- **THEN** the previous and resulting quantities are shown with up to 3 decimals, not rounded to a whole number
 
 #### Scenario: Acting user is shown
 - **WHEN** a movement is listed

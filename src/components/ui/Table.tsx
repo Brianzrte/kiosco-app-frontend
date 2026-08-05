@@ -8,7 +8,10 @@ export function Table({
     <div
       className={`overflow-x-auto rounded-app border border-border bg-surface shadow-soft ${className}`}
     >
-      <table className="w-full text-left text-sm" {...props} />
+      <table
+        className="w-full text-left text-sm [&_tbody_tr:not(:last-child)_td]:border-b [&_tbody_tr:not(:last-child)_td]:border-border"
+        {...props}
+      />
     </div>
   );
 }
@@ -33,7 +36,7 @@ export function Td({
 }: TdHTMLAttributes<HTMLTableCellElement> & { compact?: boolean }) {
   return (
     <td
-      className={`border-b border-border ${compact ? "px-3 py-2" : "px-4 py-3"} last:border-b-0 ${className}`}
+      className={`${compact ? "px-3 py-2" : "px-4 py-3"} ${className}`}
       {...props}
     />
   );

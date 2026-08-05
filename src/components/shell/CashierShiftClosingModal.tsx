@@ -6,183 +6,117 @@ import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api } from "@/lib/api";
-import { cashDifference, isCountedCash } from "@/lib/cashClosing";
+import { isCountedCash } from "@/lib/cashClosing";
 import { formatMoney } from "@/lib/money";
+import { CashClosing, CashClosingStatus } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
-import { CashClosing, CashierShiftSummary } from "@/lib/types";
 
-type ShiftRange = { date: string; from: string; to: string };
-
-function currentShiftRange(): ShiftRange {
+function currentBusinessDate(): string {
   const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
-
-  return { date, from: start.toISOString(), to: now.toISOString() };
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-export function CashierShiftClosingModal({
-  onClose,
-  onSaved,
-}: {
-  onClose: () => void;
-  onSaved: () => void;
-}) {
+function formatTimestamp(value: string): string {
+  return new Intl.DateTimeFormat("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+export function CashierShiftClosingModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
-  const range = useMemo(() => currentShiftRange(), []);
+  const date = useMemo(() => currentBusinessDate(), []);
   const [countedCash, setCountedCash] = useState("");
+  const [notes, setNotes] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [pending, setPending] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedClosing, setSavedClosing] = useState<CashClosing | null>(null);
   const fetcher = useCallback(
-    () => api<CashierShiftSummary>(`/sales/summary?from=${range.date}&to=${range.date}`),
-    [range.date],
+    () => api<CashClosingStatus>(`/cash-closings/current-status?date=${date}`),
+    [date],
   );
-  const { data: summary, error, reload } = useLoad(fetcher);
-
-  const difference = summary
-    ? cashDifference(summary.total_cash, countedCash)
-    : null;
-  const countedCashError =
-    countedCash && !isCountedCash(countedCash)
-      ? "Ingresá un importe con hasta dos decimales."
-      : undefined;
+  const { data: status, error, reload } = useLoad(fetcher);
+  const latestClosing = savedClosing ?? status?.latest_closing ?? null;
+  const canCorrect = latestClosing?.state === "provisional";
+  const countedCashError = countedCash && !isCountedCash(countedCash)
+    ? "Ingresá un importe con hasta dos decimales."
+    : undefined;
 
   async function saveClosing() {
-    if (!summary || difference === null) return;
-
+    if (!isCountedCash(countedCash)) return;
     setPending(true);
     setSaveError(null);
     try {
-      await api<CashClosing>("/cash-closings", {
-        method: "POST",
-        body: {
-          from: range.from,
-          to: range.to,
-          counted_cash: countedCash,
+      const closing = await api<CashClosing>(
+        canCorrect ? `/cash-closings/${latestClosing.id}` : "/cash-closings",
+        {
+          method: canCorrect ? "PUT" : "POST",
+          body: { to: new Date().toISOString(), counted_cash: countedCash, notes },
         },
-      });
-      toast("success", "Cierre de caja registrado");
+      );
+      setSavedClosing(closing);
+      setConfirming(false);
+      toast("success", canCorrect ? "Cierre de caja actualizado" : "Cierre de caja registrado");
       onSaved();
-      onClose();
-    } catch (e) {
-      const message =
-        e instanceof ApiError ? e.message : "Ocurrió un error inesperado.";
-      setSaveError(message);
-      toast("error", message);
+      reload();
+    } catch (cause) {
+      setSaveError(cause instanceof ApiError ? cause.message : "Ocurrió un error inesperado.");
     } finally {
       setPending(false);
     }
   }
 
+  if (savedClosing) {
+    return (
+      <Dialog open title="Cierre de caja registrado" onClose={onClose}>
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-text-secondary">El backend calculó el cierre de tu turno.</p>
+          <ClosingSummary closing={savedClosing} openingFund={status?.opening_fund ?? null} />
+          <Button onClick={onClose}>Listo</Button>
+        </div>
+      </Dialog>
+    );
+  }
+
   return (
-    <Dialog
-      open
-      title={confirming ? "Confirmar cierre de caja" : "Cierre de caja"}
-      onClose={onClose}
-      dismissible={!pending}
-    >
+    <Dialog open title={confirming ? "Confirmar cierre de caja" : "Cierre de caja"} onClose={onClose} dismissible={!pending}>
       {error ? (
         <div className="flex flex-col gap-4" role="alert">
           <p className="text-sm text-text-secondary">{error.message}</p>
-          <Button variant="secondary" onClick={reload} className="self-start">
-            Reintentar
-          </Button>
+          <Button variant="secondary" onClick={reload} className="self-start">Reintentar</Button>
         </div>
-      ) : !summary ? (
-        <p role="status" className="py-6 text-sm text-text-secondary">
-          Cargando efectivo esperado…
-        </p>
+      ) : !status ? (
+        <p role="status" className="py-6 text-sm text-text-secondary">Cargando estado de caja…</p>
+      ) : latestClosing?.state === "sealed" ? (
+        <div className="flex flex-col gap-5"><p className="text-sm text-text-secondary">Este cierre ya quedó sellado y no se puede corregir.</p><ClosingSummary closing={latestClosing} openingFund={status.opening_fund} /><Button onClick={onClose}>Cerrar</Button></div>
       ) : confirming ? (
         <div className="flex flex-col gap-5">
-          <p className="text-sm text-text-secondary">
-            Revisá los importes antes de registrar el cierre. Esta acción no se
-            puede deshacer desde la app.
-          </p>
-          <dl className="grid gap-3 rounded-app border border-border bg-surface-2 p-4 text-sm">
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-text-secondary">Efectivo esperado</dt>
-              <dd className="num font-semibold text-text-primary">
-                {formatMoney(summary.total_cash)}
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4">
-              <dt className="text-text-secondary">Efectivo contado</dt>
-              <dd className="num font-semibold text-text-primary">
-                {formatMoney(countedCash)}
-              </dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-4 border-t border-border pt-3">
-              <dt className="font-medium text-text-primary">Diferencia</dt>
-              <dd className="num font-semibold text-text-primary">
-                {formatMoney(difference!)}
-              </dd>
-            </div>
-          </dl>
-          {saveError && (
-            <p role="alert" className="text-sm text-error">
-              {saveError}
-            </p>
-          )}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button
-              variant="secondary"
-              onClick={() => setConfirming(false)}
-              disabled={pending}
-            >
-              Volver
-            </Button>
-            <Button onClick={saveClosing} pending={pending}>
-              {pending ? "Registrando…" : "Confirmar cierre"}
-            </Button>
-          </div>
+          <p className="text-sm text-text-secondary">El backend calculará el efectivo esperado y la diferencia usando el turno activo.</p>
+          {status.opening_fund && <OpeningFundSummary amount={status.opening_fund.amount} />}
+          <p className="num rounded-app border border-border bg-surface-2 p-4 text-lg font-semibold">Efectivo contado: {formatMoney(countedCash)}</p>
+          {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>Volver</Button><Button onClick={saveClosing} pending={pending}>{canCorrect ? "Confirmar corrección" : "Confirmar cierre"}</Button></div>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <div className="rounded-app border border-border bg-surface-2 p-4">
-            <p className="text-sm text-text-secondary">Efectivo esperado hoy</p>
-            <p className="num mt-1 text-2xl font-semibold text-text-primary">
-              {formatMoney(summary.total_cash)}
-            </p>
-            <p className="mt-1 text-sm text-text-secondary">
-              {summary.total_sales} ventas confirmadas en el día.
-            </p>
-          </div>
-          <Input
-            label="Efectivo contado"
-            type="text"
-            inputMode="decimal"
-            pattern="\\d+(\\.\\d{1,2})?"
-            placeholder="0.00"
-            title="Número con hasta dos decimales, p. ej. 1250.50"
-            value={countedCash}
-            onChange={(event) => setCountedCash(event.target.value)}
-            error={countedCashError}
-          />
-          {difference !== null && (
-            <div className="flex items-baseline justify-between gap-4 rounded-app border border-border bg-surface-2 px-4 py-3">
-              <span className="text-sm font-medium text-text-secondary">
-                Diferencia
-              </span>
-              <span className="num text-lg font-semibold text-text-primary">
-                {formatMoney(difference)}
-              </span>
-            </div>
-          )}
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => setConfirming(true)}
-              disabled={difference === null}
-            >
-              Revisar cierre
-            </Button>
-          </div>
+          <p className="text-sm text-text-secondary">Ingresá el efectivo contado. El cierre corresponde a tu turno activo.</p>
+          {status.opening_fund && <OpeningFundSummary amount={status.opening_fund.amount} />}
+          {canCorrect && <ClosingSummary closing={latestClosing} openingFund={status.opening_fund} />}
+          <Input label="Efectivo contado" type="text" inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="0.00" value={countedCash} onChange={(event) => setCountedCash(event.target.value)} error={countedCashError} />
+          <Input label="Notas (opcional)" value={notes} onChange={(event) => setNotes(event.target.value)} />
+          {saveError && <p role="alert" className="text-sm text-error">{saveError}</p>}
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="secondary" onClick={onClose}>Cancelar</Button><Button onClick={() => setConfirming(true)} disabled={!isCountedCash(countedCash)}>{canCorrect ? "Revisar corrección" : "Revisar cierre"}</Button></div>
         </div>
       )}
     </Dialog>
   );
+}
+
+function OpeningFundSummary({ amount }: { amount: string }) {
+  return <div className="rounded-app border border-border bg-surface-2 p-4"><p className="text-sm text-text-secondary">Fondo inicial del turno</p><p className="num mt-1 text-2xl font-semibold text-text-primary">{formatMoney(amount)}</p><p className="mt-1 text-sm text-text-secondary">Está incluido en el efectivo esperado que calcula el backend.</p></div>;
+}
+
+function ClosingSummary({ closing, openingFund }: { closing: CashClosing; openingFund: CashClosingStatus["opening_fund"] }) {
+  return <dl className="grid gap-3 rounded-app border border-border bg-surface-2 p-4 text-sm">{openingFund && <div className="flex justify-between gap-4"><dt className="text-text-secondary">Fondo inicial</dt><dd className="num font-semibold">{formatMoney(openingFund.amount)}</dd></div>}<div className="flex justify-between gap-4"><dt className="text-text-secondary">Turno</dt><dd className="text-right">{formatTimestamp(closing.from)} — {formatTimestamp(closing.to)}</dd></div><div className="flex justify-between gap-4"><dt className="text-text-secondary">Efectivo esperado</dt><dd className="num font-semibold">{formatMoney(closing.expected_cash)}</dd></div><div className="flex justify-between gap-4"><dt className="text-text-secondary">Efectivo contado</dt><dd className="num font-semibold">{formatMoney(closing.counted_cash)}</dd></div><div className="flex justify-between gap-4 border-t border-border pt-3"><dt className="font-medium">Diferencia</dt><dd className="num font-semibold">{formatMoney(closing.difference)}</dd></div><div className="flex justify-between gap-4"><dt className="text-text-secondary">Estado</dt><dd>{closing.state === "sealed" ? "Sellado" : "Provisional"}</dd></div></dl>;
 }

@@ -1,4 +1,5 @@
 import { computePageSize } from "./pagination";
+import { isValidWeight } from "./weightPricing";
 
 /**
  * Pure helpers for the inventory screen. Kept out of the component so the
@@ -43,6 +44,36 @@ export const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   ADJUSTMENT_OUT: "Ajuste (salida)",
   RETURN: "Devolución",
 };
+
+/**
+ * Stock for a weighable product uses the POS weight format. Zero is allowed
+ * for initialization and minimums, but not for manual adjustments.
+ */
+export function isValidStockQuantityKg(
+  value: string,
+  allowZero: boolean,
+): boolean {
+  return isValidWeight(value) ||
+    (allowZero && ["0", "0.0", "0.00", "0.000"].includes(value));
+}
+
+export function formatStockQuantity(
+  quantity: number,
+  unitType: "unitario" | "pesable",
+): string {
+  if (unitType === "unitario") return String(quantity);
+  if (quantity === 0) return "0,000 kg";
+  return `${new Intl.NumberFormat("es-AR", {
+    maximumFractionDigits: 3,
+  }).format(quantity)} kg`;
+}
+
+export function stockLimitMessageKg(
+  productName: string,
+  availableKg: string,
+): string {
+  return `Sólo hay ${availableKg} disponibles de “${productName}”.`;
+}
 
 export function buildStockQuery(opts: {
   search: string;

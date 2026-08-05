@@ -18,6 +18,7 @@ export function PageHeader({
   eyebrow,
   titleAdornment,
   titleClassName,
+  compactMobile,
   actions,
 }: {
   title: string;
@@ -28,6 +29,8 @@ export function PageHeader({
   titleAdornment?: ReactNode;
   /** Extra classes appended to the h1, e.g. `num` for a numeric title (sale number). */
   titleClassName?: string;
+  /** Use the compact heading scale below `sm` for dense mobile workspaces. */
+  compactMobile?: boolean;
   actions?: ReactNode;
 }) {
   return (
@@ -40,7 +43,7 @@ export function PageHeader({
         )}
         <div className="flex flex-wrap items-center gap-3">
           <h1
-            className={`text-2xl font-semibold tracking-tight text-text-primary${titleClassName ? ` ${titleClassName}` : ""}`}
+            className={`${compactMobile ? "text-xl sm:text-2xl" : "text-2xl"} font-semibold tracking-tight text-text-primary${titleClassName ? ` ${titleClassName}` : ""}`}
           >
             {title}
           </h1>

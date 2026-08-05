@@ -9,6 +9,8 @@ export type User = {
   last_name: string;
   phone: string;
   address: string;
+  /** `null` significa "no se le liquidan sueldos por este sistema", no cero. */
+  hourly_rate: string | null;
   created_at: string;
 };
 
@@ -42,6 +44,7 @@ export type Sale = {
   items: SaleItem[];
   created_at: string;
   confirmed_at: string | null;
+  updated_at: string;
 };
 
 export type OperationalSale = {
@@ -51,8 +54,10 @@ export type OperationalSale = {
   sale_number: number | null | undefined;
   payments: SalePayment[];
   total: string | null;
+  has_returns: boolean;
   created_at: string;
   confirmed_at: string | null;
+  updated_at: string;
 };
 
 export type OperationalSalesList = {
@@ -80,19 +85,27 @@ export type CashClosing = {
   difference: string;
   notes?: string | null;
   closed_at: string;
+  state: "provisional" | "sealed";
+};
+
+export type CashierOpeningFund = {
+  id: string;
+  operator_id: string;
+  business_date: string;
+  amount: string;
+  status: "declared" | "confirmed";
+  declared_by: string;
+  confirmed_at: string | null;
 };
 
 export type CashClosingReconciliationStatus =
-  | "NO_ACTIVITY"
-  | "IN_PROGRESS"
-  | "UNCLOSED"
-  | "CLOSED"
-  | "REQUIRES_UPDATE";
+  "NO_ACTIVITY" | "IN_PROGRESS" | "UNCLOSED" | "CLOSED" | "REQUIRES_UPDATE";
 
 export type CashClosingStatus = {
   business_date: string;
   status: CashClosingReconciliationStatus;
   latest_closing: CashClosing | null;
+  opening_fund: CashierOpeningFund | null;
   sales_after_latest_closing: number;
   cash_after_latest_closing: string;
 };
@@ -110,6 +123,7 @@ export type DailyCashClosingStatusItem = {
   sales_after_latest_closing: number;
   cash_after_latest_closing: string;
   latest_closing: CashClosing | null;
+  opening_fund: Pick<CashierOpeningFund, "amount" | "status"> | null;
 };
 
 export type DailyCashClosingStatusList = {
@@ -129,9 +143,38 @@ export type Product = {
   price: string;
   price_per_kg?: string;
   cost: string;
+  sells_by_unit: boolean;
+  units_per_package: number;
+  extra_margin_percent: string;
+  parent_product_id: string | null;
+  unit_product: ProductReference | null;
   active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type ProductReference = {
+  id: string;
+  name: string;
+  sku: string;
+  price: string;
+  active: boolean;
+};
+
+export type ProductConflict = Pick<ProductReference, "id" | "name" | "sku">;
+
+export type ProductPayload = {
+  sku: string;
+  barcode?: string;
+  name: string;
+  category_id: string;
+  unit_type: "unitario" | "pesable";
+  price: string;
+  price_per_kg?: string;
+  cost: string;
+  sells_by_unit?: boolean;
+  units_per_package?: number;
+  extra_margin_percent?: string;
 };
 
 export type ProductList = {
@@ -161,6 +204,7 @@ export type StockListItem = {
   name: string;
   barcode: string | null;
   active: boolean;
+  unit_type: "unitario" | "pesable";
   initialized: boolean;
   quantity: number;
   minimum_quantity: number;
@@ -169,14 +213,20 @@ export type StockListItem = {
 
 export type StockList = { items: StockListItem[]; total: number };
 
-/** Cerrado a los cuatro valores que valida el backend; `RETURN` no trae filas hasta que existan devoluciones. */
+/**
+ * Cerrado a los valores que valida el backend; `RETURN` no trae filas hasta que
+ * existan devoluciones. `SELF_CONSUMPTION` es propio y no se fusiona con
+ * `ADJUSTMENT_OUT`: mezclarlos impediría distinguir un error de inventario de
+ * mercadería consumida.
+ */
 export type MovementType =
-  "SALE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "RETURN";
+  "SALE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "RETURN" | "SELF_CONSUMPTION";
 
 export type StockMovement = {
   id: string;
   product_id: string;
   product_name: string;
+  unit_type: "unitario" | "pesable";
   type: string;
   quantity_delta: number;
   previous_quantity: number;
@@ -199,7 +249,8 @@ export type ReturnItem = {
   id: string;
   sale_item_id: string;
   product_id: string;
-  quantity: number;
+  quantity?: number;
+  weight?: string;
   unit_price: string;
   subtotal: string;
 };
@@ -212,12 +263,22 @@ export type Return = {
   performed_by: string;
   created_at: string;
   items: ReturnItem[];
+  refund_payments: SalePayment[];
 };
 
 export type ReturnList = { returns: Return[]; total: number };
 
 export type PurchaseOrderStatus = "PENDING" | "RECEIVED" | "CANCELLED";
-export type Supplier = { id: string; name: string; active: boolean };
+export type Supplier = {
+  id: string;
+  name: string;
+  active: boolean;
+  phone: string | null;
+  address: string | null;
+  visit_frequency_days: number | null;
+  visit_notes: string | null;
+  notes: string | null;
+};
 export type SuppliersList = { suppliers: Supplier[] };
 export type ProductSupplier = {
   product_id: string;
@@ -249,20 +310,26 @@ export type PurchaseOrderListItem = {
   id: string;
   supplier_name: string;
   ordered_at: string;
+  expected_at: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
   received_by?: string;
   has_uncatalogued_items: boolean;
 };
-export type PurchaseOrdersList = { purchase_orders: PurchaseOrderListItem[]; page: number; limit: number; total: number };
+export type PurchaseOrdersList = {
+  purchase_orders: PurchaseOrderListItem[];
+  page: number;
+  limit: number;
+  total: number;
+};
 export type PurchaseOrderItem = {
   id: string;
   product_id?: string;
   product_name?: string;
   description?: string;
-  quantity: number;
-  received_quantity: number;
+  quantity: string;
+  received_quantity: string;
   non_delivery_reason?: string;
   unit_cost: string;
   subtotal: string;
@@ -275,6 +342,7 @@ export type PurchaseOrder = {
   supplier_id: string;
   supplier_name: string;
   ordered_at: string;
+  expected_at: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
@@ -289,4 +357,111 @@ export type PurchasesBySupplierReport = {
   complete_delivery_count: number;
   incomplete_delivery_count: number;
   undelivered_products: number;
+};
+
+/**
+ * Los tres ejes de un egreso son ortogonales: `ExpenseType` define qué hace el
+ * sistema con el egreso, el rubro en qué se gastó, y `ExpensePaymentMethod` de
+ * dónde salió la plata. Sólo el último decide si afecta la caja.
+ */
+export type ExpenseType =
+  "OPERATING" | "PURCHASE" | "PAYROLL" | "SELF_CONSUMPTION" | "OWNER_DRAW";
+
+export type ExpensePaymentMethod =
+  "CASH_REGISTER" | "OWNER_FUNDS" | "TRANSFER" | "CARD";
+
+export type ExpenseStatus = "ACTIVE" | "VOID";
+
+export type ExpenseCategory = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ExpenseLine = {
+  product_id: string;
+  product_name: string;
+  unit_type: "unitario" | "pesable";
+  quantity: string;
+  unit_cost: string;
+  line_total: string;
+};
+
+export type Expense = {
+  id: string;
+  business_date: string;
+  type: ExpenseType;
+  expense_category_id: string | null;
+  expense_category_name: string | null;
+  payment_method: ExpensePaymentMethod;
+  amount: string;
+  description: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  items: ExpenseLine[] | null;
+  status: ExpenseStatus;
+  void_reason: string | null;
+  voided_at: string | null;
+  voided_by_username: string | null;
+  payroll_payment_id: string | null;
+  created_by_username: string;
+  created_at: string;
+};
+
+export type ExpenseList = {
+  items: Expense[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type ExpenseSummaryBucket = { key: string; label: string; amount: string };
+
+export type ExpenseSummary = {
+  /** Excluye los retiros: un retiro no es un gasto del negocio. */
+  total_business_expenses: string;
+  total_owner_draws: string;
+  by_type: ExpenseSummaryBucket[];
+  by_category: ExpenseSummaryBucket[];
+  by_payment_method: ExpenseSummaryBucket[];
+};
+
+export type WorkLog = {
+  id: string;
+  user_id: string;
+  username: string;
+  business_date: string;
+  hours: string;
+  hourly_rate_snapshot: string;
+  computed_amount: string;
+  amount: string;
+  adjustment_reason: string | null;
+  payroll_payment_id: string | null;
+};
+
+export type PayrollPendingItem = {
+  user_id: string;
+  username: string;
+  full_name: string;
+  hourly_rate: string | null;
+  user_active: boolean;
+  total_hours: string;
+  total_amount: string;
+  pending_days: number;
+  oldest_unpaid_date: string | null;
+  has_adjustment: boolean;
+};
+
+export type PayrollPayment = {
+  id: string;
+  user_id: string;
+  username: string;
+  period_from: string;
+  period_to: string;
+  total_hours: string;
+  total_amount: string;
+  payment_method: ExpensePaymentMethod;
+  expense_id: string;
+  paid_at: string;
 };

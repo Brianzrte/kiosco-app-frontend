@@ -97,6 +97,7 @@ export function PurchaseOrdersHistoryView() {
       <PageHeader
         title="Historial de pedidos"
         description="Consultá los pedidos creados y su recepción."
+        compactMobile
         actions={
           <Button variant="secondary" onClick={() => router.push("/purchasing")}>
             Volver a compras
@@ -200,8 +201,8 @@ export function PurchaseOrdersHistoryView() {
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <dt className="text-text-secondary">Fecha</dt>
-                    <dd>{new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(order.ordered_at))}</dd>
+                    <dt className="text-text-secondary">Fecha objetivo</dt>
+                    <dd>{order.expected_at ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(order.expected_at)) : "Sin definir"}</dd>
                   </div>
                   <div>
                     <dt className="text-text-secondary">Total</dt>
@@ -217,7 +218,7 @@ export function PurchaseOrdersHistoryView() {
               <tr>
                 <Th>Proveedor</Th>
                 <Th>Estado</Th>
-                <Th>Fecha</Th>
+                <Th>Fecha objetivo</Th>
                 <Th>Recibido por</Th>
                 <Th className="text-right">Costo</Th>
               </tr>
@@ -239,9 +240,7 @@ export function PurchaseOrdersHistoryView() {
                     </Badge>
                   </Td>
                   <Td>
-                    {new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(
-                      new Date(order.ordered_at),
-                    )}
+                    {order.expected_at ? new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(order.expected_at)) : "Sin definir"}
                   </Td>
                   <Td>{order.received_by ?? "—"}</Td>
                   <Td className="num text-right">{formatMoney(order.total)}</Td>

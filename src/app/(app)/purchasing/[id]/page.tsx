@@ -1,4 +1,4 @@
-import { ReceivingDetailView } from "@/components/receiving/ReceivingDetailView";
+import { ReceivingDetailView } from "@/components/purchasing/ReceivingDetailView";
 import { requireRole } from "@/lib/roles";
 
 export default async function PurchaseOrderDetailPage({

@@ -24,6 +24,8 @@ import {
   isRowLow,
   isDeepLinkedProductId,
   MOVEMENT_TYPE_LABELS,
+  formatStockQuantity,
+  isValidStockQuantityKg,
 } from "@/lib/inventory";
 import {
   CategoryList,
@@ -94,7 +96,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
       ),
     [term, categoryId, lowStockOnly, page, pageSize],
   );
-  const { data, error, reload } = useLoad(fetcher);
+  const { data, error, reload } = useLoad(fetcher, { pollMs: 30_000 });
   const rows = data?.items ?? null;
   const total = data?.total ?? 0;
 
@@ -139,7 +141,9 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
       `/inventory/stock?${buildStockQuery({ search: term, categoryId, lowStockOnly: true, page: 1, limit: 100 })}`,
     );
   }, [term, categoryId, lowStockOnly]);
-  const { data: lowStockData } = useLoad(lowStockIdsFetcher);
+  const { data: lowStockData } = useLoad(lowStockIdsFetcher, {
+    pollMs: 30_000,
+  });
   const lowStockIds = new Set(
     (lowStockData?.items ?? []).map((item) => item.product_id),
   );
@@ -185,6 +189,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         name: deepLinkedProduct.name,
         barcode: deepLinkedProduct.barcode,
         active: deepLinkedProduct.active,
+        unit_type: deepLinkedProduct.unit_type ?? "unitario",
         initialized: false,
         quantity: 0,
         minimum_quantity: 0,
@@ -306,10 +311,10 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                           low ? "text-warning" : ""
                         }`}
                       >
-                        {item.quantity}
+                        {formatStockQuantity(item.quantity, item.unit_type)}
                         {low && (
                           <span className="ml-1 text-xs font-normal text-text-secondary">
-                            mín. {item.minimum_quantity}
+                            mín. {formatStockQuantity(item.minimum_quantity, item.unit_type)}
                           </span>
                         )}
                       </p>
@@ -375,6 +380,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
           <StockPanel
             key={selectedItem.product_id}
             productId={selectedItem.product_id}
+            unitType={selectedItem.unit_type}
             isLow={isLow(selectedItem)}
             canPlanStock={canPlanStock}
             onChanged={reload}
@@ -402,12 +408,14 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
 
 function StockPanel({
   productId,
+  unitType,
   isLow,
   canPlanStock,
   onChanged,
   onClose,
 }: {
   productId: string;
+  unitType: "unitario" | "pesable";
   isLow: boolean;
   canPlanStock: boolean;
   onChanged: () => void;
@@ -439,6 +447,7 @@ function StockPanel({
     return (
       <InitializeStockForm
         productId={productId}
+        unitType={unitType}
         onDone={() => {
           refreshAll();
           onClose();
@@ -455,9 +464,9 @@ function StockPanel({
           <p
             className={`num text-2xl font-semibold ${isLow ? "text-warning" : ""}`}
           >
-            {stock.quantity}
+            {formatStockQuantity(stock.quantity, unitType)}
             <span className="ml-2 text-sm font-normal text-text-secondary">
-              mín. {stock.minimum_quantity}
+              mín. {formatStockQuantity(stock.minimum_quantity, unitType)}
             </span>
           </p>
         </div>
@@ -498,6 +507,7 @@ function StockPanel({
       {tab === "adjust" ? (
         <AdjustStockForm
           productId={productId}
+          unitType={unitType}
           onDone={() => {
             refreshAll();
             onClose();
@@ -507,6 +517,7 @@ function StockPanel({
         <SetMinimumForm
           productId={productId}
           currentMinimum={stock.minimum_quantity}
+          unitType={unitType}
           onDone={refreshAll}
         />
       ) : null}
@@ -516,27 +527,37 @@ function StockPanel({
 
 function InitializeStockForm({
   productId,
+  unitType,
   onDone,
 }: {
   productId: string;
+  unitType: "unitario" | "pesable";
   onDone: () => void;
 }) {
   const toast = useToast();
-  const [quantity, setQuantity] = useState("0");
+  const [quantity, setQuantity] = useState(
+    unitType === "pesable" ? "0.000" : "0",
+  );
   const [reason, setReason] = useState("");
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
+    if (unitType === "pesable" && !isValidStockQuantityKg(quantity, true)) {
+      setFieldError("Ingresá una cantidad mayor o igual a cero con hasta tres decimales.");
+      return;
+    }
+    setFieldError(null);
     setPending(true);
     try {
       await api("/inventory/stock", {
         method: "POST",
         body: {
           product_id: productId,
-          quantity: parseInt(quantity, 10),
+          quantity: unitType === "pesable" ? quantity : parseInt(quantity, 10),
           reason: reason.trim(),
         },
       });
@@ -557,14 +578,20 @@ function InitializeStockForm({
       </p>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
-          label="Cantidad inicial"
+          label={
+            unitType === "pesable" ? "Cantidad inicial (kg)" : "Cantidad inicial"
+          }
           type="number"
-          inputMode="numeric"
+          inputMode={unitType === "pesable" ? "decimal" : "numeric"}
           min={0}
+          step={unitType === "pesable" ? "0.001" : "1"}
+          placeholder={unitType === "pesable" ? "0.000" : undefined}
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
           required
+          error={fieldError ?? undefined}
         />
+        {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
         <Input
           label="Motivo"
           value={reason}
@@ -583,9 +610,11 @@ function InitializeStockForm({
 
 function AdjustStockForm({
   productId,
+  unitType,
   onDone,
 }: {
   productId: string;
+  unitType: "unitario" | "pesable";
   onDone: () => void;
 }) {
   const toast = useToast();
@@ -593,19 +622,25 @@ function AdjustStockForm({
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!reason.trim()) return;
     setError(null);
+    if (unitType === "pesable" && !isValidStockQuantityKg(quantity, false)) {
+      setFieldError("Ingresá una cantidad mayor a cero con hasta tres decimales.");
+      return;
+    }
+    setFieldError(null);
     setPending(true);
-    const amount = parseInt(quantity, 10);
+    const amount = unitType === "pesable" ? quantity : parseInt(quantity, 10);
     try {
       await api(`/inventory/stock/${productId}/adjust`, {
         method: "POST",
         body: {
-          quantity_delta: direction === "in" ? amount : -amount,
+          quantity_delta: direction === "in" ? amount : unitType === "pesable" ? `-${amount}` : -amount,
           reason: reason.trim(),
         },
       });
@@ -633,15 +668,19 @@ function AdjustStockForm({
             <option value="out">Salida (−)</option>
           </Select>
           <Input
-            label="Cantidad"
+            label={unitType === "pesable" ? "Cantidad (kg)" : "Cantidad"}
             type="number"
-            inputMode="numeric"
+            inputMode={unitType === "pesable" ? "decimal" : "numeric"}
             min={1}
+            step={unitType === "pesable" ? "0.001" : "1"}
+            placeholder={unitType === "pesable" ? "0.000" : undefined}
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             required
+            error={fieldError ?? undefined}
           />
         </div>
+        {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
         <Input
           label="Motivo (obligatorio)"
           value={reason}
@@ -665,10 +704,12 @@ function AdjustStockForm({
 function SetMinimumForm({
   productId,
   currentMinimum,
+  unitType,
   onDone,
 }: {
   productId: string;
   currentMinimum: number;
+  unitType: "unitario" | "pesable";
   onDone: () => void;
 }) {
   const toast = useToast();
@@ -680,9 +721,11 @@ function SetMinimumForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const parsed = parseInt(value, 10);
-    if (!Number.isInteger(parsed) || parsed < 0) {
-      setFieldError("Ingresá un número entero mayor o igual a 0.");
+    const valid = unitType === "pesable"
+      ? isValidStockQuantityKg(value, true)
+      : Number.isInteger(parseInt(value, 10)) && parseInt(value, 10) >= 0;
+    if (!valid) {
+      setFieldError(unitType === "pesable" ? "Ingresá una cantidad mayor o igual a cero con hasta tres decimales." : "Ingresá un número entero mayor o igual a 0.");
       return;
     }
     setFieldError(null);
@@ -690,7 +733,7 @@ function SetMinimumForm({
     try {
       await api(`/inventory/stock/${productId}/minimum`, {
         method: "PATCH",
-        body: { minimum_quantity: parsed },
+        body: { minimum_quantity: unitType === "pesable" ? value : parseInt(value, 10) },
       });
       toast("success", "Mínimo actualizado");
       onDone();
@@ -713,13 +756,15 @@ function SetMinimumForm({
       <Input
         label="Cantidad mínima"
         type="number"
-        inputMode="numeric"
+        inputMode={unitType === "pesable" ? "decimal" : "numeric"}
         min={0}
+        step={unitType === "pesable" ? "0.001" : "1"}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         error={fieldError ?? undefined}
         required
       />
+      {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
       {error && <p className="text-sm text-error">{error}</p>}
       <Button type="submit" pending={pending}>
         {pending ? "Guardando…" : "Guardar mínimo"}
@@ -860,7 +905,7 @@ function MovementHistorySection({
                   <div>
                     <dt className="text-text-secondary">Cantidad</dt>
                     <dd className="num font-medium">
-                      {row.previous_quantity} → {row.new_quantity} ({row.quantity_delta > 0 ? "+" : ""}{row.quantity_delta})
+                      {formatStockQuantity(row.previous_quantity, row.unit_type)} → {formatStockQuantity(row.new_quantity, row.unit_type)} ({row.quantity_delta > 0 ? "+" : ""}{formatStockQuantity(row.quantity_delta, row.unit_type)})
                     </dd>
                   </div>
                   <div>
@@ -894,8 +939,8 @@ function MovementHistorySection({
                     <Td className="font-medium">{row.product_name}</Td>
                     <Td className="whitespace-nowrap">{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</Td>
                     <Td className={`num text-right ${row.quantity_delta < 0 ? "text-error" : "text-success"}`}>
-                      {row.previous_quantity} → {row.new_quantity}
-                      <span className="ml-2 text-xs text-text-secondary">({row.quantity_delta > 0 ? "+" : ""}{row.quantity_delta})</span>
+                      {formatStockQuantity(row.previous_quantity, row.unit_type)} → {formatStockQuantity(row.new_quantity, row.unit_type)}
+                      <span className="ml-2 text-xs text-text-secondary">({row.quantity_delta > 0 ? "+" : ""}{formatStockQuantity(row.quantity_delta, row.unit_type)})</span>
                     </Td>
                     <Td className="text-text-secondary">{row.reason || "—"}</Td>
                     <Td className="text-text-secondary">{row.performed_by_username || "—"}</Td>
