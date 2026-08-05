@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -29,6 +30,7 @@ import { useViewportPageSize } from "@/lib/useViewportPageSize";
 type DialogState = "create" | "edit" | "deactivate" | null;
 
 export function SuppliersView() {
+  const router = useRouter();
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -36,6 +38,11 @@ export function SuppliersView() {
   const [dialog, setDialog] = useState<DialogState>(null);
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [visitFrequencyDays, setVisitFrequencyDays] = useState("");
+  const [visitNotes, setVisitNotes] = useState("");
+  const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +82,11 @@ export function SuppliersView() {
     triggerRef.current = event.currentTarget;
     setSelected(supplier ?? null);
     setName(supplier?.name ?? "");
+    setPhone(supplier?.phone ?? "");
+    setAddress(supplier?.address ?? "");
+    setVisitFrequencyDays(supplier?.visit_frequency_days?.toString() ?? "");
+    setVisitNotes(supplier?.visit_notes ?? "");
+    setNotes(supplier?.notes ?? "");
     setFormError(null);
     setDialog(next);
   }
@@ -93,16 +105,23 @@ export function SuppliersView() {
     setFormError(null);
     setPending(true);
     try {
+      const contactPayload = {
+        ...(phone.trim() ? { phone: phone.trim() } : {}),
+        ...(address.trim() ? { address: address.trim() } : {}),
+        ...(visitFrequencyDays ? { visit_frequency_days: parseInt(visitFrequencyDays, 10) } : {}),
+        ...(visitNotes.trim() ? { visit_notes: visitNotes.trim() } : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+      };
       if (dialog === "create") {
         await api<Supplier>("/suppliers", {
           method: "POST",
-          body: { name: name.trim() },
+          body: { name: name.trim(), ...contactPayload },
         });
         toast("success", "Proveedor creado");
       } else if (selected) {
         await api<Supplier>(`/suppliers/${selected.id}`, {
           method: "PUT",
-          body: { name: name.trim() },
+          body: { name: name.trim(), ...contactPayload },
         });
         toast("success", "Proveedor actualizado");
       }
@@ -141,7 +160,7 @@ export function SuppliersView() {
   function onRowKeyDown(event: KeyboardEvent<HTMLElement>, supplier: Supplier) {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    openDialog("edit", event, supplier);
+    router.push(`/purchasing/suppliers/${supplier.id}`);
   }
 
   return (
@@ -187,7 +206,7 @@ export function SuppliersView() {
                 <SupplierCard
                   key={supplier.id}
                   supplier={supplier}
-                  onOpen={(event) => openDialog("edit", event, supplier)}
+                  onOpen={() => router.push(`/purchasing/suppliers/${supplier.id}`)}
                   onDeactivate={(event) => {
                     event.stopPropagation();
                     openDialog("deactivate", event, supplier);
@@ -212,7 +231,7 @@ export function SuppliersView() {
                     key={supplier.id}
                     role="button"
                     tabIndex={0}
-                    onClick={(event) => openDialog("edit", event, supplier)}
+                    onClick={() => router.push(`/purchasing/suppliers/${supplier.id}`)}
                     onKeyDown={(event) => onRowKeyDown(event, supplier)}
                     className={`cursor-pointer transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ${
                       supplier.active
@@ -284,6 +303,11 @@ export function SuppliersView() {
             required
             disabled={pending}
           />
+          <Input label="Teléfono" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} disabled={pending} />
+          <Input label="Dirección" value={address} onChange={(event) => setAddress(event.target.value)} disabled={pending} />
+          <Input label="Frecuencia de visita (días)" type="number" min="1" inputMode="numeric" value={visitFrequencyDays} onChange={(event) => setVisitFrequencyDays(event.target.value)} disabled={pending} />
+          <Input label="Notas de visita" value={visitNotes} onChange={(event) => setVisitNotes(event.target.value)} disabled={pending} />
+          <Input label="Notas generales" value={notes} onChange={(event) => setNotes(event.target.value)} disabled={pending} />
           <div className="flex justify-end gap-2">
             <Button
               type="button"

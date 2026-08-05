@@ -56,9 +56,11 @@ respecto del proyecto de diseño.
 - Notificaciones o recordatorios por fecha objetivo.
 - Cambiar la regla de motivo obligatorio: sigue siendo obligatorio para todos los
   roles, incluido admin.
-- Gestionar la asociación producto–proveedor **desde** la ficha del proveedor más
-  allá de abrir el flujo existente: la escritura sigue siendo
-  `PUT /products/{id}/suppliers`.
+- Editar o quitar una asociación producto–proveedor **existente** desde la
+  ficha del proveedor: eso sigue siendo exclusivo de `ProductSuppliersPanel`,
+  en la ficha del producto. El popover `Asociar producto` sólo agrega
+  asociaciones nuevas, sin `preferred`, con lectura fresca antes de cada
+  escritura (ver D2); no reemplaza al panel del producto.
 
 ## Relación con las specs vigentes
 
@@ -91,7 +93,11 @@ antigüedad y frecuencia de visita; card de datos de contacto; card de productos
 asociados; card teaser de los últimos tres pedidos con enlace al historial
 filtrado por ese proveedor. `Editar ficha` abre el mismo diálogo de edición del
 listado, ahora con los campos de contacto. `Desactivar` pide confirmación y, al
-confirmar, la ficha queda en estado inactivo sin desaparecer.
+confirmar, la ficha queda en estado inactivo sin desaparecer. En la card de
+productos asociados, `Asociar producto` abre un popover anclado al botón (ver
+D2) con el listado de productos sin proveedor preferido; tocar `+` en una fila
+asocia ese producto a este proveedor sin salir de la ficha, con spinner
+mientras la escritura está en vuelo y un check al confirmar.
 
 **C. Fecha objetivo** — `/purchasing/new`: el usuario elige proveedor, deja o
 cambia `Fecha de creación` y completa `Fecha objetivo`. Al crear, vuelve al
@@ -115,16 +121,71 @@ ser enlazable desde el detalle de un pedido y desde el historial. Un diálogo co
 tres requests y navegación interna es peor en móvil y no se puede compartir por
 URL. Costo: una ruta más y un `page.tsx` más con su gate.
 
-### D2 — Los productos asociados se leen desde el lado del proveedor, pero se escriben desde el producto
+### D2 — Los productos asociados se leen desde el lado del proveedor; asociar uno nuevo también escribe desde ahí, con lectura fresca justo antes de cada escritura
 
-La card "Productos asociados" es de lectura más navegación: cada fila lleva al
-producto, y `Asociar producto` lleva al panel de asociación del producto elegido.
-Alternativa descartada: escribir asociaciones desde el proveedor. El contrato
-existente es `PUT /products/{id}/suppliers`, que **reemplaza la lista completa**
-de proveedores de un producto; hacerlo desde el proveedor obligaría a leer y
-reescribir la lista ajena de cada producto, con riesgo real de pisar
-asociaciones. Si el backend expusiera una escritura desde el proveedor, se
-revisa. Mientras tanto la ficha no inventa un camino de escritura frágil.
+La card "Productos asociados" es sobre todo lectura: cada fila lleva al
+producto. La escritura de la asociación en sí, en cambio, pasó por tres
+iteraciones el 2026-08-05, todas sobre el mismo origen: la sección "Datos de
+planificación incompletos" —lista con buscador de productos sin proveedor
+preferido activo, servida por `GET /purchase-orders/suggestions`— vivía en
+`/purchasing/new` (`ReplenishmentSuggestionsPanel.tsx`), donde quedaba fuera de
+lugar (esa pantalla arma un pedido, no asocia proveedores). Se sacó de ahí por
+completo —`/purchasing/new` sólo conserva "Bajos de stock"— y terminó en
+`src/components/suppliers/AssociateProductPopover.tsx`, detrás del botón
+`Asociar producto`.
+
+**Intento 1 — listado inline, sólo navegación.** El popover ni existía: la
+lista se desplegaba inline dentro de la card, empujando el resto hacia abajo, y
+cada fila era un link `Ir al producto` a `/products/{id}`; la escritura seguía
+siendo exclusiva de `ProductSuppliersPanel`. Alternativa original descartada:
+escribir desde el proveedor. El contrato es `PUT /products/{id}/suppliers`, que
+**reemplaza la lista completa** de proveedores de un producto; escribir desde
+el proveedor obliga a leer y reescribir la lista ajena de cada producto, con
+riesgo real de pisar asociaciones — por eso el primer intento evitó el problema
+del todo, delegando la escritura al panel que ya existía.
+
+**Intento 2 — popover, sigue siendo sólo navegación.** El usuario pidió el
+patrón visual que ya usa `Editar precio real` en `CartLines.tsx`: un popover
+anclado al botón (`absolute`, `motion/react`, cierra con Escape, foco vuelve al
+trigger) que se superpone al resto de la página en vez de empujarla, con copy
+propio —título "Productos sin proveedor preferido", sin la badge "Completar
+datos" heredada de compras— y buscador siempre visible en vez del buscador
+colapsable de icono+input del original.
+
+**Intento 3 (definitivo) — el popover asocia directamente, fila por fila.**
+El usuario marcó el link `Ir al producto` como un flujo tedioso: la lista
+existía para elegir y asociar, no para rebotar a cada producto uno por uno.
+Se revisó la alternativa descartada del intento 1 y se adoptó, acotada: cada
+fila tiene un botón `+` que, al tocarlo, hace **una lectura de
+`GET /products/{id}/suppliers` inmediatamente antes del `PUT`** —no reutiliza
+la lista que el popover ya tenía cargada— agrega este proveedor a esa lista
+fresca con `preferred: false` (decisión del usuario: asociar no marca
+preferido; el producto puede seguir apareciendo en la lista hasta que alguien
+elija preferido desde su ficha) y hace un único `PUT` con el resultado. La
+ventana de carrera con una edición concurrente desde `ProductSuppliersPanel` se
+acorta a los milisegundos entre esa lectura y esa escritura — el mismo riesgo
+que ya asume `ProductSuppliersPanel` consigo mismo, no uno nuevo. El botón
+muestra spinner mientras la request está en vuelo (`Button` con
+`pending`/`pendingImmediate`) y pasa a un ícono de check al confirmar; un error
+se muestra en la fila y el botón vuelve a quedar disponible para reintentar. Es
+la única escritura de este change que sale del panel del producto, y queda
+acotada a este caso: agregar una asociación nueva sin preferido, nunca editar
+ni quitar una existente ni tocar `preferred`/`replenishment_frequency_days` de
+una fila ajena.
+
+Alternativas descartadas en el intento 3: (a) checklist con selección múltiple
+y un botón `Asociar (N)` al pie, que hace un `PUT` por producto tildado al
+confirmar — más cercano a un patrón de selección masiva, pero sigue obligando a
+un paso de confirmación aparte y a esperar el lote entero antes de ver
+resultado en cualquier fila; se prefirió la acción inmediata por fila, con
+feedback (spinner → check) en el momento.
+
+Este popover no depende de ningún bloque bloqueado por backend (usa
+`GET /purchase-orders/suggestions` y `PUT /products/{id}/suppliers`, ambos ya
+desplegados), así que se implementó ya, aunque el resto de la ficha de
+proveedor —card de datos de contacto y card de historial de pedidos, que sí
+necesitan `GET /suppliers/{id}`— sigue bloqueado hasta que el backend despliegue
+el bloque B.
 
 ### D3 — `visit_frequency_days` y `ProductSupplier.replenishment_frequency_days` son datos distintos y el copy los distingue
 
@@ -170,11 +231,11 @@ la cantidad sigue siendo un string decimal.
 El frontend hoy ya maneja pesos con tres decimales en POS
 (`isValidWeight`/`weightThousandths` en `src/lib/weightPricing.ts`) y el módulo
 Inventory del backend ya opera con `decimal.Decimal`. **La escala válida para
-purchasing es un dato a confirmar**, definido por la migración del backend
-(bloque A de `backend-request.md`). Hasta que se confirme, la validación de
-cantidad del frontend no se implementa con una escala fija: la tarea de
-implementación está bloqueada por ese dato, y la validación local se escribe
-contra la escala confirmada, no contra una supuesta.
+purchasing está confirmada en tres decimales**: el 2026-08-04, una instancia
+real aceptó al crear un pedido `"quantity":"0.001"` y devolvió
+`"quantity":"0.001"`; el detalle de un pedido existente devolvió cantidades
+con tres decimales, por ejemplo `"10.000"`. La validación local acepta como
+máximo tres decimales y no usa una escala distinta.
 
 Regla que sí es firme: la cantidad **nunca** se convierte a `float` ni se envía
 como número JSON. Se envía como string decimal, igual que el dinero. Eso saca del
@@ -192,8 +253,8 @@ Dos consultas al listado, ambas con `status=PENDING`:
 
 | Bloque | Filtro | Contenido |
 |---|---|---|
-| Qué llega hoy | `expected_to = hoy` | Todo lo que debería haber llegado hasta hoy inclusive, es decir hoy **y** lo atrasado |
-| Esta semana | `expected_from = mañana`, `expected_to = hoy + 6 días` | Lo que viene |
+| Qué llega hoy | `expected_to = mañana` (límite exclusivo) | Todo lo que debería haber llegado hasta hoy inclusive, es decir hoy **y** lo atrasado |
+| Esta semana | `expected_from = mañana`, `expected_to = hoy + 7 días` (límite exclusivo) | Lo que viene hasta hoy + 6 días |
 
 Un pedido de "Qué llega hoy" con fecha objetivo anterior a hoy se rotula
 `Atrasado` con badge de texto e ícono, borde de card en tono de error y subtítulo
@@ -250,15 +311,14 @@ mapeo completa está en el digest del rediseño y se aplica sin excepciones
 
 Los cuatro valores del mockup que **no** son tokens y que tocan a este change:
 
-- `#fca5a5` (borde de card en estado atrasado) → `--color-error` con opacidad, no
+- `#fca5a5` (borde de card en estado atrasado) → `--color-error/40`; no se agrega
   un hex nuevo.
-- `#15803d` / `#b45309` / `#dc2626` (texto oscuro sobre fondo teñido) → no existen
-  como token; se resuelven con `color-mix` sobre los tokens de estado o con una
-  variante `-strong` agregada al design system, decidido en el change hermano que
-  toca los tokens. Este change **no** define hex sueltos.
+- `#15803d` / `#b45309` / `#dc2626` (texto oscuro sobre fondo teñido) →
+  `--color-success-strong`, `--color-warning-strong` y `--color-error-strong`.
+  El último conserva el ajuste de contraste ya documentado en el design system
+  (`#c62626`), en vez de copiar el hex del mockup.
 - `#fffdf0` / `#a16207` / `#fde68a` (badge "★ Preferido" de la ficha de
-  proveedor) → único lugar donde el diseño sale de la paleta; se reconcilia contra
-  `--color-warning` antes de implementar.
+  proveedor) → `bg-warning/10`, `text-warning-strong` y `border-warning/40`.
 - `#e5e2ee` (fondo de botón deshabilitado) → `--color-surface-2`.
 
 No se porta nada de `support.js` del proyecto de diseño: es el runtime del canvas.
@@ -294,6 +354,12 @@ Enter, porque a esa altura la acción todavía no corresponde.
 - *404*: proveedor inexistente → estado explícito con vuelta a la lista.
 - *Success*: editar o desactivar muestra confirmación en español y **relee** la
   ficha; nunca estado optimista.
+- *Popover `Asociar producto`*: cada fila es independiente. Al tocar `+`:
+  *pending* → spinner inmediato en el botón de esa fila (`pendingImmediate`,
+  sin esperar el umbral estándar); *success* → ícono de check reemplaza al
+  botón, toast de confirmación, y la card "Productos asociados" se relee;
+  *error* → mensaje inline debajo de esa fila, el botón vuelve a su estado
+  inicial para reintentar. Un error o éxito en una fila no afecta a las demás.
 
 **Hub**
 
@@ -500,7 +566,11 @@ antes de implementarse. No es una decisión que el frontend pueda tomar.
    sincronizadas (incluida la fusión de `ui-receiving`).
 5. Recién entonces se implementa este change, en el orden de `tasks.md`: tipos y
    helpers puros → ficha de proveedor → fecha objetivo y hub → cantidades →
-   navegación y gates del cajero.
+   navegación y gates del cajero. **Excepción ya implementada:** el picker de
+   "Asociar producto" dentro de la card de productos asociados (D2) no depende
+   de ningún bloque bloqueado —usa `GET /purchase-orders/suggestions`, ya
+   desplegado— y se implementó fuera de este orden. El resto de la ficha de
+   proveedor (datos de contacto, historial) sigue esperando el bloque B.
 6. `cashier` se agrega a `NAV_ITEMS` y a los gates **al final**, después de
    verificar el permiso contra el backend real.
 

@@ -8,6 +8,7 @@ import {
   ReplenishmentSuggestion,
   Supplier,
 } from "./types";
+import { BUSINESS_TIME_ZONE, todayISO } from "./salesSummary";
 
 export const PURCHASE_ORDER_PAGE_SIZE = 20;
 
@@ -30,9 +31,9 @@ export function buildPurchaseOrdersQuery(options: {
   status: PurchaseOrderStatus | "";
   page: number;
   limit?: number;
-  /** RFC3339. Backend filters `expected_at >= expectedFrom`. */
+  /** YYYY-MM-DD. Backend filters `expected_at >= expectedFrom`. */
   expectedFrom?: string;
-  /** RFC3339. Backend filters `expected_at < expectedTo` (exclusive). */
+  /** YYYY-MM-DD. Backend filters `expected_at < expectedTo` (exclusive). */
   expectedTo?: string;
   /** Backend only accepts `expected_at` as a sort key (`order_by`); omit for the default `ordered_at DESC`. */
   orderByExpected?: boolean;
@@ -80,10 +81,104 @@ export function supplierLabel(supplier: Supplier): string {
  * change. Displaying that raw string reads as "8.000" for an ordinary
  * whole-unit line; this formats it the way a person expects ("8"), while
  * still showing real decimals if a fractional quantity is ever present. */
-export function formatQuantity(quantity: number | string): string {
-  return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 }).format(
-    Number(quantity),
+export function formatQuantity(quantity: string): string {
+  const [whole, fraction = ""] = quantity.split(".");
+  const normalizedWhole = whole.replace(/^0+(?=\d)/, "") || "0";
+  const normalizedFraction = fraction.replace(/0+$/, "");
+  return normalizedFraction
+    ? `${normalizedWhole},${normalizedFraction}`
+    : normalizedWhole;
+}
+
+export type PurchaseOrderSchedule =
+  | "today"
+  | "this_week"
+  | "overdue"
+  | "no_expected_date";
+
+export type PurchaseOrderScheduleRegion = "today" | "week";
+
+function calendarDayInBusinessTimeZone(timestamp: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(timestamp));
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
   );
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addCalendarDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map((part) => parseInt(part, 10));
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return value.toISOString().slice(0, 10);
+}
+
+/**
+ * Builds the target-date bounds for one hub region. The backend treats
+ * `expected_to` as exclusive, so the end of a calendar-day range is the next
+ * day. A selected target day narrows the appropriate region to that day.
+ */
+export function purchaseOrderScheduleBounds(
+  today: string,
+  targetDate: string,
+  region: PurchaseOrderScheduleRegion,
+): { expectedFrom?: string; expectedTo?: string } | null {
+  const tomorrow = addCalendarDays(today, 1);
+  const weekEnd = addCalendarDays(today, 6);
+
+  if (!targetDate) {
+    return region === "today"
+      ? { expectedTo: tomorrow }
+      : { expectedFrom: tomorrow, expectedTo: addCalendarDays(weekEnd, 1) };
+  }
+
+  if (region === "today") {
+    return targetDate <= today
+      ? { expectedFrom: targetDate, expectedTo: addCalendarDays(targetDate, 1) }
+      : null;
+  }
+
+  return targetDate >= tomorrow && targetDate <= weekEnd
+    ? { expectedFrom: targetDate, expectedTo: addCalendarDays(targetDate, 1) }
+    : null;
+}
+
+export function classifyPurchaseOrderSchedule(
+  order: Pick<PurchaseOrder, "expected_at">,
+  now = new Date(),
+): PurchaseOrderSchedule {
+  if (!order.expected_at) return "no_expected_date";
+  const today = todayISO(now);
+  const expectedDay = calendarDayInBusinessTimeZone(order.expected_at);
+  if (expectedDay < today) return "overdue";
+  if (expectedDay === today) return "today";
+  return expectedDay <= addCalendarDays(today, 6) ? "this_week" : "no_expected_date";
+}
+
+export function quantityUnit(
+  product?: Pick<Product, "unit_type"> | null,
+): "kg" | "un" {
+  return product?.unit_type === "pesable" ? "kg" : "un";
+}
+
+export function quantityThousandths(value: string): number {
+  const [whole, fraction = ""] = value.split(".");
+  return parseInt(whole, 10) * 1000 + parseInt((fraction + "000").slice(0, 3), 10);
+}
+
+export function isValidPurchaseQuantity(value: string): boolean {
+  return /^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(value) &&
+    quantityThousandths(value) > 0;
+}
+
+function isValidNonNegativeQuantity(value: string): boolean {
+  return /^(?:0|[1-9]\d*)(?:\.\d{1,3})?$/.test(value);
 }
 
 export function splitReplenishmentSuggestions(
@@ -128,7 +223,7 @@ export function hasSupplierAssociation(
 export type PurchaseOrderDraftItemSummary = {
   productId: string;
   productName: string;
-  quantity: number;
+  quantity: string;
   unitCost: string;
 };
 
@@ -141,7 +236,9 @@ export function summarizePurchaseOrderDraft(
 ): { lines: PurchaseOrderSummaryLine[]; total: string } {
   let totalCents = 0;
   const lines = items.map((item) => {
-    const subtotalCents = item.quantity * toCents(item.unitCost);
+    const subtotalCents = Math.round(
+      (quantityThousandths(item.quantity) * toCents(item.unitCost)) / 1000,
+    );
     totalCents += subtotalCents;
     return { ...item, subtotal: fromCents(subtotalCents) };
   });
@@ -255,7 +352,7 @@ export function purchaseOrderPreloadExclusionReasonLabel(
  * existing reception contract; nothing is sent until confirm. */
 export type ReceptionLineResolution =
   | { action: "received_all" }
-  | { action: "received_partial"; receivedQuantity: number; reason: string }
+  | { action: "received_partial"; receivedQuantity: string; reason: string }
   | { action: "not_delivered"; reason: string };
 
 /** Spanish copy for a line's resolved bar in the detail view (design.md,
@@ -263,7 +360,7 @@ export type ReceptionLineResolution =
  * from the backend — never recomputed here. */
 export function describeReceptionLineResolution(
   resolution: ReceptionLineResolution,
-  requestedQuantity: number,
+  requestedQuantity: string,
 ): string {
   const requested = formatQuantity(requestedQuantity);
   if (resolution.action === "received_all") {
@@ -288,7 +385,7 @@ export type ReceptionResolutionState = Record<string, ReceptionLineResolution>;
 
 export type ReceptionPayloadItem = {
   item_id: string;
-  received_quantity: number;
+  received_quantity: string;
   non_delivery_reason?: string;
 };
 
@@ -313,7 +410,7 @@ export function buildReceptionPayload(
     const receivedQuantity =
       resolution.action === "received_partial"
         ? resolution.receivedQuantity
-        : 0;
+      : "0";
     return {
       item_id: item.id,
       received_quantity: receivedQuantity,
@@ -345,7 +442,7 @@ export function summarizeReceptionResolution(
     if (!resolution) return false;
     if (resolution.action === "received_all") return true;
     if (resolution.action === "received_partial") {
-      return resolution.receivedQuantity > 0;
+      return quantityThousandths(resolution.receivedQuantity) > 0;
     }
     return false;
   });
@@ -360,13 +457,12 @@ export function summarizeReceptionResolution(
  * requested quantity (inclusive), matching what `ValidateReception` accepts
  * in the backend. */
 export function isValidReceivedQuantity(
-  receivedQuantity: number,
-  requestedQuantity: number,
+  receivedQuantity: string,
+  requestedQuantity: string,
 ): boolean {
   return (
-    Number.isInteger(receivedQuantity) &&
-    receivedQuantity >= 0 &&
-    receivedQuantity <= requestedQuantity
+    isValidNonNegativeQuantity(receivedQuantity) &&
+    quantityThousandths(receivedQuantity) <= quantityThousandths(requestedQuantity)
   );
 }
 

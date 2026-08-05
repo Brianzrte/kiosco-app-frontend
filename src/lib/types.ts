@@ -9,6 +9,8 @@ export type User = {
   last_name: string;
   phone: string;
   address: string;
+  /** `null` significa "no se le liquidan sueldos por este sistema", no cero. */
+  hourly_rate: string | null;
   created_at: string;
 };
 
@@ -211,9 +213,14 @@ export type StockListItem = {
 
 export type StockList = { items: StockListItem[]; total: number };
 
-/** Cerrado a los cuatro valores que valida el backend; `RETURN` no trae filas hasta que existan devoluciones. */
+/**
+ * Cerrado a los valores que valida el backend; `RETURN` no trae filas hasta que
+ * existan devoluciones. `SELF_CONSUMPTION` es propio y no se fusiona con
+ * `ADJUSTMENT_OUT`: mezclarlos impediría distinguir un error de inventario de
+ * mercadería consumida.
+ */
 export type MovementType =
-  "SALE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "RETURN";
+  "SALE" | "ADJUSTMENT_IN" | "ADJUSTMENT_OUT" | "RETURN" | "SELF_CONSUMPTION";
 
 export type StockMovement = {
   id: string;
@@ -262,7 +269,16 @@ export type Return = {
 export type ReturnList = { returns: Return[]; total: number };
 
 export type PurchaseOrderStatus = "PENDING" | "RECEIVED" | "CANCELLED";
-export type Supplier = { id: string; name: string; active: boolean };
+export type Supplier = {
+  id: string;
+  name: string;
+  active: boolean;
+  phone: string | null;
+  address: string | null;
+  visit_frequency_days: number | null;
+  visit_notes: string | null;
+  notes: string | null;
+};
 export type SuppliersList = { suppliers: Supplier[] };
 export type ProductSupplier = {
   product_id: string;
@@ -294,7 +310,7 @@ export type PurchaseOrderListItem = {
   id: string;
   supplier_name: string;
   ordered_at: string;
-  expected_at?: string | null;
+  expected_at: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
@@ -312,8 +328,8 @@ export type PurchaseOrderItem = {
   product_id?: string;
   product_name?: string;
   description?: string;
-  quantity: number;
-  received_quantity: number;
+  quantity: string;
+  received_quantity: string;
   non_delivery_reason?: string;
   unit_cost: string;
   subtotal: string;
@@ -326,7 +342,7 @@ export type PurchaseOrder = {
   supplier_id: string;
   supplier_name: string;
   ordered_at: string;
-  expected_at?: string | null;
+  expected_at: string | null;
   total: string;
   status: PurchaseOrderStatus;
   received_at?: string;
@@ -341,4 +357,111 @@ export type PurchasesBySupplierReport = {
   complete_delivery_count: number;
   incomplete_delivery_count: number;
   undelivered_products: number;
+};
+
+/**
+ * Los tres ejes de un egreso son ortogonales: `ExpenseType` define qué hace el
+ * sistema con el egreso, el rubro en qué se gastó, y `ExpensePaymentMethod` de
+ * dónde salió la plata. Sólo el último decide si afecta la caja.
+ */
+export type ExpenseType =
+  "OPERATING" | "PURCHASE" | "PAYROLL" | "SELF_CONSUMPTION" | "OWNER_DRAW";
+
+export type ExpensePaymentMethod =
+  "CASH_REGISTER" | "OWNER_FUNDS" | "TRANSFER" | "CARD";
+
+export type ExpenseStatus = "ACTIVE" | "VOID";
+
+export type ExpenseCategory = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ExpenseLine = {
+  product_id: string;
+  product_name: string;
+  unit_type: "unitario" | "pesable";
+  quantity: string;
+  unit_cost: string;
+  line_total: string;
+};
+
+export type Expense = {
+  id: string;
+  business_date: string;
+  type: ExpenseType;
+  expense_category_id: string | null;
+  expense_category_name: string | null;
+  payment_method: ExpensePaymentMethod;
+  amount: string;
+  description: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  items: ExpenseLine[] | null;
+  status: ExpenseStatus;
+  void_reason: string | null;
+  voided_at: string | null;
+  voided_by_username: string | null;
+  payroll_payment_id: string | null;
+  created_by_username: string;
+  created_at: string;
+};
+
+export type ExpenseList = {
+  items: Expense[];
+  page: number;
+  limit: number;
+  total: number;
+};
+
+export type ExpenseSummaryBucket = { key: string; label: string; amount: string };
+
+export type ExpenseSummary = {
+  /** Excluye los retiros: un retiro no es un gasto del negocio. */
+  total_business_expenses: string;
+  total_owner_draws: string;
+  by_type: ExpenseSummaryBucket[];
+  by_category: ExpenseSummaryBucket[];
+  by_payment_method: ExpenseSummaryBucket[];
+};
+
+export type WorkLog = {
+  id: string;
+  user_id: string;
+  username: string;
+  business_date: string;
+  hours: string;
+  hourly_rate_snapshot: string;
+  computed_amount: string;
+  amount: string;
+  adjustment_reason: string | null;
+  payroll_payment_id: string | null;
+};
+
+export type PayrollPendingItem = {
+  user_id: string;
+  username: string;
+  full_name: string;
+  hourly_rate: string | null;
+  user_active: boolean;
+  total_hours: string;
+  total_amount: string;
+  pending_days: number;
+  oldest_unpaid_date: string | null;
+  has_adjustment: boolean;
+};
+
+export type PayrollPayment = {
+  id: string;
+  user_id: string;
+  username: string;
+  period_from: string;
+  period_to: string;
+  total_hours: string;
+  total_amount: string;
+  payment_method: ExpensePaymentMethod;
+  expense_id: string;
+  paid_at: string;
 };

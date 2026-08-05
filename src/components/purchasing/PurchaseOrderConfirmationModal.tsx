@@ -30,7 +30,7 @@ export function PurchaseOrderConfirmationModal({
       productName:
         products.find((product) => product.id === item.productId)?.name ??
         item.productId,
-      quantity: Number(item.quantity),
+      quantity: item.quantity,
       unitCost: item.unitCost.trim(),
     })),
   );

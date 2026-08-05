@@ -30,10 +30,10 @@ export function buildAddedItemPayload(input: AddPurchaseOrderItemInput) {
   if (!input.quantity || !input.unitCost) return null;
   if (input.mode === "catalog") {
     return input.productId
-      ? { product_id: input.productId, quantity: Number(input.quantity), unit_cost: input.unitCost }
+      ? { product_id: input.productId, quantity: input.quantity, unit_cost: input.unitCost }
       : null;
   }
   return input.description.trim()
-    ? { description: input.description.trim(), quantity: Number(input.quantity), unit_cost: input.unitCost }
+    ? { description: input.description.trim(), quantity: input.quantity, unit_cost: input.unitCost }
     : null;
 }

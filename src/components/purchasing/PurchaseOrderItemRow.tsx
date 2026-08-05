@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast";
 import { ProductCombobox } from "@/components/purchasing/ProductCombobox";
 import { SupplierAssociationCheck } from "@/components/purchasing/SupplierAssociationCheck";
 import { formatMoney, fromCents, toCents } from "@/lib/money";
+import { isValidPurchaseQuantity, quantityThousandths, quantityUnit } from "@/lib/purchasing";
 import { Product } from "@/lib/types";
 
 export type DraftItem = {
@@ -46,12 +47,12 @@ export function PurchaseOrderItemRow({
   removeButtonRef?: (el: HTMLButtonElement | null) => void;
   toast: ReturnType<typeof useToast>;
 }) {
-  const quantity = Number(item.quantity);
   const hasValidLine =
-    item.unitCost.trim() && Number.isFinite(quantity) && quantity > 0;
+    item.unitCost.trim() && isValidPurchaseQuantity(item.quantity);
   const subtotal = hasValidLine
-    ? formatMoney(fromCents(Math.round(quantity * toCents(item.unitCost))))
+    ? formatMoney(fromCents(Math.round((quantityThousandths(item.quantity) * toCents(item.unitCost)) / 1000)))
     : null;
+  const unit = quantityUnit(products.find((product) => product.id === item.productId));
 
   return (
     <>
@@ -65,15 +66,17 @@ export function PurchaseOrderItemRow({
           />
         </td>
         <td className="w-[92px] p-2 align-top">
+          <div className="relative">
           <input
-            aria-label="Cantidad"
-            type="number"
-            min="1"
-            inputMode="numeric"
+            aria-label={`Cantidad en ${unit === "kg" ? "kilogramos" : "unidades"}`}
+            type="text"
+            inputMode="decimal"
             value={item.quantity}
             onChange={(event) => onUpdate("quantity", event.target.value)}
-            className={`${cellInputClass} w-[70px] num`}
+            className={`${cellInputClass} w-full pr-8 num`}
           />
+          <span aria-hidden className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-text-secondary">{unit}</span>
+          </div>
         </td>
         <td className="w-[110px] p-2 align-top">
           <input

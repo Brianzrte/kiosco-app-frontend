@@ -14,6 +14,7 @@ import {
   derivePurchaseOrderPreloadDraft,
   PurchaseOrderPreloadDraft,
   purchaseOrderPreloadExclusionReasonLabel,
+  isValidPurchaseQuantity,
   summarizePurchaseOrderDraft,
   toOrderedAtPayload,
 } from "@/lib/purchasing";
@@ -51,6 +52,7 @@ export function PurchaseOrderForm() {
   const toast = useToast();
   const [supplierId, setSupplierId] = useState("");
   const [orderedAt, setOrderedAt] = useState("");
+  const [expectedAt, setExpectedAt] = useState("");
   const [items, setItems] = useState<DraftItem[]>([emptyDraftItem()]);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -203,13 +205,12 @@ export function PurchaseOrderForm() {
       items.some(
         (item) =>
           !item.productId ||
-          !Number.isInteger(Number(item.quantity)) ||
-          Number(item.quantity) < 1 ||
+          !isValidPurchaseQuantity(item.quantity) ||
           !item.unitCost.trim(),
       )
     ) {
       setFormError(
-        "Cada ítem necesita producto, cantidad entera y costo unitario.",
+        "Cada ítem necesita producto, cantidad válida y costo unitario.",
       );
       return;
     }
@@ -226,9 +227,10 @@ export function PurchaseOrderForm() {
         body: {
           supplier_id: supplierId,
           ordered_at: toOrderedAtPayload(orderedAt),
+          ...(expectedAt ? { expected_at: toOrderedAtPayload(expectedAt) } : {}),
           items: items.map((item) => ({
             product_id: item.productId,
-            quantity: Number(item.quantity),
+            quantity: item.quantity,
             unit_cost: item.unitCost.trim(),
           })),
         },
@@ -257,7 +259,7 @@ export function PurchaseOrderForm() {
         productName:
           products.find((product) => product.id === item.productId)?.name ??
           item.productId,
-        quantity: Number(item.quantity) || 0,
+        quantity: item.quantity,
         unitCost: item.unitCost.trim(),
       })),
   );
@@ -279,12 +281,26 @@ export function PurchaseOrderForm() {
             ))}
           </Select>
           <Input
-            label="Fecha del pedido"
+            label="Fecha de creación"
             type="date"
             compact
             value={orderedAt}
             onChange={(event) => setOrderedAt(event.target.value)}
           />
+          <div className="flex flex-col gap-1">
+            <Input
+              label="Fecha objetivo"
+              type="date"
+              compact
+              value={expectedAt}
+              onChange={(event) => setExpectedAt(event.target.value)}
+              error={formError?.includes("fecha objetivo") ? formError : undefined}
+            />
+            <p className="text-xs text-text-secondary">Indicá cuándo esperás que llegue el pedido.</p>
+            {orderedAt && expectedAt && expectedAt < orderedAt && (
+              <p className="text-xs text-warning" role="status">La fecha objetivo es anterior a la fecha de creación. Podés continuar, pero el backend puede rechazarla.</p>
+            )}
+          </div>
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -4,8 +4,17 @@ export const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/", label: "Ventas", roles: ["cashier", "admin"] },
   { href: "/sales", label: "Historial", roles: ["admin", "cashier"] },
   { href: "/products", label: "Productos", roles: ["inventory", "admin"] },
-  { href: "/inventory", label: "Inventario", roles: ["inventory", "receiving", "admin"] },
-  { href: "/purchasing", label: "Proveedores", roles: ["admin", "inventory", "receiving"] },
+  {
+    href: "/inventory",
+    label: "Inventario",
+    roles: ["inventory", "receiving", "admin"],
+  },
+  {
+    href: "/purchasing",
+    label: "Proveedores",
+    roles: ["admin", "inventory", "receiving", "cashier"],
+  },
+  { href: "/expenses", label: "Egresos", roles: ["admin"] },
   { href: "/categories", label: "Categorías", roles: ["admin"] },
   { href: "/users", label: "Usuarios", roles: ["admin"] },
   { href: "/reports", label: "Reportes", roles: ["admin"] },
@@ -25,5 +34,7 @@ export function navItemsFor(userRoles: Role[]) {
 }
 
 export function homeFor(roles: Role[]): string {
-  return HOME_PRIORITY.find(({ role }) => roles.includes(role))?.href ?? "/login";
+  return (
+    HOME_PRIORITY.find(({ role }) => roles.includes(role))?.href ?? "/login"
+  );
 }

@@ -11,6 +11,7 @@ import {
   productSearchPath,
   ReceivingItemMode,
 } from "@/lib/receiving";
+import { isValidPurchaseQuantity, quantityUnit } from "@/lib/purchasing";
 import { Product } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 
@@ -63,6 +64,7 @@ export function AddPurchaseOrderItemForm({
       .toLocaleLowerCase("es-AR")
       .includes(search.toLocaleLowerCase("es-AR")),
   );
+  const selectedProduct = products?.find((product) => product.id === productId);
 
   function switchMode(next: ReceivingItemMode) {
     setMode(next);
@@ -96,11 +98,9 @@ export function AddPurchaseOrderItemForm({
       nextFieldErrors.description = "Ingresá una descripción.";
     }
     if (
-      !quantity ||
-      !Number.isInteger(Number(quantity)) ||
-      Number(quantity) < 1
+      !isValidPurchaseQuantity(quantity)
     ) {
-      nextFieldErrors.quantity = "Ingresá una cantidad entera mayor a cero.";
+      nextFieldErrors.quantity = "Ingresá una cantidad válida mayor a cero.";
     }
     if (!unitCost.trim()) {
       nextFieldErrors.unitCost = "Ingresá el costo unitario.";
@@ -299,10 +299,9 @@ export function AddPurchaseOrderItemForm({
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Input
-              label="Cantidad"
-              type="number"
-              inputMode="numeric"
-              min="1"
+              label={`Cantidad en ${quantityUnit(selectedProduct) === "kg" ? "kilogramos" : "unidades"}`}
+              type="text"
+              inputMode="decimal"
               value={quantity}
               error={fieldErrors.quantity}
               onChange={(e) => {
@@ -312,6 +311,7 @@ export function AddPurchaseOrderItemForm({
                   quantity: undefined,
                 }));
               }}
+              endAdornment={<span aria-hidden className="text-xs text-text-secondary">{quantityUnit(selectedProduct)}</span>}
             />
             <Input
               label="Costo unitario"

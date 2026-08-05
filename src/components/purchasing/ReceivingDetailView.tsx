@@ -25,10 +25,12 @@ import {
   describeReceptionLineResolution,
   formatQuantity,
   isValidReceivedQuantity,
+  quantityUnit,
+  quantityThousandths,
   ReceptionResolutionState,
   summarizeReceptionResolution,
 } from "@/lib/purchasing";
-import { PurchaseOrder, PurchaseOrderItem } from "@/lib/types";
+import { ProductList, PurchaseOrder, PurchaseOrderItem } from "@/lib/types";
 import { useLoad } from "@/lib/useLoad";
 import { AddPurchaseOrderItemForm } from "@/components/purchasing/AddPurchaseOrderItemForm";
 
@@ -54,6 +56,11 @@ export function ReceivingDetailView({ id }: { id: string }) {
     [id],
   );
   const { data: order, error, reload } = useLoad(fetcher);
+  const productsFetcher = useCallback(
+    () => api<ProductList>("/products?limit=100"),
+    [],
+  );
+  const { data: products } = useLoad(productsFetcher);
 
   const [resolutions, setResolutions] = useState<ReceptionResolutionState>({});
   const [openPanel, setOpenPanel] = useState<Record<string, PanelKind>>({});
@@ -129,12 +136,12 @@ export function ReceivingDetailView({ id }: { id: string }) {
 
   function confirmPartial(item: PurchaseOrderItem) {
     const draft = panelDrafts[item.id];
-    const quantity = Number(draft?.quantity);
+    const quantity = draft?.quantity ?? "";
     const reason = draft?.reason.trim() ?? "";
     if (
       !isValidReceivedQuantity(quantity, item.quantity) ||
-      quantity <= 0 ||
-      quantity >= item.quantity ||
+      quantityThousandths(quantity) <= 0 ||
+      quantityThousandths(quantity) >= quantityThousandths(item.quantity) ||
       !reason
     ) {
       return;
@@ -235,9 +242,7 @@ export function ReceivingDetailView({ id }: { id: string }) {
       <PageHeader
         title={`Pedido de ${order.supplier_name}`}
         compactMobile
-        description={new Intl.DateTimeFormat("es-AR", {
-          dateStyle: "long",
-        }).format(new Date(order.ordered_at))}
+        description={`Creado ${new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(new Date(order.ordered_at))} · Objetivo ${order.expected_at ? new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(new Date(order.expected_at)) : "Sin definir"}`}
         titleAdornment={
           <Badge
             tone={
@@ -297,7 +302,7 @@ export function ReceivingDetailView({ id }: { id: string }) {
           const resolution = resolutions[item.id];
           const panel = openPanel[item.id];
           const draft = panelDrafts[item.id] ?? {
-            quantity: String(item.quantity),
+            quantity: item.quantity,
             reason: "",
           };
           return (
@@ -410,22 +415,28 @@ export function ReceivingDetailView({ id }: { id: string }) {
                   </div>
                   {panel === "partial" && (
                     <div className="flex flex-col gap-3 rounded-app border border-border p-3 sm:flex-row sm:items-end">
-                      <Input
-                        ref={registerRef<HTMLInputElement>(`${item.id}:qty`)}
-                        label="Cantidad recibida"
-                        type="number"
-                        min="0"
-                        max={item.quantity - 1}
-                        inputMode="numeric"
-                        value={draft.quantity}
-                        onChange={(event) =>
-                          updatePanelDraft(
-                            item.id,
-                            "quantity",
-                            event.target.value,
-                          )
-                        }
-                      />
+                      {(() => {
+                        const unit = quantityUnit(
+                          products?.products.find(
+                            (product) => product.id === item.product_id,
+                          ),
+                        );
+                        return <Input
+                          ref={registerRef<HTMLInputElement>(`${item.id}:qty`)}
+                          label={`Cantidad recibida en ${unit === "kg" ? "kilogramos" : "unidades"}`}
+                          type="text"
+                          inputMode="decimal"
+                          value={draft.quantity}
+                          onChange={(event) =>
+                            updatePanelDraft(
+                              item.id,
+                              "quantity",
+                              event.target.value,
+                            )
+                          }
+                          endAdornment={<span aria-hidden className="text-xs text-text-secondary">{unit}</span>}
+                        />;
+                      })()}
                       <Input
                         label="Motivo de la diferencia"
                         placeholder="Ej: llegaron rotas, faltante del proveedor…"
@@ -458,12 +469,9 @@ export function ReceivingDetailView({ id }: { id: string }) {
                           variant="warning"
                           disabled={
                             !draft.reason.trim() ||
-                            !isValidReceivedQuantity(
-                              Number(draft.quantity),
-                              item.quantity,
-                            ) ||
-                            Number(draft.quantity) <= 0 ||
-                            Number(draft.quantity) >= item.quantity
+                            !isValidReceivedQuantity(draft.quantity, item.quantity) ||
+                            quantityThousandths(draft.quantity) <= 0 ||
+                            quantityThousandths(draft.quantity) >= quantityThousandths(item.quantity)
                           }
                           aria-disabled={!draft.reason.trim()}
                           onClick={() => confirmPartial(item)}

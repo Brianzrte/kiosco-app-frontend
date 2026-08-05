@@ -3,6 +3,18 @@
 ### Requirement: Purchasing hub prioritizes pending orders
 The frontend SHALL provide `/purchasing` as the shared operational hub for Admin, Inventory, Receiving and Cashier. The hub SHALL organize pending orders by their target delivery date into two regions: a dominant "Qué llega hoy" region listing every `PENDING` order whose target delivery date is today or earlier, and a secondary, denser "Esta semana" region listing every `PENDING` order whose target delivery date falls in the following six days. Each region SHALL request only `PENDING` orders with the backend target-date filters, SHALL show supplier, target date, total and status per order, and SHALL link each order to its detail. Below the desktop breakpoint the regions SHALL stack in that same order without page-level horizontal overflow. A `PENDING` order without a target delivery date SHALL NOT be placed in either region, and the hub SHALL offer a link to the complete pending list so those orders remain reachable. The hub SHALL keep the supplier and date-range filters it already supports.
 
+#### Scenario: Pending orders dominate the hub
+- **WHEN** an authorized user opens `/purchasing` at desktop width
+- **THEN** the target-date pending-order regions are the dominant content of the page, their actions live in the header, and no lateral action panel is rendered
+
+#### Scenario: Pending order row states its data and its action
+- **WHEN** the hub lists a pending order
+- **THEN** its row shows supplier, target date, total formatted with `formatMoney()` and a text status badge; a row in "Qué llega hoy" also shows an action that opens its detail to receive it, while a row in "Esta semana" opens its detail directly
+
+#### Scenario: Order with uncatalogued items is flagged in the hub
+- **WHEN** a listed pending order contains at least one free-text item
+- **THEN** its row carries a badge indicating that it has items pending catalog registration
+
 #### Scenario: Today's arrivals dominate the hub
 - **WHEN** an authorized user opens `/purchasing` and there are pending orders targeted for today or earlier
 - **THEN** those orders appear in the "Qué llega hoy" region, above and visually more prominent than "Esta semana"
@@ -34,6 +46,14 @@ The frontend SHALL provide `/purchasing` as the shared operational hub for Admin
 #### Scenario: Pending-order filters
 - **WHEN** the user changes supplier or date filters in the hub
 - **THEN** the frontend sends the supported query values with `status=PENDING`, resets pagination to the first page, and distinguishes no filtered results from no pending orders
+
+#### Scenario: Hub without pending orders
+- **WHEN** no pending order matches an unfiltered request
+- **THEN** the hub explains that there are no pending orders to receive and continues to offer order creation to a user authorized to create orders
+
+#### Scenario: Hub fails to load pending orders
+- **WHEN** either target-date pending-order request fails
+- **THEN** that region shows the backend `message` with a retry action and renders no partial data for the failed region
 
 ### Requirement: Role-adaptive purchasing actions
 The purchasing hub SHALL present links to create a purchase order, view order history and manage suppliers. It SHALL render all three links only for Admin or Inventory. It SHALL NOT render the create-order or supplier-management controls for a user holding only Receiving, nor for a user holding only Cashier. The history link SHALL be available to all roles authorized to list purchase orders. A Cashier SHALL reach the hub from the application navigation, SHALL see the pending-order regions and SHALL be able to open an order detail and receive it.

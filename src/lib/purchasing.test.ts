@@ -5,15 +5,19 @@ import {
   buildPurchaseOrdersQuery,
   buildPurchasesBySupplierQuery,
   buildReceptionPayload,
+  classifyPurchaseOrderSchedule,
   derivePurchaseOrderPreloadDraft,
   describeReceptionLineResolution,
   filterIncompleteDataSuggestions,
   formatQuantity,
   hasSupplierAssociation,
   isValidReceivedQuantity,
+  isValidPurchaseQuantity,
   purchaseOrderPreloadExclusionReasonLabel,
   purchaseOrderStatusLabel,
+  purchaseOrderScheduleBounds,
   purchasePaymentMethodLabel,
+  quantityUnit,
   ReceptionResolutionState,
   splitReplenishmentSuggestions,
   summarizePurchaseOrderDraft,
@@ -60,6 +64,99 @@ describe("buildPurchaseOrdersQuery", () => {
     expect(params.get("page")).toBe("2");
     expect(params.get("limit")).toBe("50");
   });
+
+  it("passes expected-date filters as calendar days and requests expected order", () => {
+    const params = new URLSearchParams(
+      buildPurchaseOrdersQuery({
+        supplierId: "",
+        from: "",
+        to: "",
+        status: "PENDING",
+        expectedFrom: "2026-08-04",
+        expectedTo: "2026-08-05",
+        orderByExpected: true,
+        page: 1,
+      }),
+    );
+    expect(params.get("expected_from")).toBe("2026-08-04");
+    expect(params.get("expected_to")).toBe("2026-08-05");
+    expect(params.get("order_by")).toBe("expected_at");
+  });
+});
+
+describe("purchase-order schedule", () => {
+  const now = new Date("2026-08-04T02:30:00.000Z"); // 23:30 on Aug 3 in Buenos Aires.
+
+  it("uses the business calendar day at the midnight boundary", () => {
+    expect(
+      classifyPurchaseOrderSchedule(
+        { expected_at: "2026-08-03T12:00:00-03:00" },
+        now,
+      ),
+    ).toBe("today");
+  });
+
+  it("classifies missing, overdue and upcoming target dates", () => {
+    expect(classifyPurchaseOrderSchedule({ expected_at: null }, now)).toBe(
+      "no_expected_date",
+    );
+    expect(
+      classifyPurchaseOrderSchedule(
+        { expected_at: "2026-08-02T12:00:00-03:00" },
+        now,
+      ),
+    ).toBe("overdue");
+    expect(
+      classifyPurchaseOrderSchedule(
+        { expected_at: "2026-08-09T12:00:00-03:00" },
+        now,
+      ),
+    ).toBe("this_week");
+    expect(
+      classifyPurchaseOrderSchedule(
+        { expected_at: "2026-08-10T12:00:00-03:00" },
+        now,
+      ),
+    ).toBe("no_expected_date");
+  });
+
+  it("uses exclusive backend bounds without overlapping today and this week", () => {
+    expect(purchaseOrderScheduleBounds("2026-08-04", "", "today")).toEqual({
+      expectedTo: "2026-08-05",
+    });
+    expect(purchaseOrderScheduleBounds("2026-08-04", "", "week")).toEqual({
+      expectedFrom: "2026-08-05",
+      expectedTo: "2026-08-11",
+    });
+  });
+
+  it("narrows only the matching schedule region for a target-date filter", () => {
+    expect(
+      purchaseOrderScheduleBounds("2026-08-04", "2026-08-02", "today"),
+    ).toEqual({ expectedFrom: "2026-08-02", expectedTo: "2026-08-03" });
+    expect(
+      purchaseOrderScheduleBounds("2026-08-04", "2026-08-02", "week"),
+    ).toBeNull();
+    expect(
+      purchaseOrderScheduleBounds("2026-08-04", "2026-08-07", "week"),
+    ).toEqual({ expectedFrom: "2026-08-07", expectedTo: "2026-08-08" });
+  });
+});
+
+describe("purchase quantity", () => {
+  it("derives kilograms only for weighable catalog products", () => {
+    expect(quantityUnit(product({ unit_type: "pesable" }))).toBe("kg");
+    expect(quantityUnit(product({ unit_type: "unitario" }))).toBe("un");
+    expect(quantityUnit()).toBe("un");
+  });
+
+  it("accepts positive values up to three decimals", () => {
+    expect(isValidPurchaseQuantity("15.125")).toBe(true);
+    expect(isValidPurchaseQuantity("0")).toBe(false);
+    expect(isValidPurchaseQuantity("-1")).toBe(false);
+    expect(isValidPurchaseQuantity("15.1234")).toBe(false);
+    expect(isValidPurchaseQuantity("")).toBe(false);
+  });
 });
 
 describe("buildPurchasesBySupplierQuery", () => {
@@ -90,10 +187,10 @@ describe("purchasing display labels", () => {
     expect(purchaseOrderStatusLabel("PENDING")).toBe("Pendiente");
     expect(purchasePaymentMethodLabel("account")).toBe("Cuenta corriente");
     expect(
-      supplierLabel({ id: "supplier-1", name: "Mayorista", active: true }),
+      supplierLabel({ id: "supplier-1", name: "Mayorista", active: true, phone: null, address: null, visit_frequency_days: null, visit_notes: null, notes: null }),
     ).toBe("Mayorista");
     expect(
-      supplierLabel({ id: "supplier-1", name: "Mayorista", active: false }),
+      supplierLabel({ id: "supplier-1", name: "Mayorista", active: false, phone: null, address: null, visit_frequency_days: null, visit_notes: null, notes: null }),
     ).toBe("Mayorista (inactivo)");
   });
 });
@@ -101,7 +198,6 @@ describe("purchasing display labels", () => {
 describe("formatQuantity", () => {
   it("drops the backend's fixed 3-decimal padding for whole quantities", () => {
     expect(formatQuantity("8.000")).toBe("8");
-    expect(formatQuantity(8)).toBe("8");
     expect(formatQuantity("0.000")).toBe("0");
   });
 
@@ -237,7 +333,7 @@ describe("summarizePurchaseOrderDraft", () => {
       {
         productId: "product-1",
         productName: "Producto A",
-        quantity: 3,
+        quantity: "3",
         unitCost: "10.00",
       },
     ]);
@@ -245,7 +341,7 @@ describe("summarizePurchaseOrderDraft", () => {
       {
         productId: "product-1",
         productName: "Producto A",
-        quantity: 3,
+        quantity: "3",
         unitCost: "10.00",
         subtotal: "30.00",
       },
@@ -258,13 +354,13 @@ describe("summarizePurchaseOrderDraft", () => {
       {
         productId: "product-1",
         productName: "Producto A",
-        quantity: 2,
+        quantity: "2",
         unitCost: "5.50",
       },
       {
         productId: "product-2",
         productName: "Producto B",
-        quantity: 4,
+        quantity: "4",
         unitCost: "1.25",
       },
     ]);
@@ -280,12 +376,25 @@ describe("summarizePurchaseOrderDraft", () => {
       {
         productId: "product-1",
         productName: "Producto A",
-        quantity: 3,
+        quantity: "3",
         unitCost: "0.10",
       },
     ]);
     expect(result.lines[0].subtotal).toBe("0.30");
     expect(result.total).toBe("0.30");
+  });
+
+  it("uses scaled integers for fractional quantities", () => {
+    const result = summarizePurchaseOrderDraft([
+      {
+        productId: "product-1",
+        productName: "Pan",
+        quantity: "1.250",
+        unitCost: "10.00",
+      },
+    ]);
+    expect(result.lines[0].subtotal).toBe("12.50");
+    expect(result.total).toBe("12.50");
   });
 
   it("returns a zero total for an empty draft", () => {
@@ -372,8 +481,8 @@ function purchaseOrderItem(
     id: "item-1",
     product_id: "product-1",
     product_name: "Producto",
-    quantity: 3,
-    received_quantity: 0,
+    quantity: "3",
+    received_quantity: "0",
     unit_cost: "5.00",
     subtotal: "15.00",
     ...overrides,
@@ -485,42 +594,42 @@ describe("derivePurchaseOrderPreloadDraft", () => {
 
 describe("buildReceptionPayload", () => {
   it("sends full quantity with no reason for a fully received line", () => {
-    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const items = [purchaseOrderItem({ id: "item-1", quantity: "5" })];
     const resolutions: ReceptionResolutionState = {
       "item-1": { action: "received_all" },
     };
     expect(buildReceptionPayload(items, resolutions)).toEqual([
-      { item_id: "item-1", received_quantity: 5 },
+      { item_id: "item-1", received_quantity: "5" },
     ]);
   });
 
   it("includes the reason for a partially received line", () => {
-    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const items = [purchaseOrderItem({ id: "item-1", quantity: "5" })];
     const resolutions: ReceptionResolutionState = {
       "item-1": {
         action: "received_partial",
-        receivedQuantity: 2,
+        receivedQuantity: "2",
         reason: "Faltó stock",
       },
     };
     expect(buildReceptionPayload(items, resolutions)).toEqual([
       {
         item_id: "item-1",
-        received_quantity: 2,
+        received_quantity: "2",
         non_delivery_reason: "Faltó stock",
       },
     ]);
   });
 
   it("sends zero with the reason for a line that was not delivered", () => {
-    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const items = [purchaseOrderItem({ id: "item-1", quantity: "5" })];
     const resolutions: ReceptionResolutionState = {
       "item-1": { action: "not_delivered", reason: "No llegó" },
     };
     expect(buildReceptionPayload(items, resolutions)).toEqual([
       {
         item_id: "item-1",
-        received_quantity: 0,
+        received_quantity: "0",
         non_delivery_reason: "No llegó",
       },
     ]);
@@ -535,8 +644,8 @@ describe("buildReceptionPayload", () => {
 describe("summarizeReceptionResolution", () => {
   it("counts resolved lines and outcomes as a reception when something arrived", () => {
     const items = [
-      purchaseOrderItem({ id: "item-1", quantity: 5 }),
-      purchaseOrderItem({ id: "item-2", quantity: 2 }),
+      purchaseOrderItem({ id: "item-1", quantity: "5" }),
+      purchaseOrderItem({ id: "item-2", quantity: "2" }),
     ];
     const resolutions: ReceptionResolutionState = {
       "item-1": { action: "received_all" },
@@ -549,7 +658,7 @@ describe("summarizeReceptionResolution", () => {
   });
 
   it("outcomes as a cancellation when every resolved line received nothing", () => {
-    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const items = [purchaseOrderItem({ id: "item-1", quantity: "5" })];
     const resolutions: ReceptionResolutionState = {
       "item-1": { action: "not_delivered", reason: "No llegó" },
     };
@@ -561,11 +670,11 @@ describe("summarizeReceptionResolution", () => {
   });
 
   it("outcomes as a cancellation when a partial resolution received zero", () => {
-    const items = [purchaseOrderItem({ id: "item-1", quantity: 5 })];
+    const items = [purchaseOrderItem({ id: "item-1", quantity: "5" })];
     const resolutions: ReceptionResolutionState = {
       "item-1": {
         action: "received_partial",
-        receivedQuantity: 0,
+        receivedQuantity: "0",
         reason: "No llegó nada",
       },
     };
@@ -577,18 +686,18 @@ describe("summarizeReceptionResolution", () => {
 
 describe("isValidReceivedQuantity", () => {
   it("accepts an integer between zero and the requested quantity", () => {
-    expect(isValidReceivedQuantity(0, 5)).toBe(true);
-    expect(isValidReceivedQuantity(5, 5)).toBe(true);
-    expect(isValidReceivedQuantity(3, 5)).toBe(true);
+    expect(isValidReceivedQuantity("0", "5")).toBe(true);
+    expect(isValidReceivedQuantity("5", "5")).toBe(true);
+    expect(isValidReceivedQuantity("3", "5")).toBe(true);
   });
 
   it("rejects a quantity above what was requested", () => {
-    expect(isValidReceivedQuantity(6, 5)).toBe(false);
+    expect(isValidReceivedQuantity("6", "5")).toBe(false);
   });
 
   it("rejects a negative or non-integer quantity", () => {
-    expect(isValidReceivedQuantity(-1, 5)).toBe(false);
-    expect(isValidReceivedQuantity(1.5, 5)).toBe(false);
+    expect(isValidReceivedQuantity("-1", "5")).toBe(false);
+    expect(isValidReceivedQuantity("1.2345", "5")).toBe(false);
   });
 });
 
@@ -611,7 +720,7 @@ describe("purchaseOrderPreloadExclusionReasonLabel", () => {
 
 describe("describeReceptionLineResolution", () => {
   it("describes a fully received line with the requested quantity", () => {
-    expect(describeReceptionLineResolution({ action: "received_all" }, 5)).toBe(
+    expect(describeReceptionLineResolution({ action: "received_all" }, "5")).toBe(
       "Recibido completo: 5/5",
     );
   });
@@ -621,10 +730,10 @@ describe("describeReceptionLineResolution", () => {
       describeReceptionLineResolution(
         {
           action: "received_partial",
-          receivedQuantity: 2,
+        receivedQuantity: "2",
           reason: "Faltó stock",
         },
-        5,
+      "5",
       ),
     ).toBe("Recibido parcial: 2 de 5 · Motivo: Faltó stock");
   });
@@ -633,7 +742,7 @@ describe("describeReceptionLineResolution", () => {
     expect(
       describeReceptionLineResolution(
         { action: "not_delivered", reason: "No llegó" },
-        5,
+      "5",
       ),
     ).toBe("Fuera del pedido · Motivo: No llegó");
   });
