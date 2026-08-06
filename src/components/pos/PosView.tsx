@@ -67,6 +67,7 @@ const CONFIRMED_SALE_AUTO_DISMISS_MS = 6000;
 
 const POS_CART_STORAGE_KEY = "pos:cart:v1";
 const STOCK_POLL_MS = 30_000;
+const MIN_SEARCH_LENGTH = 3;
 
 const UNKNOWN_NETWORK_MESSAGE =
   "Falló la conexión y no se sabe si la venta se confirmó. Verificá el estado antes de reintentar; el carrito se conservó.";
@@ -155,9 +156,7 @@ export function PosView() {
     Record<string, Promise<StockAvailability> | undefined>
   >({});
 
-  async function availableStock(
-    productId: string,
-  ): Promise<StockAvailability> {
+  async function availableStock(productId: string): Promise<StockAvailability> {
     // Do not cache unknown failures. Besides allowing a retry after a
     // transient error, this lets a Fast Refresh session that previously
     // stored `undefined` re-check the product with the current 404 rule.
@@ -337,9 +336,7 @@ export function PosView() {
       setCart((prev) => addEmptyWeightLine(prev, product));
       const available = await availableStock(product.id);
       if (isOutOfStock(available)) {
-        setCart((prev) =>
-          removeCartLine(prev, product.id),
-        );
+        setCart((prev) => removeCartLine(prev, product.id));
         setStockLimitMsg(stockLimitMessage(product.name, 0));
         return;
       }
@@ -385,9 +382,7 @@ export function PosView() {
     if (line.product.unit_type === "pesable") return;
     const available = await availableStock(line.product.id);
     if (isOutOfStock(available)) {
-      setCart((prev) =>
-        removeCartLine(prev, line.product.id),
-      );
+      setCart((prev) => removeCartLine(prev, line.product.id));
       setStockLimitMsg(stockLimitMessage(line.product.name, 0));
       return;
     }
@@ -409,14 +404,18 @@ export function PosView() {
   }
 
   useEffect(() => {
-    if (!searchTerm.trim()) return;
+    if (searchTerm.trim().length < MIN_SEARCH_LENGTH) return;
 
     const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   useEffect(() => {
-    if (!searchTerm.trim() || searchTerm !== debouncedSearchTerm) return;
+    if (
+      searchTerm.trim().length < MIN_SEARCH_LENGTH ||
+      searchTerm !== debouncedSearchTerm
+    )
+      return;
     const term = searchTerm.trim();
 
     let cancelled = false;
@@ -456,13 +455,16 @@ export function PosView() {
     };
   }, [debouncedSearchTerm, searchTerm]);
 
-  const searchStatusMessage = !searchTerm.trim()
+  const trimmedSearchTerm = searchTerm.trim();
+  const searchStatusMessage = !trimmedSearchTerm
     ? null
-    : searchPending
-      ? "Buscando…"
-      : searchResults.length === 0
-        ? `Ningún producto activo coincide con “${searchTerm.trim()}”.`
-        : null;
+    : trimmedSearchTerm.length < MIN_SEARCH_LENGTH
+      ? `Escribí al menos ${MIN_SEARCH_LENGTH} caracteres para buscar.`
+      : searchPending
+        ? "Buscando…"
+        : searchResults.length === 0
+          ? `Ningún producto activo coincide con “${trimmedSearchTerm}”.`
+          : null;
 
   const entryStatusMessage = resolveEntryStatus({
     unknownBarcodeMessage,
@@ -478,7 +480,7 @@ export function PosView() {
     setSearchTerm(value);
     setSearchResults([]);
     setSearchErrorMessage(null);
-    setSearchPending(value.trim() !== "");
+    setSearchPending(value.trim().length >= MIN_SEARCH_LENGTH);
     setActiveResultIndex(0);
     setSearchDismissed(false);
   }
@@ -512,15 +514,18 @@ export function PosView() {
     if (selectableIndices.length === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveResultIndex((index) =>
-        selectableIndices.find((candidate) => candidate > index) ??
-        selectableIndices[selectableIndices.length - 1],
+      setActiveResultIndex(
+        (index) =>
+          selectableIndices.find((candidate) => candidate > index) ??
+          selectableIndices[selectableIndices.length - 1],
       );
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveResultIndex((index) =>
-        [...selectableIndices].reverse().find((candidate) => candidate < index) ??
-        selectableIndices[0],
+      setActiveResultIndex(
+        (index) =>
+          [...selectableIndices]
+            .reverse()
+            .find((candidate) => candidate < index) ?? selectableIndices[0],
       );
     }
   }
@@ -569,9 +574,7 @@ export function PosView() {
     if (isValidWeight(value)) {
       const available = await availableStock(productId);
       if (isOutOfStock(available)) {
-        setCart((prev) =>
-          removeCartLine(prev, productId),
-        );
+        setCart((prev) => removeCartLine(prev, productId));
         setStockLimitMsg(stockLimitMessage(line.product.name, 0));
         return;
       }
