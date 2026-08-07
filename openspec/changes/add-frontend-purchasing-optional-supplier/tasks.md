@@ -1,8 +1,8 @@
-## 0. Prerrequisitos y coordinación backend (bloqueante)
+## 0. Prerrequisitos y coordinación backend (bloqueante para pedido sin proveedor y sugerencias acotadas)
 
 - [ ] 0.1 Confirmar contra una instancia backend real que `POST /purchase-orders` acepta `supplier_id` ausente/`null` y crea el pedido `PENDING` sin proveedor; backend real. Bloquea toda tarea de la sección 2 y 3.
 - [ ] 0.2 Confirmar contra una instancia backend real que `purchaseOrderResponse`, `purchaseOrderDetailResponse` y `purchaseOrderListItemResponse` devuelven `supplier_id`/`supplier_name` `null` para un pedido sin proveedor; backend real. Bloquea toda tarea de la sección 1 y 4.
-- [ ] 0.3 Confirmar contra una instancia backend real la forma final de acotado de sugerencias por proveedor (parámetro de filtro o campo con todas las asociaciones) y el criterio de frecuencia de reposición documentado por backend para proveedor no preferido; backend real. Bloquea toda tarea de la sección 5.
+- [ ] 0.3 Confirmar contra una instancia backend real que `GET /purchase-orders/suggestions` acepta `supplier_id` opcional y devuelve ventas de 7 días, stock, cobertura, cantidad sugerida, explicación y orden para cualquier asociación activa; backend real. Bloquea toda tarea de la sección 5.
 - [ ] 0.4 Confirmar si backend documenta y despliega el tratamiento de pedidos sin proveedor en `GET /reports/purchases/by-supplier` (bucket propio o exclusión); backend real. Bloquea la sección 6; si backend no lo resuelve, la sección 6 queda fuera del alcance implementable de este change y se documenta como pendiente.
 - [ ] 0.5 Confirmar que `add-frontend-suppliers-purchasing` sigue archivado o su comportamiento vigente equivalente al descripto en este documento (mismo `PurchaseOrderForm.tsx`, mismos tipos de pedido) antes de tocar los mismos archivos; inspección de código.
 - [ ] 0.6 Confirmar el estado de `add-frontend-purchasing-supplier-item-association` (implementado o en curso) y que la implementación de este change no reintroduce una regresión en la partición de sugerencias sin proveedor ni en el warning de asociación inline; inspección de código.
@@ -29,13 +29,13 @@
 
 - [ ] 4.1 Verificar por inspección que un filtro de historial por un proveedor específico no requiere ni ofrece un filtro adicional "sin proveedor" no soportado por backend; inspección de código, sin cambio de UI si no aplica.
 
-## 5. Sugerencias acotadas al proveedor seleccionado
+## 5. Lista de compra priorizada y acotada al proveedor seleccionado
 
-- [ ] 5.1 Según la forma confirmada en 0.3, actualizar `src/lib/types.ts` para `ReplenishmentSuggestion` (nuevo campo de asociaciones) o para el parámetro de consulta de `GET /purchase-orders/suggestions`; inspección de tipos.
-- [ ] 5.2 Agregar a `src/lib/purchasing.ts` una función pura que, dado el array de sugerencias (o de asociaciones expuestas) y un `supplierId`, devuelva sólo las sugerencias de productos con alguna asociación (preferida o no) con ese proveedor; prueba automatizada en `src/lib/purchasing.test.ts` con casos: sin proveedor seleccionado (sin filtrar), proveedor con productos asociados, proveedor sin ningún producto asociado.
-- [ ] 5.3 En `PurchaseOrderForm.tsx`, aplicar el filtro de 5.2 cuando hay un proveedor seleccionado, conservando sin cambios el comportamiento de las dos secciones de `add-frontend-purchasing-supplier-item-association` cuando no hay proveedor seleccionado; inspección de código: no se recalcula `suggested_quantity` ni la frecuencia de reposición en el cliente.
-- [ ] 5.4 Agregar el vacío específico "No hay sugerencias para este proveedor." cuando el filtro de 5.2 no deja ningún ítem con proveedor seleccionado, distinto del vacío general; prueba manual: proveedor sin productos asociados con necesidad de reposición.
-- [ ] 5.5 Prueba manual contra backend real: seleccionar un proveedor con productos asociados de forma no preferida y confirmar que aparecen en la lista acotada.
+- [ ] 5.1 Confirmar contra backend real que `GET /purchase-orders/suggestions` devuelve la lista de prioridad de siete días con ventas, stock, cobertura, cantidad, explicación y orden, y acepta `supplier_id` para cualquier asociación activa. **[backend real]**
+- [ ] 5.2 Actualizar `src/lib/types.ts` y el builder de query con las métricas y el parámetro confirmados; mantener montos y cantidades en el formato decimal que backend entregue. **[inspección + npm run build]**
+- [ ] 5.3 En `ReplenishmentSuggestionsPanel.tsx`, mostrar una lista única ordenada por backend con ventas de siete días, stock actual, cobertura, cantidad sugerida y explicación; permitir ajustar la cantidad antes de agregar la línea y no recalcular prioridad ni cantidad en el cliente. **[inspección + prueba manual]**
+- [ ] 5.4 En `PurchaseOrderForm.tsx`, volver a pedir o actualizar la lista con `supplier_id` al elegir proveedor; sin proveedor usar la lista completa. Mostrar el vacío específico "No hay sugerencias para este proveedor." cuando corresponda. **[inspección + prueba manual]**
+- [ ] 5.5 Prueba manual contra backend real: confirmar el orden por cobertura sin proveedor, la inclusión de un producto vendido sin proveedor preferido, el recorte por una asociación no preferida y el ajuste manual de una cantidad antes de agregarla al pedido. **[backend real + prueba manual]**
 
 ## 6. Reporte por proveedor (condicional a 0.4)
 

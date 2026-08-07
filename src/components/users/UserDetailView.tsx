@@ -274,6 +274,7 @@ function ProfileForm({ user, onSaved }: { user: User; onSaved: () => void }) {
   const [lastName, setLastName] = useState(user.last_name);
   const [phone, setPhone] = useState(user.phone);
   const [address, setAddress] = useState(user.address);
+  const [hourlyRate, setHourlyRate] = useState(user.hourly_rate ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -284,7 +285,13 @@ function ProfileForm({ user, onSaved }: { user: User; onSaved: () => void }) {
     try {
       await api(`/users/${user.id}`, {
         method: "PUT",
-        body: { first_name: firstName, last_name: lastName, phone, address },
+        body: {
+          first_name: firstName,
+          last_name: lastName,
+          phone,
+          address,
+          hourly_rate: hourlyRate.trim() || null,
+        },
       });
       toast("success", "Perfil actualizado");
       onSaved();
@@ -322,6 +329,18 @@ function ProfileForm({ user, onSaved }: { user: User; onSaved: () => void }) {
             value={address}
             onChange={(event) => setAddress(event.target.value)}
           />
+          <div>
+            <Input
+              label="Tarifa horaria"
+              value={hourlyRate}
+              onChange={(event) => setHourlyRate(event.target.value)}
+              inputMode="decimal"
+              placeholder="Ej. 2500.00"
+            />
+            <p className="mt-1 text-xs text-text-secondary">
+              Dejá vacío si no se liquida por hora.
+            </p>
+          </div>
         </div>
         {error && (
           <p role="alert" className="text-sm text-error">

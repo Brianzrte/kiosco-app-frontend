@@ -86,6 +86,15 @@ export type CashClosing = {
   notes?: string | null;
   closed_at: string;
   state: "provisional" | "sealed";
+  // Egresos en efectivo ya descontados de expected_cash (backend-request.md
+  // → F). Verificado por inspección del DTO real
+  // (internal/sales/transport/http/dto.go → cashClosingResponse): presente
+  // en un CashClosing sellado. current-status y daily-status NO exponen
+  // estos campos a nivel de fila pese a que el spec los pide — bug
+  // reportado en add-frontend-expenses-and-payroll → tasks.md 0.10, no
+  // reflejado acá porque no está confirmado en vivo.
+  cash_expenses_total: string;
+  cash_expenses_count: number;
 };
 
 export type CashierOpeningFund = {
@@ -123,6 +132,8 @@ export type DailyCashClosingStatusItem = {
   sales_after_latest_closing: number;
   cash_after_latest_closing: string;
   latest_closing: CashClosing | null;
+  cash_expenses_total?: string;
+  cash_expenses_count?: number;
   opening_fund: Pick<CashierOpeningFund, "amount" | "status"> | null;
 };
 
@@ -375,38 +386,58 @@ export type ExpenseStatus = "ACTIVE" | "VOID";
 export type ExpenseCategory = {
   id: string;
   name: string;
-  is_active: boolean;
-  created_at: string;
+  active: boolean;
 };
 
+/**
+ * Verificado en vivo el 2026-08-06 contra `GET /expenses/{id}`: no trae
+ * `product_name` ni `unit_type` ni `line_total` como se había asumido antes
+ * de verificar — sólo estos cuatro campos. El nombre y la unidad del
+ * producto se resuelven del lado del frontend contra `/products`.
+ */
 export type ExpenseLine = {
+  id: string;
   product_id: string;
-  product_name: string;
-  unit_type: "unitario" | "pesable";
   quantity: string;
   unit_cost: string;
-  line_total: string;
+  subtotal: string;
 };
 
+/**
+ * Forma verificada en vivo el 2026-08-06 contra `POST/GET /expenses` y
+ * `POST /expenses/{id}/void`. El backend no expone nombres resueltos
+ * (`expense_category_name`, `supplier_name`, `voided_by_username`,
+ * `created_by_username`): sólo ids crudos. Los campos marcados opcionales
+ * están directamente ausentes del JSON cuando no aplican (no `null`),
+ * salvo `expense_category_id`, que siempre está presente y puede ser
+ * `null`. `items` y `supplier_id` sólo se verificaron presentes en el
+ * detalle (`GET /expenses/{id}`); el listado (`GET /expenses`) no los trae
+ * ni para `PURCHASE` con líneas.
+ */
 export type Expense = {
   id: string;
   business_date: string;
   type: ExpenseType;
   expense_category_id: string | null;
-  expense_category_name: string | null;
   payment_method: ExpensePaymentMethod;
   amount: string;
   description: string;
-  supplier_id: string | null;
-  supplier_name: string | null;
-  items: ExpenseLine[] | null;
   status: ExpenseStatus;
-  void_reason: string | null;
-  voided_at: string | null;
-  voided_by_username: string | null;
-  payroll_payment_id: string | null;
-  created_by_username: string;
+  created_by: string;
   created_at: string;
+  /** Sólo en `PURCHASE`. */
+  supplier_id?: string;
+  /** Sólo en el detalle de `PURCHASE`/`SELF_CONSUMPTION` con líneas. */
+  items?: ExpenseLine[];
+  void_reason?: string;
+  voided_by?: string;
+  voided_at?: string;
+  /** Sólo cuando `payment_method=CASH_REGISTER` y había un único turno
+   * activo al crearse (D2). */
+  cash_shift_id?: string;
+  /** Sólo cuando `type=PAYROLL`, generado por la liquidación de sueldos
+   * (bloque D/E, fuera de este bloque). No verificado en vivo todavía. */
+  payroll_payment_id?: string;
 };
 
 export type ExpenseList = {
@@ -416,26 +447,50 @@ export type ExpenseList = {
   total: number;
 };
 
-export type ExpenseSummaryBucket = { key: string; label: string; amount: string };
-
+/**
+ * Forma verificada en vivo el 2026-08-06 contra `GET /expenses/summary`:
+ * `by_type`/`by_category`/`by_payment_method` son mapas `clave → monto`, no
+ * un array de `{key,label,amount}` como se había asumido antes de verificar.
+ * `by_category` usa el **nombre** del rubro como clave (no el id), con `""`
+ * agrupando los egresos sin rubro (p. ej. retiros). Importante: los tres
+ * mapas **mezclan** gastos del negocio y retiros — un retiro con
+ * `payment_method=CASH_REGISTER` suma al mismo balde `CASH_REGISTER` que un
+ * gasto operativo en efectivo (confirmado creando un `OWNER_DRAW` real y
+ * viendo crecer `by_payment_method.CASH_REGISTER`). El mockup
+ * (`design/01-hub-*`) muestra una cifra de retiros aparte *dentro* de cada
+ * tarjeta de medio de pago que el contrato real no permite calcular (no hay
+ * un cruce tipo×medio de pago); esa cifra por-tarjeta no se implementa para
+ * no inventar un dato que el backend no da — sólo los dos totales generales
+ * (D8) se muestran separados.
+ */
 export type ExpenseSummary = {
   /** Excluye los retiros: un retiro no es un gasto del negocio. */
   total_business_expenses: string;
   total_owner_draws: string;
-  by_type: ExpenseSummaryBucket[];
-  by_category: ExpenseSummaryBucket[];
-  by_payment_method: ExpenseSummaryBucket[];
+  by_type: Partial<Record<ExpenseType, string>>;
+  by_category: Record<string, string>;
+  by_payment_method: Partial<Record<ExpensePaymentMethod, string>>;
 };
 
+/**
+ * Forma real de `GET/POST/PUT /work-logs`, verificada en vivo contra
+ * `localhost:8080` (2026-08-07). El backend no manda `username` (sólo
+ * `user_id`; el nombre se resuelve del lado del cliente contra `/users`), y
+ * el monto final viaja como `final_amount`, no `amount` — `amount` es sólo
+ * el nombre del campo del *request* de alta/edición. `adjustment_reason` y
+ * `payroll_payment_id` son punteros `omitempty` en el backend: cuando no hay
+ * valor, la clave está **ausente** del JSON (`undefined`), no `null`. El
+ * código que los consume debe usar una comprobación "truthy"
+ * (`Boolean(...)`), nunca `=== null` / `!== null`.
+ */
 export type WorkLog = {
   id: string;
   user_id: string;
-  username: string;
   business_date: string;
   hours: string;
   hourly_rate_snapshot: string;
   computed_amount: string;
-  amount: string;
+  final_amount: string;
   adjustment_reason: string | null;
   payroll_payment_id: string | null;
 };
@@ -450,13 +505,17 @@ export type PayrollPendingItem = {
   total_amount: string;
   pending_days: number;
   oldest_unpaid_date: string | null;
-  has_adjustment: boolean;
 };
 
+/**
+ * Forma real de `GET/POST /payroll/payments` (verificada en vivo): el campo
+ * es `user_name`, `omitempty` — ausente en la respuesta del `POST` que crea
+ * la liquidación, presente en el `GET` de listado.
+ */
 export type PayrollPayment = {
   id: string;
   user_id: string;
-  username: string;
+  user_name?: string;
   period_from: string;
   period_to: string;
   total_hours: string;
@@ -464,4 +523,5 @@ export type PayrollPayment = {
   payment_method: ExpensePaymentMethod;
   expense_id: string;
   paid_at: string;
+  status: "ACTIVE" | "VOID";
 };

@@ -13,10 +13,18 @@ const NO_ENTER_TRANSITION_ROUTES = new Set(["/"]);
 export function SectionTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const skipTransition = NO_ENTER_TRANSITION_ROUTES.has(pathname);
+  const isExpensesRoute =
+    pathname === "/expenses" || pathname.startsWith("/expenses/");
   return (
     <div
       key={pathname}
-      className={skipTransition ? undefined : "section-enter"}
+      className={
+        skipTransition
+          ? undefined
+          : isExpensesRoute
+            ? "section-enter expenses-section-enter"
+            : "section-enter"
+      }
     >
       {children}
     </div>

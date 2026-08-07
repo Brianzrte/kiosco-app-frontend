@@ -16,19 +16,27 @@ The frontend SHALL let Admin and Inventory create a pending purchase order using
 - **THEN** the order is created and displayed as pending without a supplier, using the "Sin proveedor" label instead of a blank or undefined value
 
 ### Requirement: Replenishment suggestions require review
-The frontend SHALL display backend-generated replenishment suggestions that account for current stock, sales volume, replenishment frequency and product–supplier relationships. It SHALL let an authorized user review and adjust a suggestion before creating a purchase order, and SHALL never calculate the suggestion or create an order automatically in the browser. WHEN the user has selected an active supplier for the draft order, the frontend SHALL scope the displayed suggestions to products with any association — preferred or not — with that supplier, and SHALL show a supplier-specific empty state distinct from the general no-replenishment-needed empty state when no such product needs replenishment.
+The frontend SHALL display one backend-generated, reviewable purchase-priority list before creating a purchase order, and SHALL never calculate its priority, coverage or quantity in the browser. The backend list SHALL use confirmed sales from the previous 7 business days and current stock to return only products requiring replenishment, ordered from lowest stock coverage to highest. Every suggestion SHALL expose its product, sales in that window, current stock, estimated coverage, backend-provided rationale and suggested quantity. WHEN no supplier is selected, the frontend SHALL show the complete prioritized list. WHEN the user has selected an active supplier, the frontend SHALL scope the same list to products with any association — preferred or not — with that supplier, and SHALL show a supplier-specific empty state distinct from the general no-replenishment-needed empty state when no such product needs replenishment. The user SHALL be able to adjust a suggested quantity before adding the product to the draft.
 
 #### Scenario: Review a suggestion
 - **WHEN** the backend returns replenishment items
-- **THEN** each item and its backend-provided rationale is visible before the user creates an order
+- **THEN** each item shows its seven-day sales, current stock, coverage, suggested quantity and backend-provided rationale before the user adds it to the order
 
 #### Scenario: No replenishment required
 - **WHEN** the backend returns no replenishment suggestion
 - **THEN** the frontend shows an empty state explaining that no replenishment is currently required
 
-#### Scenario: Planning data is incomplete
-- **WHEN** the backend reports that a product lacks planning data
-- **THEN** the frontend displays the backend-provided reason and does not guess a quantity or supplier
+#### Scenario: Supplier-free purchase priority
+- **WHEN** an authorized user opens the new-order form without selecting a supplier
+- **THEN** the form shows the complete backend-prioritized replenishment list ordered by lowest coverage, without requiring a preferred supplier or replenishment frequency to make a sold product eligible
+
+#### Scenario: Seven-day coverage drives priority
+- **WHEN** two products require replenishment and one has fewer estimated coverage days from its current stock and seven-day sales
+- **THEN** the lower-coverage product appears first in the list
+
+#### Scenario: Suggested quantity can be adjusted
+- **WHEN** the user changes a suggestion's quantity before adding it to the draft
+- **THEN** the adjusted quantity is used for that draft item and the frontend does not recalculate the backend recommendation
 
 #### Scenario: Suggestions scoped to the selected supplier
 - **WHEN** the user selects an active supplier for the draft order

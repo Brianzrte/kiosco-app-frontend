@@ -24,6 +24,7 @@ import {
   isRowLow,
   isDeepLinkedProductId,
   MOVEMENT_TYPE_LABELS,
+  getSelfConsumptionQualifier,
   formatStockQuantity,
   isValidStockQuantityKg,
 } from "@/lib/inventory";
@@ -162,14 +163,11 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
     if (!isDeepLinkedProductId(deepLinkedProductId)) {
       return Promise.resolve<Product | null>(null);
     }
-    return api<Product>(
-      `/products/${encodeURIComponent(deepLinkedProductId)}`,
-    );
+    return api<Product>(`/products/${encodeURIComponent(deepLinkedProductId)}`);
   }, [deepLinkedProductId]);
-  const {
-    data: deepLinkedProduct,
-    error: deepLinkedProductError,
-  } = useLoad(deepLinkedProductFetcher);
+  const { data: deepLinkedProduct, error: deepLinkedProductError } = useLoad(
+    deepLinkedProductFetcher,
+  );
 
   useEffect(() => {
     if (!isDeepLinkedProductId(deepLinkedProductId)) return;
@@ -222,43 +220,80 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         </p>
       )}
 
-      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-row md:items-end md:gap-3 md:p-3`}>
-        <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
-          <Input icon={<IconSearch />} placeholder="Buscar por nombre, SKU o código de barras" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full max-w-xl flex-1" aria-label="Buscar producto" />
+      <div
+        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-row md:items-end md:gap-3 md:p-3`}
+      >
+        <CollapsibleSearch
+          mobileGridLayout
+          open={searchOpen}
+          onOpenChange={(next) => {
+            setSearchOpen(next);
+            if (next) setFiltersOpen(false);
+          }}
+          label="Buscar producto"
+        >
+          <Input
+            icon={<IconSearch />}
+            placeholder="Buscar por nombre, SKU o código de barras"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full max-w-xl flex-1"
+            aria-label="Buscar producto"
+          />
         </CollapsibleSearch>
-        <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryId)) + Number(lowStockOnly)}>
-          {canPlanStock && <Select value={categoryId} onChange={(e) => selectCategory(e.target.value)} className="w-full max-w-none md:w-56" aria-label="Filtrar por categoría">
-            <option value="">Todas las categorías</option>
-            {(categories ?? []).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>}
-        {/* Segmented control: filled background marks the active option,
+        <CollapsibleFilters
+          mobileGridLayout
+          open={filtersOpen}
+          onOpenChange={(next) => {
+            setFiltersOpen(next);
+            if (next) setSearchOpen(false);
+          }}
+          className="justify-self-end"
+          activeFilterCount={Number(Boolean(categoryId)) + Number(lowStockOnly)}
+        >
+          {canPlanStock && (
+            <Select
+              value={categoryId}
+              onChange={(e) => selectCategory(e.target.value)}
+              className="w-full max-w-none md:w-56"
+              aria-label="Filtrar por categoría"
+            >
+              <option value="">Todas las categorías</option>
+              {(categories ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+          {/* Segmented control: filled background marks the active option,
             same convention as ProductsReportView's sort buttons — a filter
             toggle, not a section-switching tab (see StockPanel's Ajustar/
             Mínimo tabs below, which use the underline convention instead). */}
-        <div className="w-fit self-start overflow-hidden rounded-app border border-border">
-          <button
-            type="button"
-            onClick={() => selectLowStockOnly(false)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
-              !lowStockOnly
-                ? "bg-primary text-text-inverse"
-                : "bg-surface text-text-primary hover:bg-surface-2"
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            onClick={() => selectLowStockOnly(true)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors ${
-              lowStockOnly
-                ? "bg-primary text-text-inverse"
-                : "bg-surface text-text-primary hover:bg-surface-2"
-            }`}
-          >
-            Stock bajo
-          </button>
-        </div>
+          <div className="w-fit self-start overflow-hidden rounded-app border border-border">
+            <button
+              type="button"
+              onClick={() => selectLowStockOnly(false)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                !lowStockOnly
+                  ? "bg-primary text-text-inverse"
+                  : "bg-surface text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => selectLowStockOnly(true)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                lowStockOnly
+                  ? "bg-primary text-text-inverse"
+                  : "bg-surface text-text-primary hover:bg-surface-2"
+              }`}
+            >
+              Stock bajo
+            </button>
+          </div>
         </CollapsibleFilters>
       </div>
 
@@ -314,7 +349,11 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                         {formatStockQuantity(item.quantity, item.unit_type)}
                         {low && (
                           <span className="ml-1 text-xs font-normal text-text-secondary">
-                            mín. {formatStockQuantity(item.minimum_quantity, item.unit_type)}
+                            mín.{" "}
+                            {formatStockQuantity(
+                              item.minimum_quantity,
+                              item.unit_type,
+                            )}
                           </span>
                         )}
                       </p>
@@ -323,7 +362,8 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                   <div className="ml-auto flex shrink-0 gap-1">
                     {canPlanStock && (
                       <Button
-                        variant="ghost" size="sm"
+                        variant="ghost"
+                        size="sm"
                         onClick={() =>
                           setHistoryRequest({
                             productId: item.product_id,
@@ -335,7 +375,8 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
                       </Button>
                     )}
                     <Button
-                      variant="secondary" size="sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setSelectedItem(item)}
                     >
                       {item.initialized ? "Ajustar" : "Inicializar"}
@@ -547,7 +588,9 @@ function InitializeStockForm({
     event.preventDefault();
     setError(null);
     if (unitType === "pesable" && !isValidStockQuantityKg(quantity, true)) {
-      setFieldError("Ingresá una cantidad mayor o igual a cero con hasta tres decimales.");
+      setFieldError(
+        "Ingresá una cantidad mayor o igual a cero con hasta tres decimales.",
+      );
       return;
     }
     setFieldError(null);
@@ -579,7 +622,9 @@ function InitializeStockForm({
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Input
           label={
-            unitType === "pesable" ? "Cantidad inicial (kg)" : "Cantidad inicial"
+            unitType === "pesable"
+              ? "Cantidad inicial (kg)"
+              : "Cantidad inicial"
           }
           type="number"
           inputMode={unitType === "pesable" ? "decimal" : "numeric"}
@@ -591,7 +636,11 @@ function InitializeStockForm({
           required
           error={fieldError ?? undefined}
         />
-        {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
+        {unitType === "pesable" && (
+          <p className="text-sm text-text-secondary">
+            Ingresá los kilogramos con hasta tres decimales.
+          </p>
+        )}
         <Input
           label="Motivo"
           value={reason}
@@ -630,7 +679,9 @@ function AdjustStockForm({
     if (!reason.trim()) return;
     setError(null);
     if (unitType === "pesable" && !isValidStockQuantityKg(quantity, false)) {
-      setFieldError("Ingresá una cantidad mayor a cero con hasta tres decimales.");
+      setFieldError(
+        "Ingresá una cantidad mayor a cero con hasta tres decimales.",
+      );
       return;
     }
     setFieldError(null);
@@ -640,7 +691,12 @@ function AdjustStockForm({
       await api(`/inventory/stock/${productId}/adjust`, {
         method: "POST",
         body: {
-          quantity_delta: direction === "in" ? amount : unitType === "pesable" ? `-${amount}` : -amount,
+          quantity_delta:
+            direction === "in"
+              ? amount
+              : unitType === "pesable"
+                ? `-${amount}`
+                : -amount,
           reason: reason.trim(),
         },
       });
@@ -680,7 +736,11 @@ function AdjustStockForm({
             error={fieldError ?? undefined}
           />
         </div>
-        {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
+        {unitType === "pesable" && (
+          <p className="text-sm text-text-secondary">
+            Ingresá los kilogramos con hasta tres decimales.
+          </p>
+        )}
         <Input
           label="Motivo (obligatorio)"
           value={reason}
@@ -721,11 +781,16 @@ function SetMinimumForm({
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    const valid = unitType === "pesable"
-      ? isValidStockQuantityKg(value, true)
-      : Number.isInteger(parseInt(value, 10)) && parseInt(value, 10) >= 0;
+    const valid =
+      unitType === "pesable"
+        ? isValidStockQuantityKg(value, true)
+        : Number.isInteger(parseInt(value, 10)) && parseInt(value, 10) >= 0;
     if (!valid) {
-      setFieldError(unitType === "pesable" ? "Ingresá una cantidad mayor o igual a cero con hasta tres decimales." : "Ingresá un número entero mayor o igual a 0.");
+      setFieldError(
+        unitType === "pesable"
+          ? "Ingresá una cantidad mayor o igual a cero con hasta tres decimales."
+          : "Ingresá un número entero mayor o igual a 0.",
+      );
       return;
     }
     setFieldError(null);
@@ -733,7 +798,10 @@ function SetMinimumForm({
     try {
       await api(`/inventory/stock/${productId}/minimum`, {
         method: "PATCH",
-        body: { minimum_quantity: unitType === "pesable" ? value : parseInt(value, 10) },
+        body: {
+          minimum_quantity:
+            unitType === "pesable" ? value : parseInt(value, 10),
+        },
       });
       toast("success", "Mínimo actualizado");
       onDone();
@@ -764,7 +832,11 @@ function SetMinimumForm({
         error={fieldError ?? undefined}
         required
       />
-      {unitType === "pesable" && <p className="text-sm text-text-secondary">Ingresá los kilogramos con hasta tres decimales.</p>}
+      {unitType === "pesable" && (
+        <p className="text-sm text-text-secondary">
+          Ingresá los kilogramos con hasta tres decimales.
+        </p>
+      )}
       {error && <p className="text-sm text-error">{error}</p>}
       <Button type="submit" pending={pending}>
         {pending ? "Guardando…" : "Guardar mínimo"}
@@ -819,7 +891,16 @@ function MovementHistorySection({
       const desktop = desktopListRef.current?.getBoundingClientRect();
       const rect = mobile && mobile.height > 0 ? mobile : desktop;
       if (!rect) return;
-      const next = Math.min(15, Math.max(5, Math.floor((window.innerHeight - rect.top - 56) / (rect.height / data.items.length))));
+      const next = Math.min(
+        15,
+        Math.max(
+          5,
+          Math.floor(
+            (window.innerHeight - rect.top - 56) /
+              (rect.height / data.items.length),
+          ),
+        ),
+      );
       if (next === pageSize) return;
       setPageSize(next);
       setPage(1);
@@ -885,40 +966,60 @@ function MovementHistorySection({
       ) : (
         <>
           <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
-            {rows.map((row) => (
-              <li key={row.id} className="rounded-app border border-border bg-surface p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{row.product_name}</p>
-                    <p className="data text-xs text-text-secondary">
-                      {new Date(row.created_at).toLocaleString("es-AR")}
-                    </p>
+            {rows.map((row) => {
+              const selfConsumptionQualifier = getSelfConsumptionQualifier(row);
+              return (
+                <li
+                  key={row.id}
+                  className="rounded-app border border-border bg-surface p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{row.product_name}</p>
+                      <p className="data text-xs text-text-secondary">
+                        {new Date(row.created_at).toLocaleString("es-AR")}
+                      </p>
+                    </div>
+                    <Badge
+                      tone={row.quantity_delta < 0 ? "error" : "success"}
+                      className="shrink-0 whitespace-nowrap"
+                    >
+                      {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                    </Badge>
                   </div>
-                  <Badge
-                    tone={row.quantity_delta < 0 ? "error" : "success"}
-                    className="shrink-0 whitespace-nowrap"
-                  >
-                    {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
-                  </Badge>
-                </div>
-                <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-text-secondary">Cantidad</dt>
-                    <dd className="num font-medium">
-                      {formatStockQuantity(row.previous_quantity, row.unit_type)} → {formatStockQuantity(row.new_quantity, row.unit_type)} ({row.quantity_delta > 0 ? "+" : ""}{formatStockQuantity(row.quantity_delta, row.unit_type)})
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-text-secondary">Usuario</dt>
-                    <dd>{row.performed_by_username || "—"}</dd>
-                  </div>
-                  <div className="col-span-2">
-                    <dt className="text-text-secondary">Motivo</dt>
-                    <dd>{row.reason || "—"}</dd>
-                  </div>
-                </dl>
-              </li>
-            ))}
+                  <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-text-secondary">Cantidad</dt>
+                      <dd className="num font-medium">
+                        {formatStockQuantity(
+                          row.previous_quantity,
+                          row.unit_type,
+                        )}{" "}
+                        → {formatStockQuantity(row.new_quantity, row.unit_type)}{" "}
+                        ({row.quantity_delta > 0 ? "+" : ""}
+                        {formatStockQuantity(row.quantity_delta, row.unit_type)}
+                        )
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-text-secondary">Usuario</dt>
+                      <dd>{row.performed_by_username || "—"}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-text-secondary">Motivo</dt>
+                      <dd>
+                        {selfConsumptionQualifier && (
+                          <span className="text-text-secondary">
+                            {selfConsumptionQualifier} ·{" "}
+                          </span>
+                        )}
+                        {row.reason || "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              );
+            })}
           </ul>
           <div ref={desktopListRef} className="hidden md:block">
             <Table>
@@ -933,19 +1034,46 @@ function MovementHistorySection({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="data">{new Date(row.created_at).toLocaleString("es-AR")}</Td>
-                    <Td className="font-medium">{row.product_name}</Td>
-                    <Td className="whitespace-nowrap">{MOVEMENT_TYPE_LABELS[row.type] ?? row.type}</Td>
-                    <Td className={`num text-right ${row.quantity_delta < 0 ? "text-error" : "text-success"}`}>
-                      {formatStockQuantity(row.previous_quantity, row.unit_type)} → {formatStockQuantity(row.new_quantity, row.unit_type)}
-                      <span className="ml-2 text-xs text-text-secondary">({row.quantity_delta > 0 ? "+" : ""}{formatStockQuantity(row.quantity_delta, row.unit_type)})</span>
-                    </Td>
-                    <Td className="text-text-secondary">{row.reason || "—"}</Td>
-                    <Td className="text-text-secondary">{row.performed_by_username || "—"}</Td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const selfConsumptionQualifier =
+                    getSelfConsumptionQualifier(row);
+                  return (
+                    <tr key={row.id}>
+                      <Td className="data">
+                        {new Date(row.created_at).toLocaleString("es-AR")}
+                      </Td>
+                      <Td className="font-medium">{row.product_name}</Td>
+                      <Td className="whitespace-nowrap">
+                        {MOVEMENT_TYPE_LABELS[row.type] ?? row.type}
+                        {selfConsumptionQualifier &&
+                          ` · ${selfConsumptionQualifier}`}
+                      </Td>
+                      <Td
+                        className={`num text-right ${row.quantity_delta < 0 ? "text-error" : "text-success"}`}
+                      >
+                        {formatStockQuantity(
+                          row.previous_quantity,
+                          row.unit_type,
+                        )}{" "}
+                        → {formatStockQuantity(row.new_quantity, row.unit_type)}
+                        <span className="ml-2 text-xs text-text-secondary">
+                          ({row.quantity_delta > 0 ? "+" : ""}
+                          {formatStockQuantity(
+                            row.quantity_delta,
+                            row.unit_type,
+                          )}
+                          )
+                        </span>
+                      </Td>
+                      <Td className="text-text-secondary">
+                        {row.reason || "—"}
+                      </Td>
+                      <Td className="text-text-secondary">
+                        {row.performed_by_username || "—"}
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           </div>

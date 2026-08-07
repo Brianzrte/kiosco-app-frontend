@@ -20,7 +20,12 @@ import {
 import { formatMoney } from "@/lib/money";
 import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { today } from "@/lib/reports";
-import { CashierOpeningFund, DailyCashClosingStatusList, User } from "@/lib/types";
+import {
+  CashierOpeningFund,
+  DailyCashClosingStatusItem,
+  DailyCashClosingStatusList,
+  User,
+} from "@/lib/types";
 import { useToast } from "@/components/ui/Toast";
 import { useLoad } from "@/lib/useLoad";
 
@@ -46,6 +51,16 @@ function formatClosingTime(value: string | null): string {
 
 function AmountCell({ value }: { value: string | null }) {
   return <>{value === null ? "—" : formatMoney(value)}</>;
+}
+
+// El backend siempre informa cash_expenses_total/cash_expenses_count (nunca
+// omitido), incluso cuando no hubo egresos en efectivo ("0.00"/0). Tratamos
+// ese caso como "sin egresos" para mantener la convención "—" de la tabla.
+function hasCashExpenses(item: DailyCashClosingStatusItem): boolean {
+  return (
+    item.cash_expenses_total !== undefined &&
+    parseFloat(item.cash_expenses_total) !== 0
+  );
 }
 
 export function CashClosingStatusReportView() {
@@ -91,7 +106,9 @@ export function CashClosingStatusReportView() {
         />
       </CollapsibleFilters>
 
-      <OpeningFundForm onSaved={() => setReportVersion((version) => version + 1)} />
+      <OpeningFundForm
+        onSaved={() => setReportVersion((version) => version + 1)}
+      />
 
       <CashClosingStatusTable
         key={reportVersion}
@@ -112,12 +129,23 @@ function OpeningFundForm({ onSaved }: { onSaved: () => void }) {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const fetcher = useCallback(
-    () => api<{ users: User[]; total: number }>("/users?limit=100").then((response) => response.users),
+    () =>
+      api<{ users: User[]; total: number }>("/users?limit=100").then(
+        (response) => response.users,
+      ),
     [],
   );
   const { data: users, error: usersError } = useLoad(fetcher);
-  const operators = users?.filter((user) => user.active && (user.roles.includes("admin") || user.roles.includes("cashier"))) ?? [];
-  const amountError = amount && !isCountedCash(amount) ? "Ingresá un importe con hasta dos decimales." : undefined;
+  const operators =
+    users?.filter(
+      (user) =>
+        user.active &&
+        (user.roles.includes("admin") || user.roles.includes("cashier")),
+    ) ?? [];
+  const amountError =
+    amount && !isCountedCash(amount)
+      ? "Ingresá un importe con hasta dos decimales."
+      : undefined;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -133,7 +161,11 @@ function OpeningFundForm({ onSaved }: { onSaved: () => void }) {
       setAmount("");
       onSaved();
     } catch (cause) {
-      setFormError(cause instanceof ApiError ? cause.message : "Ocurrió un error inesperado.");
+      setFormError(
+        cause instanceof ApiError
+          ? cause.message
+          : "Ocurrió un error inesperado.",
+      );
     } finally {
       setPending(false);
     }
@@ -142,10 +174,71 @@ function OpeningFundForm({ onSaved }: { onSaved: () => void }) {
   return (
     <Card>
       <form onSubmit={submit} className="flex flex-col gap-4">
-        <div><h2 className="text-lg font-semibold tracking-tight">Declarar fondo inicial</h2><p className="mt-1 text-sm text-text-secondary">Asignalo a un operador antes de que inicie su turno.</p></div>
-        {usersError ? <p role="alert" className="text-sm text-error">{usersError.message}</p> : <div className="grid gap-4 md:grid-cols-3"><Select label="Operador" value={operatorID} onChange={(event) => setOperatorID(event.target.value)} disabled={!users || pending} required><option value="">Seleccioná un operador</option>{operators.map((user) => <option key={user.id} value={user.id}>{user.username}</option>)}</Select><Input label="Fecha operativa" type="date" value={businessDate} onChange={(event) => setBusinessDate(event.target.value)} disabled={pending} required /><Input label="Monto" type="text" inputMode="decimal" pattern="\d+(\.\d{1,2})?" placeholder="0.00" value={amount} onChange={(event) => setAmount(event.target.value)} error={amountError} disabled={pending} required /></div>}
-        {formError && <p role="alert" className="text-sm text-error">{formError}</p>}
-        <Button type="submit" className="self-start" pending={pending} disabled={!users || !!usersError || !operatorID || !isCountedCash(amount)}>Declarar fondo</Button>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Declarar fondo inicial
+          </h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Asignalo a un operador antes de que inicie su turno.
+          </p>
+        </div>
+        {usersError ? (
+          <p role="alert" className="text-sm text-error">
+            {usersError.message}
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-3">
+            <Select
+              label="Operador"
+              value={operatorID}
+              onChange={(event) => setOperatorID(event.target.value)}
+              disabled={!users || pending}
+              required
+            >
+              <option value="">Seleccioná un operador</option>
+              {operators.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.username}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="Fecha operativa"
+              type="date"
+              value={businessDate}
+              onChange={(event) => setBusinessDate(event.target.value)}
+              disabled={pending}
+              required
+            />
+            <Input
+              label="Monto"
+              type="text"
+              inputMode="decimal"
+              pattern="\d+(\.\d{1,2})?"
+              placeholder="0.00"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              error={amountError}
+              disabled={pending}
+              required
+            />
+          </div>
+        )}
+        {formError && (
+          <p role="alert" className="text-sm text-error">
+            {formError}
+          </p>
+        )}
+        <Button
+          type="submit"
+          className="self-start"
+          pending={pending}
+          disabled={
+            !users || !!usersError || !operatorID || !isCountedCash(amount)
+          }
+        >
+          Declarar fondo
+        </Button>
       </form>
     </Card>
   );
@@ -181,7 +274,15 @@ function CashClosingStatusTable({
       const desktop = desktopListRef.current?.getBoundingClientRect();
       const rect = mobile && mobile.height > 0 ? mobile : desktop;
       if (!rect) return;
-      const next = computePageSize({ viewportHeight: window.innerHeight, listTop: rect.top, rowHeight: rect.height / data.items.length, reservedBelow: 56, min: 5, max: 15, fallback: PAGE_SIZE });
+      const next = computePageSize({
+        viewportHeight: window.innerHeight,
+        listTop: rect.top,
+        rowHeight: rect.height / data.items.length,
+        reservedBelow: 56,
+        min: 5,
+        max: 15,
+        fallback: PAGE_SIZE,
+      });
       if (next === pageSize) return;
       setPageSize(next);
       onPageChange(1);
@@ -204,69 +305,149 @@ function CashClosingStatusTable({
     <div className="flex flex-col gap-4">
       <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {data.items.map((item) => (
-          <li key={`${item.business_date}-${item.cashier_id}`} className="rounded-app border border-border bg-surface p-4">
+          <li
+            key={`${item.business_date}-${item.cashier_id}`}
+            className="rounded-app border border-border bg-surface p-4"
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-medium">{item.cashier_username}</p>
-                <p className="num text-sm text-text-secondary">{formatBusinessDate(item.business_date)}</p>
+                <p className="num text-sm text-text-secondary">
+                  {formatBusinessDate(item.business_date)}
+                </p>
               </div>
-              <Badge tone={reconciliationStatusTone(item.status)}>{reconciliationStatusLabel(item.status)}</Badge>
+              <Badge tone={reconciliationStatusTone(item.status)}>
+                {reconciliationStatusLabel(item.status)}
+              </Badge>
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div><dt className="text-text-secondary">Diferencia</dt><dd className="num font-medium"><AmountCell value={item.difference} /></dd></div>
-              <div><dt className="text-text-secondary">Ventas</dt><dd className="num">{item.total_sales} · {formatMoney(item.total_amount)}</dd></div>
-              {item.opening_fund && <div className="col-span-2"><dt className="text-text-secondary">Fondo inicial</dt><dd className="mt-1 flex flex-wrap items-center gap-2"><Badge tone={item.opening_fund.status === "confirmed" ? "success" : "warning"}>{openingFundStatusLabel(item.opening_fund.status)}</Badge><span className="num">{formatMoney(item.opening_fund.amount)}</span></dd></div>}
+              <div>
+                <dt className="text-text-secondary">Diferencia</dt>
+                <dd className="num font-medium">
+                  <AmountCell value={item.difference} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-text-secondary">Ventas</dt>
+                <dd className="num">
+                  {item.total_sales} · {formatMoney(item.total_amount)}
+                </dd>
+              </div>
+              {hasCashExpenses(item) && (
+                <div className="col-span-2">
+                  <dt className="text-text-secondary">Egresos en efectivo</dt>
+                  <dd className="num">
+                    {formatMoney(item.cash_expenses_total!)} ·{" "}
+                    {item.cash_expenses_count ?? 0} movimientos{" "}
+                    <span className="text-xs text-text-secondary">
+                      (ya descontados del esperado)
+                    </span>
+                  </dd>
+                </div>
+              )}
+              {item.opening_fund && (
+                <div className="col-span-2">
+                  <dt className="text-text-secondary">Fondo inicial</dt>
+                  <dd className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge
+                      tone={
+                        item.opening_fund.status === "confirmed"
+                          ? "success"
+                          : "warning"
+                      }
+                    >
+                      {openingFundStatusLabel(item.opening_fund.status)}
+                    </Badge>
+                    <span className="num">
+                      {formatMoney(item.opening_fund.amount)}
+                    </span>
+                  </dd>
+                </div>
+              )}
             </dl>
           </li>
         ))}
       </ul>
       <div ref={desktopListRef} className="hidden md:block">
-      <Table>
-        <thead>
-          <tr>
-            <Th>Fecha</Th>
-            <Th>Cajero</Th>
-            <Th>Estado</Th>
-            <Th>Fondo inicial</Th>
-            <Th className="text-right">Ventas</Th>
-            <Th className="text-right">Efectivo esperado</Th>
-            <Th className="text-right">Contado</Th>
-            <Th className="text-right">Diferencia</Th>
-            <Th className="text-right">Último cierre</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.items.map((item) => (
-            <tr key={`${item.business_date}-${item.cashier_id}`}>
-              <Td className="num whitespace-nowrap">
-                {formatBusinessDate(item.business_date)}
-              </Td>
-              <Td className="font-medium">{item.cashier_username}</Td>
-              <Td>
-                <Badge tone={reconciliationStatusTone(item.status)}>
-                  {reconciliationStatusLabel(item.status)}
-                </Badge>
-              </Td>
-              <Td>{item.opening_fund && <span className="flex items-center gap-2 whitespace-nowrap"><Badge tone={item.opening_fund.status === "confirmed" ? "success" : "warning"}>{openingFundStatusLabel(item.opening_fund.status)}</Badge><span className="num text-xs">{formatMoney(item.opening_fund.amount)}</span></span>}</Td>
-              <Td className="num text-right">
-                {item.total_sales} · {formatMoney(item.total_amount)}
-              </Td>
-              <Td className="num text-right">
-                <AmountCell value={item.expected_cash} />
-              </Td>
-              <Td className="num text-right">
-                <AmountCell value={item.counted_cash} />
-              </Td>
-              <Td className="num text-right font-medium">
-                <AmountCell value={item.difference} />
-              </Td>
-              <Td className="num text-right">
-                {formatClosingTime(item.latest_closing?.closed_at ?? null)}
-              </Td>
+        <Table>
+          <thead>
+            <tr>
+              <Th>Fecha</Th>
+              <Th>Cajero</Th>
+              <Th>Estado</Th>
+              <Th>Fondo inicial</Th>
+              <Th className="text-right">Ventas</Th>
+              <Th className="text-right">Egresos en efectivo</Th>
+              <Th className="text-right">Efectivo esperado</Th>
+              <Th className="text-right">Contado</Th>
+              <Th className="text-right">Diferencia</Th>
+              <Th className="text-right">Último cierre</Th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {data.items.map((item) => (
+              <tr key={`${item.business_date}-${item.cashier_id}`}>
+                <Td className="num whitespace-nowrap">
+                  {formatBusinessDate(item.business_date)}
+                </Td>
+                <Td className="font-medium">{item.cashier_username}</Td>
+                <Td>
+                  <Badge tone={reconciliationStatusTone(item.status)}>
+                    {reconciliationStatusLabel(item.status)}
+                  </Badge>
+                </Td>
+                <Td>
+                  {item.opening_fund && (
+                    <span className="flex items-center gap-2 whitespace-nowrap">
+                      <Badge
+                        tone={
+                          item.opening_fund.status === "confirmed"
+                            ? "success"
+                            : "warning"
+                        }
+                      >
+                        {openingFundStatusLabel(item.opening_fund.status)}
+                      </Badge>
+                      <span className="num text-xs">
+                        {formatMoney(item.opening_fund.amount)}
+                      </span>
+                    </span>
+                  )}
+                </Td>
+                <Td className="num text-right">
+                  {item.total_sales} · {formatMoney(item.total_amount)}
+                </Td>
+                <Td className="num text-right">
+                  {hasCashExpenses(item) ? (
+                    <span className="flex flex-col items-end">
+                      <span>
+                        {formatMoney(item.cash_expenses_total!)} ·{" "}
+                        {item.cash_expenses_count ?? 0}
+                      </span>
+                      <span className="text-xs text-text-secondary">
+                        (ya descontados del esperado)
+                      </span>
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </Td>
+                <Td className="num text-right">
+                  <AmountCell value={item.expected_cash} />
+                </Td>
+                <Td className="num text-right">
+                  <AmountCell value={item.counted_cash} />
+                </Td>
+                <Td className="num text-right font-medium">
+                  <AmountCell value={item.difference} />
+                </Td>
+                <Td className="num text-right">
+                  {formatClosingTime(item.latest_closing?.closed_at ?? null)}
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       </div>
 
       {totalPages > 1 && (

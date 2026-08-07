@@ -22,15 +22,33 @@ export const Input = forwardRef<
     endAdornment?: ReactNode;
   }
 >(function Input(
-  { label, error, icon, endAdornment, compact = false, inline = false, className = "", id, ...props },
+  {
+    label,
+    error,
+    icon,
+    endAdornment,
+    compact = false,
+    inline = false,
+    className = "",
+    id,
+    ...props
+  },
   ref,
 ) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const describedBy =
+    [props["aria-describedby"], errorId].filter(Boolean).join(" ") || undefined;
   return (
-    <div className={`${inline ? "flex min-w-0 items-start gap-2" : "min-w-0"} ${className}`}>
+    <div
+      className={`${inline ? "flex min-w-0 items-start gap-2" : "min-w-0"} ${className}`}
+    >
       {label && (
-        <label htmlFor={inputId} className={`${inline ? "mb-0 whitespace-nowrap pt-2.5" : "mb-1.5 block"} text-sm font-medium`}>
+        <label
+          htmlFor={inputId}
+          className={`${inline ? "mb-0 whitespace-nowrap pt-2.5" : "mb-1.5 block"} text-sm font-medium`}
+        >
           {label}
         </label>
       )}
@@ -48,13 +66,19 @@ export const Input = forwardRef<
           id={inputId}
           className={`${fieldClass} ${compact ? "px-2.5 py-2 text-xs" : ""} ${icon ? "pl-9" : ""} ${endAdornment ? "pr-11" : ""}`}
           {...props}
+          aria-invalid={error ? true : props["aria-invalid"]}
+          aria-describedby={describedBy}
         />
         {endAdornment && (
           <span className="absolute right-2 top-1/2 -translate-y-1/2">
             {endAdornment}
           </span>
         )}
-        {error && <p className="mt-1.5 text-sm text-error">{error}</p>}
+        {error && (
+          <p id={errorId} role="alert" className="mt-1.5 text-sm text-error">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -80,7 +104,11 @@ export function Select({
           {label}
         </label>
       )}
-      <select id={id} className={`${fieldClass} ${compact ? "px-2.5 py-2 text-xs" : ""}`} {...props}>
+      <select
+        id={id}
+        className={`${fieldClass} ${compact ? "px-2.5 py-2 text-xs" : ""}`}
+        {...props}
+      >
         {children}
       </select>
       {error && <p className="mt-1.5 text-sm text-error">{error}</p>}

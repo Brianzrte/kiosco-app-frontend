@@ -5,6 +5,7 @@ import {
   isDeepLinkedProductId,
   computeInventoryPageSize,
   computeTotalPages,
+  getSelfConsumptionQualifier,
   isRowLow,
   formatStockQuantity,
   isValidStockQuantityKg,
@@ -36,6 +37,38 @@ describe("weighable stock helpers", () => {
     expect(stockLimitMessageKg("Jamón cocido", "2,3 kg")).toBe(
       "Sólo hay 2,3 kg disponibles de “Jamón cocido”.",
     );
+  });
+});
+
+describe("getSelfConsumptionQualifier", () => {
+  it("labels a real consumption (negative delta) as Salida", () => {
+    expect(
+      getSelfConsumptionQualifier({
+        type: "SELF_CONSUMPTION",
+        quantity_delta: -1,
+      }),
+    ).toBe("Salida");
+  });
+
+  it("labels a void that restores stock (positive delta) as Reversión, not Salida", () => {
+    expect(
+      getSelfConsumptionQualifier({
+        type: "SELF_CONSUMPTION",
+        quantity_delta: 1,
+      }),
+    ).toBe("Reversión");
+  });
+
+  it("returns null for every other movement type", () => {
+    expect(
+      getSelfConsumptionQualifier({ type: "SALE", quantity_delta: -1 }),
+    ).toBeNull();
+    expect(
+      getSelfConsumptionQualifier({
+        type: "ADJUSTMENT_OUT",
+        quantity_delta: -3,
+      }),
+    ).toBeNull();
   });
 });
 

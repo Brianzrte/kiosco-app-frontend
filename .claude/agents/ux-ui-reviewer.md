@@ -1,7 +1,7 @@
 ---
 name: ux-ui-reviewer
 description: "UX/UI specialist for discovering, designing, auditing, fixing and verifying user-facing frontend changes. Use for pages, forms, dashboards, tables, POS flows, responsive layouts, accessibility, keyboard interaction, visual states, design-system consistency and pre-merge UI reviews. Can implement approved UX/UI improvements by combining ux-ui-supervisor with the repository frontend skill. Do not use for backend-only changes or tasks without user-interface impact."
-model: inherit
+model: sonnet
 skills:
   - ux-ui-supervisor
 ---

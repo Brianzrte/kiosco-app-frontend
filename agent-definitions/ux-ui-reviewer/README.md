@@ -86,8 +86,8 @@ agent-definitions/ux-ui-reviewer/AGENT.md   ← fuente canónica, neutral
 
 `AGENT.md` no contiene YAML de Claude, TOML de Codex, nombres de herramientas
 exclusivos de una plataforma, rutas absolutas ni un modelo fijo. Empieza con un
-encabezado neutral de dos o tres líneas (`Agent:`, `Description:`,
-`Skills:` opcional) que el script de sincronización usa para completar los
+encabezado neutral de dos o tres líneas (`Agent:`, `Description:`, `Model:` y
+`Skills:` opcionales) que el script de sincronización usa para completar los
 campos de identidad de cada adaptador; el resto es el cuerpo canónico, igual
 en ambas plataformas.
 

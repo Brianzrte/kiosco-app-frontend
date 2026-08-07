@@ -1,36 +1,44 @@
-# Pedido a backend: ventas por categoría, unidades compradas y comparación de ventas por producto
+# Pedido a backend: reportes de categoría, resultado y movimientos de dinero
 
-> Fecha: 2026-07-30. El frontend verificó `../backend/internal/reporting/transport/http/routes.go`,
-> `handler.go`, `dto.go` y `postgres_report_queries.go` contra una instancia real
-> del repositorio backend. Los tres puntos de abajo no existen hoy en ningún
-> endpoint de `/api/v1/reports/`.
+**Frontend change:** `add-frontend-reports-categories-and-profitability`
+**Actualizado:** 2026-08-07
+**Estado:** el centro `/reports/profitability` no se implementa ni mockea hasta
+que el resumen de resultado se despliegue y se verifique contra una instancia
+real.
 
 ## Necesidad
 
-El dueño pidió, en un solo Requirement Context aprobado, ver qué categorías
-generan más ventas y una vista de rentabilidad (ingresos, egresos, margen
-bruto, unidades vendidas y compradas, y productos con crecimiento reciente de
-ventas). Tres piezas de eso no tienen soporte de backend hoy. El resto
-(ingresos, egresos en dinero, margen bruto derivado, unidades vendidas,
-productos sin venta) se construye con endpoints ya existentes y no se pide
-nada más para esa parte.
+La dueña necesita distinguir tres preguntas que hoy se confunden:
+
+1. ¿Cuánto vendió y cuál fue el costo de esa mercadería vendida?
+2. ¿Cuánto dejó la operación después de gastos operativos?
+3. ¿Qué dinero salió para comprar stock, pagar gastos y realizar retiros
+   personales?
+
+`GET /reports/purchases/by-supplier` es un reporte de compras, no una fuente
+válida de margen: la compra sucede al incorporar stock, mientras que el costo
+de ventas sucede al venderlo. El frontend no puede resolver esa diferencia ni
+deduplicar pagos de pedido y egresos por su cuenta.
 
 ## Estado actual verificado
 
-- `routes.go` registra `GET /api/v1/reports/sales/by-product`, que agrupa por
-  producto y sólo acepta `category_id` como filtro de un producto puntual —
-  no existe ninguna ruta que agrupe por categoría.
-- `GET /api/v1/reports/purchases/by-supplier` (`handler.go:50-58`) devuelve
-  `investment`, `purchase_order_count`, `complete_delivery_count`,
-  `incomplete_delivery_count`, `undelivered_products` — ningún campo de
-  unidades.
-- No existe ninguna ruta ni caso de uso que compare la cantidad vendida de un
-  producto entre dos ventanas de tiempo.
-- Los tres puntos son necesarios porque el cálculo cruza reglas de negocio
-  (agregación por categoría, definición de "unidad comprada", umbral de
-  calificación de un producto como "revelación") que le corresponden al
-  backend; el frontend no las puede componer a partir de datos ya paginados
-  sin duplicar lógica de negocio en el cliente.
+Evidencia de reporting consultada el 2026-07-30:
+
+- Existe `GET /api/v1/reports/sales/summary` para ingresos y
+  `GET /api/v1/reports/sales/by-product`, pero ninguno expone costo histórico
+  de los productos efectivamente vendidos.
+- Existe `GET /api/v1/reports/purchases/by-supplier` con `investment` y
+  conteos de pedidos; no entrega un resultado de negocio ni distingue compra
+  de stock de gasto operativo.
+- No existe `GET /api/v1/reports/sales/by-category` ni comparación de ventas
+  por producto entre ventanas.
+- El backend vigente no contiene el dominio Egresos. El change
+  `add-frontend-expenses-and-payroll` solicita `expenses/summary`, pero ese
+  agregado incluye `PURCHASE`; no puede consumirse directamente como gasto
+  operativo porque duplicaría compras de stock.
+- El change `add-frontend-purchasing-optional-supplier` solicita pedidos sin
+  proveedor; el resumen debe incluirlos con la misma clasificación que una
+  compra con proveedor, sin perder trazabilidad.
 
 ## Contrato mínimo solicitado
 
@@ -38,12 +46,9 @@ nada más para esa parte.
 
 **`GET /api/v1/reports/sales/by-category?from=YYYY-MM-DD&to=YYYY-MM-DD`**
 
-- Rol: admin (mismo `RequireRole(admin)` que el resto de `/api/v1/reports/`).
-- `from`/`to` obligatorios, mismo formato y semántica de rango que
-  `sales/by-product` y `sales/by-cashier`.
-- `200`, mismo envoltorio con clave nombrada que ya usan `sales/by-cashier`
-  (`{"cashiers": [...]}`) y `sales/by-product` (`{"products": [...]}`) —
-  se propone `categories` por consistencia, no un array desnudo:
+- Rol: `admin`; fechas obligatorias y misma semántica de rango que los reportes
+  de venta actuales.
+- `200`:
 
 ```json
 {
@@ -58,124 +63,105 @@ nada más para esa parte.
 }
 ```
 
-- Sólo categorías con al menos una venta confirmada en el rango aparecen en
-  la respuesta (mismo criterio que `sales/by-product`, que no lista productos
-  sin venta).
-- `category_id`/`category_name` no nullable — la categoría es obligatoria en
-  el modelo de producto (`../backend/internal/catalog/transport/http/dto.go:41`).
-- `total_revenue` como string decimal, mismo formato que el resto del
-  reporting.
-- Errores: `400` para rango ausente o inválido, `401`/`403` heredados del
-  middleware del subtree.
+- Sólo incluye categorías con ventas confirmadas; orden descendente por
+  `total_revenue`; valores monetarios como string decimal.
+- Errores: `400` para rango ausente/inválido; `401`/`403` del middleware.
 
-### 2. Unidades compradas en `purchases/by-supplier`
+### 2. Resumen de rentabilidad y movimientos
 
-Agregar un campo a la respuesta existente de
-**`GET /api/v1/reports/purchases/by-supplier?from=&to=&supplier_id=`**
-(sin cambiar ningún campo actual):
+**`GET /api/v1/reports/profitability?from=YYYY-MM-DD&to=YYYY-MM-DD`**
+
+- Rol: `admin`; `from` y `to` obligatorios, `YYYY-MM-DD`, misma semántica de
+  días de negocio que el resto de reporting.
+- Debe ser una única fotografía coherente del rango y devolver todos los
+  importes como strings decimales. Shape mínimo:
 
 ```json
 {
-  "investment": "45000.00",
-  "purchase_order_count": 12,
-  "complete_delivery_count": 10,
-  "incomplete_delivery_count": 2,
-  "undelivered_products": [],
-  "total_quantity_purchased": 340
-}
-```
-
-- `total_quantity_purchased` (nombre propuesto, no acordado): total de
-  unidades pedidas a proveedores en el rango, con el mismo criterio de qué
-  pedidos cuentan que ya aplica `investment`/`purchase_order_count` — backend
-  define si incluye pedidos cancelados o no recibidos; el frontend no fija
-  esa regla.
-- Cambio aditivo: no se quita, renombra ni cambia de tipo ningún campo
-  existente; una respuesta vieja (sin el campo) sigue siendo válida para
-  cualquier consumidor que no lo lea todavía.
-
-### 3. Comparación de ventas por producto entre dos ventanas
-
-**`GET /api/v1/reports/sales/by-product/growth?from=YYYY-MM-DD&to=YYYY-MM-DD&window_days=14`**
-
-- Rol: admin.
-- `window_days` opcional, default propuesto `14`. Ventana reciente: los
-  últimos `window_days` días terminando en `to` (o en el día actual, a
-  definir por backend). Ventana anterior: los `window_days` días
-  inmediatamente anteriores, misma longitud.
-- `200`, mismo criterio de envoltorio con clave nombrada que el resto del
-  reporting (`{"products": [...]}`, no un array desnudo):
-
-```json
-{
-  "products": [
-    {
-      "product_id": "uuid",
-      "product_name": "Gaseosa 1.5L",
-      "recent_quantity": 30,
-      "previous_quantity": 12,
-      "growth_percent": 150.0
-    },
-    {
-      "product_id": "uuid2",
-      "product_name": "Alfajor",
-      "recent_quantity": 8,
-      "previous_quantity": 0,
-      "growth_percent": null
-    }
+  "revenue": "100000.00",
+  "cost_of_goods_sold": "55000.00",
+  "gross_margin": "45000.00",
+  "operating_expenses": "12000.00",
+  "operating_result": "33000.00",
+  "stock_purchases": "60000.00",
+  "owner_draws": "5000.00",
+  "expenses_by_type": [
+    { "type": "OPERATING", "label": "Gastos operativos", "amount": "8000.00" },
+    { "type": "PAYROLL", "label": "Sueldos", "amount": "4000.00" }
+  ],
+  "expenses_by_payment_method": [
+    { "payment_method": "CASH_REGISTER", "label": "Efectivo de caja", "amount": "3000.00" }
   ]
 }
 ```
 
-- `growth_percent` es `null` cuando `previous_quantity = 0`, nunca infinito
-  ni `NaN` — mismo tratamiento que ya usa el frontend para el caso
-  `previous_empty` de `comparePeriods` (`src/lib/reports.ts:111-121`), que
-  este pedido espera reflejar del lado del backend en vez de recalcularlo en
-  el cliente a partir de dos totales.
-- Reglas de calificación (umbral mínimo de unidades vendidas y antigüedad
-  mínima del producto en catálogo para aparecer en el ranking) quedan a
-  definir por backend junto con el dueño; el frontend no las prescribe. Se
-  documentan como pregunta abierta, no como parte del contrato mínimo.
-- Errores: `400` para rango o `window_days` inválido, `401`/`403` heredados.
+Reglas de negocio que debe aplicar backend y devolver ya resueltas:
 
-## Impacto en el frontend
+- `revenue`: ventas confirmadas del rango.
+- `cost_of_goods_sold`: costo histórico de las unidades efectivamente vendidas
+  en el rango. No es el total de pedidos ni el valor de stock actual.
+- `gross_margin = revenue − cost_of_goods_sold`.
+- `operating_expenses`: sólo egresos que backend clasifique como gasto de la
+  operación. No incluye compras de stock ni `OWNER_DRAW`.
+- `operating_result = gross_margin − operating_expenses`.
+- `stock_purchases`: salidas/altas de stock por pedidos pagados y compras
+  directas que backend decida incluir, con proveedor o sin proveedor. Es una
+  lectura de caja/inventario y no se descuenta otra vez de margen o resultado.
+- `owner_draws`: suma de `OWNER_DRAW` activos; no integra ningún total de
+  gastos ni resultado.
+- Un mismo hecho económico debe tener una referencia de origen única y debe
+  aparecer una sola vez en cada dimensión pertinente. Un pago de pedido que
+  además origine un egreso de compra no puede sumar dos veces a
+  `stock_purchases` ni filtrarse a `operating_expenses`.
+- Los egresos anulados aportan cero. La regla de inclusión temporal de pagos,
+  compras directas y egresos debe ser consistente y documentada por backend.
 
-- Sin el punto 1: la sección "Categorías más vendidas" del dashboard de
-  `/reports` no se implementa; la tarea correspondiente queda bloqueada en
-  `tasks.md`.
-- Sin el punto 2: el tile "Unidades compradas" de `/reports/profitability` no
-  se implementa; el resto de la página (ingresos, egresos en dinero, margen
-  bruto, unidades vendidas) no depende de este punto y se implementa igual.
-- Sin el punto 3: la sección "Producto revelación" de `/reports/profitability`
-  se muestra como bloque deshabilitado con el motivo, sin fetch ni datos,
-  según especifica `specs/ui-reports-detail/spec.md` de este change.
+El backend puede agregar campos, pero no debe dejar al frontend inferir costo,
+resultado ni la deduplicación. Si todavía no puede calcular una cifra, debe
+responder un error verificable o posponer el endpoint completo; no se acepta
+un `0` que parezca dato real.
+
+Errores: `400` para rango inválido, `401`/`403` del middleware y `500` con el
+envelope `{ message }` si la consistencia del resumen no puede garantizarse.
+
+### 3. Crecimiento de ventas por producto
+
+**`GET /api/v1/reports/sales/by-product/growth?from=YYYY-MM-DD&to=YYYY-MM-DD&window_days=14`**
+
+- Rol: `admin`; respuesta `{ "products": [...] }` con `product_id`,
+  `product_name`, `recent_quantity`, `previous_quantity` y `growth_percent`.
+- `growth_percent` es `null` cuando `previous_quantity` es cero; nunca
+  infinito/NaN.
+- Backend y dueña definen umbral mínimo y antigüedad del catálogo para que un
+  producto califique. El frontend no los inventa.
+- Errores: `400` para rango/ventana inválidos y `401`/`403` heredados.
 
 ## Compatibilidad y despliegue
 
-- Los tres puntos son aditivos: ningún endpoint ni campo existente cambia de
-  forma incompatible. Un frontend viejo sigue funcionando contra un backend
-  que agregue estos campos/endpoints.
-- No hay orden de despliegue entre los tres puntos — son independientes entre
-  sí y cada uno desbloquea sólo la pieza de frontend que depende de él.
-- El frontend no consume ninguno de los tres hasta verificar, contra una
-  instancia real, que el endpoint o campo está desplegado y devuelve el shape
-  documentado arriba.
+1. Backend despliega y verifica primero Egresos, su `expenses/summary`, el
+   costo histórico de venta y la clasificación/deduplicación de compras.
+2. Luego despliega `reports/profitability` junto con los tests de identidades
+   anteriores y casos de pedido con y sin proveedor, compra directa, sueldo,
+   gasto operativo, retiro y anulación.
+3. Frontend verifica el endpoint contra una instancia real antes de consumirlo.
+   Un frontend viejo no conoce el endpoint nuevo; no hay incompatibilidad.
+4. Los endpoints de categoría y crecimiento son independientes y desbloquean
+   sólo sus regiones respectivas.
 
-## Criterio de desbloqueo
+## Criterio de desbloqueo frontend
 
-- Punto 1: endpoint desplegado y verificado devolviendo el shape documentado
-  contra datos reales de al menos dos categorías con ventas.
-- Punto 2: campo desplegado y verificado en `purchases/by-supplier` con al
-  menos un pedido recibido en el rango de prueba.
-- Punto 3: endpoint desplegado, shape verificado, y backend + dueño acuerdan
-  las reglas de umbral y antigüedad — sin esa definición, el frontend no
-  puede decidir qué mostrar como "califica" aunque el endpoint ya responda.
+- `reports/profitability` responde para un período con actividad y sus totales
+  cumplen las identidades declaradas, con todos los importes como strings.
+- Un caso real de compra de stock, gasto operativo y retiro muestra cada hecho
+  en su región, sin duplicar la compra ni descontar el retiro del resultado.
+- La misma verificación incluye un pedido sin proveedor si esa ampliación de
+  Purchasing ya está desplegada.
+- Categorías y producto revelación se verifican de manera independiente según
+  sus contratos anteriores.
 
 ## Fuera de alcance
 
-- No se pide ningún endpoint de gastos operativos generales (alquiler,
-  sueldos, servicios).
-- No se pide una serie diaria para compras ni para el crecimiento por
-  producto — los tres puntos son totales o comparaciones de rango completo.
-- No se pide cambiar `GET /api/v1/reports/products?sort=worst_selling`, que
-  ya cubre "productos sin venta" sin desarrollo adicional.
+- Balance contable, impuestos, amortización, cuentas por pagar y conciliación
+  bancaria.
+- Configuración de política de costo o reclasificación manual desde frontend.
+- Series diarias de gastos/compras y exportación contable.

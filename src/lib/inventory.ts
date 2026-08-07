@@ -1,5 +1,6 @@
 import { computePageSize } from "./pagination";
 import { isValidWeight } from "./weightPricing";
+import type { StockMovement } from "./types";
 
 /**
  * Pure helpers for the inventory screen. Kept out of the component so the
@@ -43,7 +44,23 @@ export const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   ADJUSTMENT_IN: "Ajuste (entrada)",
   ADJUSTMENT_OUT: "Ajuste (salida)",
   RETURN: "Devolución",
+  SELF_CONSUMPTION: "Autoconsumo",
 };
+
+/**
+ * `SELF_CONSUMPTION` movements aren't all the same direction: a normal
+ * consumption has `quantity_delta < 0` ("Salida"), but voiding one puts the
+ * stock back with `quantity_delta > 0` ("Reversión"). The label alone
+ * (`MOVEMENT_TYPE_LABELS.SELF_CONSUMPTION` = "Autoconsumo") doesn't carry
+ * that distinction, so callers append this qualifier next to it. Returns
+ * `null` for every other movement type so callers can skip rendering.
+ */
+export function getSelfConsumptionQualifier(
+  row: Pick<StockMovement, "type" | "quantity_delta">,
+): "Salida" | "Reversión" | null {
+  if (row.type !== "SELF_CONSUMPTION") return null;
+  return row.quantity_delta < 0 ? "Salida" : "Reversión";
+}
 
 /**
  * Stock for a weighable product uses the POS weight format. Zero is allowed
@@ -53,8 +70,10 @@ export function isValidStockQuantityKg(
   value: string,
   allowZero: boolean,
 ): boolean {
-  return isValidWeight(value) ||
-    (allowZero && ["0", "0.0", "0.00", "0.000"].includes(value));
+  return (
+    isValidWeight(value) ||
+    (allowZero && ["0", "0.0", "0.00", "0.000"].includes(value))
+  );
 }
 
 export function formatStockQuantity(

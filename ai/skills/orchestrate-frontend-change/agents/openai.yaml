@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orquestar feature frontend"
+  short_description: "Coordina un change frontend hasta validarlo"
+  default_prompt: "Usá $orchestrate-frontend-change para llevar el change <nombre> hasta una feature validada."

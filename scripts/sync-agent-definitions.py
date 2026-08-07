@@ -48,6 +48,7 @@ class DefinitionError(Exception):
 class AgentDefinition:
     name: str
     description: str
+    model: str = "inherit"
     skills: list[str] = field(default_factory=list)
     body: str = ""  # canonical Markdown, starting at the "# Title" heading
     source_path: Path = None
@@ -97,12 +98,14 @@ def parse_agent_definition(agent_dir: Path) -> AgentDefinition:
 
     skills_raw = header.get("skills", "")
     skills = [s.strip() for s in skills_raw.split(",") if s.strip()]
+    model = header.get("model", "inherit")
 
     body = "\n".join(lines[body_start:]).rstrip("\n") + "\n"
 
     return AgentDefinition(
         name=dir_name,
         description=header["description"],
+        model=model,
         skills=skills,
         body=body,
         source_path=source_path,
@@ -171,7 +174,7 @@ def render_claude(agent: AgentDefinition) -> str:
         "---",
         f"name: {agent.name}",
         f"description: {yaml_double_quoted(agent.description)}",
-        "model: inherit",
+        f"model: {agent.model}",
     ]
     if agent.skills:
         lines.append("skills:")

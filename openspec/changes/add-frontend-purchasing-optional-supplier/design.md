@@ -1,10 +1,12 @@
 ## Context
 
-`PurchaseOrderForm.tsx` (`add-frontend-suppliers-purchasing`, todavía sin archivar) exige `supplierId` para habilitar el envío del formulario y siempre postea `supplier_id: supplierId` a `POST /purchase-orders`. El backend rechaza cualquier creación sin proveedor: `createPurchaseOrderRequest.SupplierID` tiene `validate:"required"` (`../backend/internal/purchasing/transport/http/dto.go:76`); las respuestas de pedido (`purchaseOrderResponse`, `purchaseOrderDetailResponse`, `purchaseOrderListItemResponse`) devuelven `supplier_id`/`supplier_name` como `string` no nullable (`dto.go:133,145,189,203`), reflejado en `src/lib/types.ts` (`PurchaseOrder.supplier_id`/`supplier_name`, `PurchaseOrderListItem.supplier_name`). `GET /purchase-orders/suggestions` no acepta parámetros (`../backend/internal/purchasing/application/list_replenishment_suggestions.go:15`) y sólo une cada producto con su proveedor preferido (`LEFT JOIN product_suppliers ps ON ps.product_id = p.id AND ps.preferred`, `../backend/internal/purchasing/infrastructure/postgres_replenishment_suggestions.go:29`). `GET /reports/purchases/by-supplier` acepta `supplier_id` opcional pero agrupa exclusivamente por proveedor (`../backend/internal/reporting/application/purchases_by_supplier.go`), sin bucket para pedidos sin proveedor.
+`PurchaseOrderForm.tsx` exige `supplierId` para habilitar el envío del formulario y siempre postea `supplier_id: supplierId` a `POST /purchase-orders`. El backend rechaza cualquier creación sin proveedor: `createPurchaseOrderRequest.SupplierID` tiene `validate:"required"` (`../backend/internal/purchasing/transport/http/dto.go:76`); las respuestas de pedido (`purchaseOrderResponse`, `purchaseOrderDetailResponse`, `purchaseOrderListItemResponse`) devuelven `supplier_id`/`supplier_name` como `string` no nullable (`dto.go:133,145,189,203`), reflejado en `src/lib/types.ts` (`PurchaseOrder.supplier_id`/`supplier_name`, `PurchaseOrderListItem.supplier_name`). `GET /purchase-orders/suggestions` no acepta parámetros (`../backend/internal/purchasing/application/list_replenishment_suggestions.go:15`) y sólo une cada producto con su proveedor preferido (`LEFT JOIN product_suppliers ps ON ps.product_id = p.id AND ps.preferred`, `../backend/internal/purchasing/infrastructure/postgres_replenishment_suggestions.go:29`). `GET /reports/purchases/by-supplier` acepta `supplier_id` opcional pero agrupa exclusivamente por proveedor (`../backend/internal/reporting/application/purchases_by_supplier.go`), sin bucket para pedidos sin proveedor.
+
+La consulta actual sólo produce una cantidad cuando el producto tiene proveedor preferido y frecuencia configurada; el resto llega sin cantidad. Eso hace que, al crear un pedido sin proveedor, la ayuda parezca vacía o dependa de completar relaciones de proveedores que no son necesarias para que la dueña haga una lista de compras. El nuevo contrato desacopla la prioridad de compra de esa configuración: toma ventas confirmadas de los últimos 7 días y stock actual para todos los productos activos, y usa la asociación sólo para acotar la lista cuando se eligió un proveedor.
 
 Ninguno de estos tres puntos existe hoy en el backend desplegado. Este documento describe el comportamiento deseado una vez que el contrato ampliado (`## API contract`) se despliegue y se verifique; no se implementa ni se mockea antes de esa verificación, siguiendo el mismo criterio que `add-frontend-suppliers-purchasing/backend-request.md`.
 
-Este change es complementario y no se superpone con `add-frontend-purchasing-supplier-item-association` (ya implementable, sin bloqueo backend): ese change cubre la partición de sugerencias en dos secciones cuando **no** hay proveedor seleccionado y el warning + asociación inline producto-proveedor; este change cubre el pedido sin proveedor y el acotado de sugerencias cuando **sí** hay proveedor seleccionado. Ambos modifican el mismo requirement `Manual purchase-order creation` de `ui-suppliers-purchasing` sobre aspectos distintos del formulario (proveedor opcional vs. warning de asociación), por lo que sus deltas son componibles.
+Este change conserva el warning y la asociación inline producto-proveedor de `add-frontend-purchasing-supplier-item-association`, pero reemplaza su presentación de sugerencias sin proveedor por la lista única priorizada de siete días. Ambos changes modifican el mismo requirement de sugerencias; esta decisión posterior prevalece sólo para orden, métricas y presentación de la lista, sin alterar el flujo de asociación inline.
 
 ## Goals / Non-Goals
 
@@ -13,12 +15,13 @@ Este change es complementario y no se superpone con `add-frontend-purchasing-sup
 - Permitir crear un pedido de compra sin asociarlo a ningún proveedor del sistema.
 - Mostrar el rótulo "Sin proveedor" en cualquier superficie que hoy asume `supplier_name` como texto plano (historial, hub de pendientes, detalle de pedido, reporte).
 - Cuando hay un proveedor seleccionado en el formulario de creación, acotar las sugerencias de reposición a los productos con alguna asociación (preferida o no) con ese proveedor.
+- Cuando no hay proveedor seleccionado, mostrar una única lista priorizada de productos que requieren reposición según ventas de los últimos 7 días y cobertura de stock.
 - Mantener sin cambios el flujo de recepción para un pedido sin proveedor.
 
 **Non-Goals:**
 
 - Definir la fórmula de reposición cuando un producto tiene múltiples proveedores asociados con distinta frecuencia: es una decisión de backend, documentada como ambigüedad a resolver en `backend-request.md`.
-- La partición de sugerencias en dos secciones y el warning de asociación inline sin proveedor seleccionado: cubiertos por `add-frontend-purchasing-supplier-item-association`.
+- Hacer configurable la ventana de análisis desde una futura sección "Configuración de tu negocio". En este change es una política backend fija de 7 días; cambiarla requiere un change propio de configuración y contrato.
 - Portal, login o alta automática de proveedores externos por nombre libre.
 - Un filtro explícito "sin proveedor" en el historial: no se asume hasta que el backend lo ofrezca.
 - Cambiar `POST /purchase-orders/{id}/receive` o el pago único por pedido.
@@ -27,7 +30,7 @@ Este change es complementario y no se superpone con `add-frontend-purchasing-sup
 
 1. Admin o Inventory abre `/purchasing/new`.
 2. Deja el proveedor sin seleccionar (compra ocasional) o elige uno activo.
-3. Si eligió un proveedor, la lista de sugerencias se acota a los productos con alguna asociación (preferida o no) con ese proveedor; si no hay ninguno con necesidad de reposición, ve el vacío "No hay sugerencias para este proveedor."
+3. Sin proveedor, ve una lista de productos que requieren reposición, ordenada por menor cobertura de stock y mostrando ventas de los últimos 7 días, stock actual, cobertura y cantidad sugerida. Si eligió proveedor, la lista se acota a los productos con alguna asociación (preferida o no) con ese proveedor; si no hay ninguno con necesidad de reposición, ve el vacío "No hay sugerencias para este proveedor."
 4. Completa ítems, cantidades y costos, y envía el pedido. Si no hay proveedor, el pedido se crea igual, queda pendiente y se identifica como "Sin proveedor" en el hub de pendientes, el historial y el detalle.
 5. Cualquier rol autorizado que abra ese pedido para recepción ve el mismo flujo de siempre: la recepción no depende de tener un proveedor asociado.
 6. Admin consulta el reporte agregado por proveedor; los pedidos sin proveedor se representan según la decisión que backend documente (bucket "Sin proveedor" propio o exclusión explícita).
@@ -36,6 +39,7 @@ Este change es complementario y no se superpone con `add-frontend-purchasing-sup
 
 - **Loading/Error:** sin cambio de patrón respecto de `ui-suppliers-purchasing` vigente (carga explícita; error inline con `ApiError.message` y reintento).
 - **Empty (sugerencias acotadas por proveedor):** cuando hay proveedor seleccionado y ninguna sugerencia corresponde a un producto asociado a él, se muestra "No hay sugerencias para este proveedor.", distinto del vacío general "No hay reposición sugerida en este momento." que se usa sin proveedor seleccionado.
+- **Display (sin proveedor):** una lista priorizada muestra para cada producto ventas de 7 días, stock actual, días de cobertura y cantidad sugerida. El orden y los valores llegan de backend; la persona usuaria puede ajustar una cantidad antes de agregarla al borrador.
 - **Success (pedido sin proveedor):** el pedido creado sin proveedor muestra el mismo toast y navegación al pedido autoritativo que un pedido con proveedor; ninguna pantalla depende de `supplier_name` truthy para confirmar éxito.
 - **Display (rótulo "Sin proveedor"):** el hub de pendientes, el historial, el detalle de pedido y el reporte muestran "Sin proveedor" en el lugar donde hoy renderizan `order.supplier_name`, cuando ese campo es `null`.
 
@@ -61,6 +65,14 @@ Si un producto tiene más de un proveedor asociado, cada uno con su propia `repl
 
 Ambos changes modifican el requirement `Manual purchase-order creation` de `ui-suppliers-purchasing`, pero sobre aspectos distintos: ese change agrega el warning de asociación inline (independiente de si hay o no proveedor sin asociación) y este hace opcional el campo Proveedor. El delta de este change conserva explícitamente el escenario de warning de asociación como fuera de su alcance y no reescribe los escenarios ya agregados por el change hermano.
 
+### 6. Prioridad por cobertura de stock en una ventana fija de siete días
+
+Sin proveedor, la lista de compras no depende de que cada producto tenga una relación de abastecimiento completa. El backend calcula para cada producto activo la demanda de los últimos 7 días, el stock actual, los días de cobertura y la cantidad a reponer; devuelve sólo los productos que requieren reposición y los ordena desde la menor cobertura. La cantidad sugerida cubre el mayor entre el mínimo configurado y la demanda de siete días, menos el stock disponible. Cuando hay proveedor seleccionado, la misma fórmula se aplica sólo a productos asociados a ese proveedor, incluso si no es el preferido.
+
+La ventana de 7 días es una política fija inicial porque coincide con el ciclo de reposición actual. La interfaz no recalcula cantidades, coberturas ni orden; sólo muestra la explicación y deja ajustar la cantidad antes de agregarla al pedido.
+
+Alternativa descartada: dividir la lista entre sugerencias y "Datos de planificación incompletos". Esa división expone una limitación de configuración antes que ayudar a decidir qué comprar, y deja fuera productos vendidos que deberían competir por prioridad aun sin proveedor asignado.
+
 ## Accessibility
 
 El rótulo "Sin proveedor" es texto plano en el mismo lugar donde hoy se muestra el nombre de proveedor: no depende de un ícono o color distintivo para comunicar la ausencia de proveedor. El vacío "No hay sugerencias para este proveedor." usa el mismo patrón de texto explicativo que los demás vacíos de `ui-suppliers-purchasing`, sin agregar un control nuevo de foco.
@@ -75,12 +87,14 @@ El rótulo "Sin proveedor" cabe donde hoy se muestra el nombre de proveedor en l
 
 ## API contract
 
-**Bloqueado por completo.** Ninguno de estos contratos existe hoy en el backend desplegado; se documentan como faltantes en `backend-request.md`, no se asumen ni se mockean:
+El pedido sin proveedor y la lista priorizada con o sin proveedor quedan bloqueados por los contratos faltantes documentados en `backend-request.md`:
 
 - `POST /purchase-orders`: falta que acepte `supplier_id` ausente o `null`.
 - Respuestas de pedido (creación, detalle, listado/historial): falta que `supplier_id` y `supplier_name` sean nullable.
-- `GET /purchase-orders/suggestions`: falta un parámetro que acote por proveedor considerando cualquier asociación, o un campo de respuesta con todas las asociaciones del producto.
+- `GET /purchase-orders/suggestions`: faltan la prioridad calculada para una ventana fija de 7 días, sus métricas visibles y un parámetro que acote por proveedor considerando cualquier asociación.
 - `GET /reports/purchases/by-supplier`: falta que documente cómo trata los pedidos sin proveedor.
+
+La ventana, orden, cantidad sugerida, ventas y cobertura son autoridad backend; el frontend no deriva ninguno de esos valores a partir de respuestas de ventas o stock separadas.
 
 Dinero sigue viajando como string decimal; fechas de pedidos y timestamps mantienen RFC3339; rangos de reporte mantienen `YYYY-MM-DD`. Ningún cálculo de negocio (frecuencia, cantidad sugerida, agregado de reporte) se replica en el cliente.
 
@@ -90,7 +104,7 @@ Sin cambio de patrón general: `401` redirige a login mediante `api()`; `403` no
 
 ## Backend coordination
 
-Bloqueado en su totalidad. Ver `backend-request.md` para el contrato mínimo solicitado, el criterio de desbloqueo y la ambigüedad de negocio (frecuencia de reposición para proveedor no preferido) que corresponde resolver a backend.
+Ver `backend-request.md` para el contrato mínimo solicitado, el criterio de desbloqueo y la política de siete días que corresponde resolver a backend.
 
 ## Risks / Trade-offs
 
@@ -104,7 +118,7 @@ Bloqueado en su totalidad. Ver `backend-request.md` para el contrato mínimo sol
 1. Backend diseña y despliega el contrato ampliado: `supplier_id` opcional/nullable en creación y respuestas de pedido, ampliación de `GET /purchase-orders/suggestions`, y decisión documentada sobre pedidos sin proveedor en el reporte.
 2. Se verifica cada contrato contra una instancia real, con el mismo criterio de desbloqueo que `add-frontend-suppliers-purchasing/backend-request.md`.
 3. Frontend implementa este change sólo después de esa verificación: tipos nullable, formulario con proveedor opcional, acotado de sugerencias, rótulo "Sin proveedor" en historial/hub/detalle/reporte.
-4. Se coordina con `add-frontend-purchasing-supplier-item-association` (ya implementado o en curso) para no introducir una regresión en el warning de asociación inline ni en las dos secciones de sugerencias sin proveedor seleccionado.
+4. Se coordina con `add-frontend-purchasing-supplier-item-association` para preservar el warning de asociación inline y retirar sólo su presentación anterior de sugerencias en dos secciones.
 
 ## Rollback
 

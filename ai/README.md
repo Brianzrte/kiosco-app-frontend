@@ -25,6 +25,7 @@ Roles y skills vigentes:
 | `roles/frontend-implementer.md` | `skills/implement-nextjs-change/SKILL.md` | Implementar una sección pendiente de un change aprobado. |
 | `roles/frontend-reviewer.md` | `skills/review-frontend-diff/SKILL.md` | Revisar el diff implementado sin corregirlo. |
 | `roles/frontend-test-verifier.md` | `skills/verify-frontend-change/SKILL.md` | Ejecutar checks y contrastar tasks con evidencia. |
+| `roles/frontend-feature-orchestrator.md` | `skills/orchestrate-frontend-change/SKILL.md` | Coordinar implementación, auditoría UX/UI, review y verificación de un feature. |
 | `roles/change-closer.md` | `skills/close-openspec-change/SKILL.md` | Cerrar un change verificado: sync de specs, archivado, commit de cierre y recomendación de integración. |
 | — (transversal, sin rol propio) | `skills/ux-ui-supervisor/SKILL.md` | Supervisar UX/UI: design discovery, propuesta visual, auditoría de pantallas y revisión previa al cierre. Asesora; no implementa ni archiva. |
 

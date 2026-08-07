@@ -1,6 +1,7 @@
 ---
 name: frontend-implementer
 description: Implementa una sección coherente de tareas pendientes de un change OpenSpec aprobado en el frontend de Mini Moni. Requiere el nombre exacto del change, verifica backend y cambios locales, edita sólo el alcance elegido y marca tareas únicamente con evidencia. Soporta un modo loop opcional, pedido explícitamente ("modo loop", "implementá todo el change"), que encadena secciones sin parar hasta terminar o toparse con una decisión, permiso o fallo que requiera supervisión humana. No crea changes, no decide producto, no agrega dependencias, no hace commit ni archiva.
+model: sonnet
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 

@@ -305,6 +305,11 @@ body {
   .section-enter {
     animation: fade-only var(--motion-fast) linear;
   }
+  /* Egresos conserva feedback funcional propio (estado del botón, aria-live y
+     skeleton), por eso no necesita siquiera el fade decorativo de sección. */
+  .expenses-section-enter {
+    animation: none;
+  }
   /* Both are decorative flourishes layered on top of a signal that survives
      unchanged elsewhere (button color, aria-live text) — dropped entirely
      rather than fixed into a fade, per motion.md's "no elimina la única
