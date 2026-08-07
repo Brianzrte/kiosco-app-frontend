@@ -23,9 +23,9 @@ type ValuationResponse = {
 };
 
 const GROUPS: { key: keyof ValuationResponse; title: string }[] = [
+  { key: "total", title: "Resumen general" },
   { key: "active", title: "Productos activos" },
   { key: "inactive", title: "Productos inactivos" },
-  { key: "total", title: "Total" },
 ];
 
 const valuationMetrics = (group: ValuationGroup) => [
@@ -64,7 +64,10 @@ export function InventoryValuationView() {
         </Link>
       </div>
 
-      <PageHeader title="Valorización de inventario" />
+      <PageHeader
+        title="Valorización de inventario"
+        description="Valores totales calculados sobre todo el inventario actual."
+      />
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -81,7 +84,12 @@ export function InventoryValuationView() {
                 </h2>
                 <div className="grid gap-4 sm:grid-cols-3">
                   {valuationMetrics(group).map((metric) => (
-                    <StatCard key={metric.label} size="compact" {...metric} />
+                    <StatCard
+                      key={metric.label}
+                      size="compact"
+                      variant="workspace"
+                      {...metric}
+                    />
                   ))}
                 </div>
               </section>

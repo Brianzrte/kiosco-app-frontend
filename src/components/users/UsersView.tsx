@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -204,7 +204,7 @@ function UsersList({
   mobileListRef: RefObject<HTMLUListElement | null>;
   desktopListRef: RefObject<HTMLDivElement | null>;
 }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   function activate(user: User) {
     router.push(`/users/${user.id}`);
   }

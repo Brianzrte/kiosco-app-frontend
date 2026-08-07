@@ -505,7 +505,9 @@ export function PosView() {
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
+      event.preventDefault();
       setSearchDismissed(true);
+      refocus();
       return;
     }
     const selectableIndices = searchResults.flatMap((result, index) =>
@@ -828,119 +830,132 @@ export function PosView() {
   });
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_23rem]">
-      <div
-        className={`flex flex-col gap-4 ${cart.length > 0 ? "pb-28 md:pb-0" : ""}`}
+    <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_23rem]">
+      <section
+        role="region"
+        aria-label="Venta"
+        className={`min-w-0 ${cart.length > 0 ? "pb-28 xl:pb-0" : ""}`}
       >
-        <ScanOmnibox
-          barcode={barcode}
-          onBarcodeChange={setBarcode}
-          onScanSubmit={scan}
-          scanInputRef={scanRef}
-          searchTerm={searchTerm}
-          onSearchTermChange={updateSearchTerm}
-          onSearchSubmit={submitSearch}
-          onSearchKeyDown={handleSearchKeyDown}
-          searchInputRef={searchRef}
-          searchResults={searchResults}
-          activeResultIndex={activeResultIndex}
-          onHoverResult={setActiveResultIndex}
-          onPickResult={pickSearchResult}
-          searchDismissed={searchDismissed}
-          entryStatusMessage={entryStatusMessage}
-          entryStatusIsError={entryStatusIsError}
-        />
-
-        {cart.length === 0 ? (
-          <EmptyState message="El carrito está vacío. Escaneá un producto para empezar la venta." />
-        ) : (
-          <>
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => setClearCartDialogOpen(true)}
-              >
-                Vaciar carrito{" "}
-                <span className="text-xs font-normal text-text-muted">
-                  (F8)
-                </span>
-              </Button>
-            </div>
-            <CartLines
-              cart={cart}
-              flash={flash}
-              onIncrement={incrementQuantity}
-              onDecrement={decrementQuantity}
-              onRemove={(productId) => setQuantity(productId, 0)}
-              onWeightChange={handleWeightChange}
-              onActualPriceChange={handleActualPriceChange}
+        <section aria-label="Escaneo y búsqueda de productos">
+          <Card className="p-4 sm:p-5">
+            <ScanOmnibox
+              barcode={barcode}
+              onBarcodeChange={setBarcode}
+              onScanSubmit={scan}
+              scanInputRef={scanRef}
+              searchTerm={searchTerm}
+              onSearchTermChange={updateSearchTerm}
+              onSearchSubmit={submitSearch}
+              onSearchKeyDown={handleSearchKeyDown}
+              searchInputRef={searchRef}
+              searchResults={searchResults}
+              activeResultIndex={activeResultIndex}
+              onHoverResult={setActiveResultIndex}
+              onPickResult={pickSearchResult}
+              searchDismissed={searchDismissed}
+              entryStatusMessage={entryStatusMessage}
+              entryStatusIsError={entryStatusIsError}
             />
-          </>
-        )}
-      </div>
+          </Card>
+        </section>
 
-      <Card className="h-fit border-primary-light bg-surface-raised shadow-soft-lg md:sticky md:top-6">
-        <CheckoutPanel
-          totalCents={totalCents}
-          totalFlash={totalFlash}
-          summary={summary}
-          payment={payment}
-          onSelectPayment={selectPaymentMethod}
-          splitPayments={splitPayments}
-          onStartSplitPayment={startSplitPayment}
-          onStopSplitPayment={() => setSplitPayments(null)}
-          onUpdateSplitAmount={updateSplitAmount}
-          splitAmountRef={splitAmountRef}
-          cartEmpty={cart.length === 0}
-          cashPayment={cashPayment}
-          cashReceived={cashReceived}
-          onCashReceivedChange={setCashReceived}
-          cashReceivedRef={cashReceivedRef}
-          cashChangeCents={cashChangeCents}
-        />
+        <section aria-label="Carrito" className="mt-4 sm:mt-6">
+          {cart.length === 0 ? (
+            <EmptyState message="El carrito está vacío. Escaneá un producto para empezar la venta." />
+          ) : (
+            <>
+              <div className="mb-3 flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setClearCartDialogOpen(true)}
+                >
+                  Vaciar carrito{" "}
+                  <span className="text-xs font-normal text-text-muted">
+                    (F8)
+                  </span>
+                </Button>
+              </div>
+              <CartLines
+                cart={cart}
+                flash={flash}
+                onIncrement={incrementQuantity}
+                onDecrement={decrementQuantity}
+                onRemove={(productId) => setQuantity(productId, 0)}
+                onWeightChange={handleWeightChange}
+                onActualPriceChange={handleActualPriceChange}
+              />
+            </>
+          )}
+        </section>
+      </section>
 
-        <CheckoutStatus
-          status={checkoutStatus}
-          confirmErrorKind={confirmErrorKind}
-          onRetry={() => void confirmSale()}
-          onGoBack={() => window.history.back()}
-        />
+      <aside
+        aria-label="Cobro"
+        className="min-w-0 xl:sticky xl:top-6 xl:h-fit"
+      >
+        <Card className="border-primary-light bg-surface-raised shadow-soft-lg">
+          <CheckoutPanel
+            totalCents={totalCents}
+            totalFlash={totalFlash}
+            summary={summary}
+            payment={payment}
+            onSelectPayment={selectPaymentMethod}
+            splitPayments={splitPayments}
+            onStartSplitPayment={startSplitPayment}
+            onStopSplitPayment={() => setSplitPayments(null)}
+            onUpdateSplitAmount={updateSplitAmount}
+            splitAmountRef={splitAmountRef}
+            cartEmpty={cart.length === 0}
+            cashPayment={cashPayment}
+            cashReceived={cashReceived}
+            onCashReceivedChange={setCashReceived}
+            cashReceivedRef={cashReceivedRef}
+            cashChangeCents={cashChangeCents}
+          />
 
-        <Button
-          variant="confirm"
-          className={`hidden w-full py-3.5 text-base md:flex ${confirmReady ? "confirm-ready" : ""}`}
-          disabled={!!confirmDisabledReason}
-          pending={pending}
-          pendingImmediate
-          onClick={() => void confirmSale()}
-        >
-          {pending ? "Confirmando…" : "Confirmar venta"}{" "}
-          <span className="text-xs font-normal opacity-80">(F9)</span>
-        </Button>
+          <CheckoutStatus
+            status={checkoutStatus}
+            confirmErrorKind={confirmErrorKind}
+            onRetry={() => void confirmSale()}
+            onGoBack={() => window.history.back()}
+          />
 
-        {lastConfirmedSale && (
-          <p className="mt-3 hidden text-center text-sm text-text-secondary md:block">
-            Última venta:{" "}
-            {lastConfirmedSale.saleNumber !== null && (
-              <span className="num font-medium text-text-primary">
-                #{lastConfirmedSale.saleNumber}
-              </span>
-            )}{" "}
-            · {lastConfirmedSale.total} ·{" "}
-            <Link
-              href={`/sales/${lastConfirmedSale.id}`}
-              className="font-medium text-primary hover:text-primary-hover"
-            >
-              Ver
-            </Link>
-          </p>
-        )}
-      </Card>
+          <Button
+            variant="confirm"
+            className={`hidden w-full py-3.5 text-base xl:flex ${confirmReady ? "confirm-ready" : ""}`}
+            disabled={!!confirmDisabledReason}
+            pending={pending}
+            pendingImmediate
+            onClick={() => void confirmSale()}
+          >
+            {pending ? "Confirmando…" : "Confirmar venta"}{" "}
+            <span className="text-xs font-normal opacity-80">(F9)</span>
+          </Button>
+
+          {lastConfirmedSale && (
+            <p className="mt-3 hidden text-center text-sm text-text-secondary xl:block">
+              Última venta:{" "}
+              {lastConfirmedSale.saleNumber !== null && (
+                <span className="num font-medium text-text-primary">
+                  #{lastConfirmedSale.saleNumber}
+                </span>
+              )}{" "}
+              · {lastConfirmedSale.total} ·{" "}
+              <Link
+                href={`/sales/${lastConfirmedSale.id}`}
+                className="font-medium text-primary hover:text-primary-hover"
+              >
+                Ver
+              </Link>
+            </p>
+          )}
+        </Card>
+      </aside>
 
       {cart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 flex items-center gap-3 border-t border-border bg-surface-raised p-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] shadow-soft-lg md:hidden">
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+3.75rem)] z-30 flex items-center gap-3 border-t border-border bg-surface-raised p-3 shadow-soft-lg md:bottom-0 md:z-50 xl:hidden">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Total

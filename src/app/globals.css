@@ -133,6 +133,18 @@
   --shadow-soft: 0 1px 2px rgb(31 41 55 / 0.04), 0 2px 8px rgb(31 41 55 / 0.06);
   --shadow-soft-lg: 0 2px 4px rgb(31 41 55 / 0.04), 0 8px 24px rgb(31 41 55 / 0.08);
 
+  /* Workspace — structural values shared by the desktop rail, the content
+     region and administrative data surfaces. Views compose these through the
+     shared primitives instead of introducing their own geometry. */
+  --spacing-workspace: 1.5rem;
+  --spacing-workspace-wide: 2rem;
+  --spacing-toolbar: 1rem;
+  --layout-rail: 16rem;
+  --layout-rail-condensed: 4.5rem;
+  --layout-workspace: 80rem;
+  --text-workspace-title: 1.5rem;
+  --text-workspace-kpi: 1.875rem;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -266,6 +278,22 @@ body {
   animation: section-enter var(--motion-base) var(--ease-out);
 }
 
+/* This is an overlay, not a document-flow bar: route feedback never shifts
+   the workspace or the POS scanner. It uses opacity only, so reduced motion
+   preserves the signal without displacement. */
+.route-transition-indicator {
+  animation: route-transition-in var(--motion-fast) var(--ease-out);
+}
+
+@keyframes route-transition-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* Login background ambience. Scoped to `/login` only — this is the one
    screen in the app that isn't operational (visited once per session, no
    repeat cost), so it's the deliberate exception to "no decorative motion"
@@ -302,7 +330,8 @@ body {
     }
   }
   .pop-in,
-  .section-enter {
+  .section-enter,
+  .route-transition-indicator {
     animation: fade-only var(--motion-fast) linear;
   }
   /* Egresos conserva feedback funcional propio (estado del botón, aria-live y

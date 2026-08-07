@@ -8,6 +8,7 @@ import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
+import { AdminToolbar } from "@/components/ui/Workspace";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { SummaryCards } from "@/components/sales/SummaryCards";
 import { api } from "@/lib/api";
@@ -88,7 +89,10 @@ export function SalesReportView() {
         </Link>
       </div>
 
-      <PageHeader title="Reporte de ventas" />
+      <PageHeader
+        title="Reporte de ventas"
+        description={`Período seleccionado: ${formatDayLabel(from)} al ${formatDayLabel(to)}.`}
+      />
 
       <SalesReportContent
         key={`${from}-${to}`}
@@ -136,7 +140,8 @@ function SalesReportFilters({
   onPresetChange: (key: SalesPreset) => void;
 }) {
   return (
-    <CollapsibleFilters activeFilterCount={activePreset === null ? 1 : 0}>
+    <AdminToolbar label="Filtros del reporte de ventas">
+      <CollapsibleFilters activeFilterCount={activePreset === null ? 1 : 0}>
       <div className="flex flex-wrap gap-2">
         {DAY_PRESETS.map((preset) => (
           <Button
@@ -173,7 +178,8 @@ function SalesReportFilters({
         value={to}
         onChange={(e) => onToChange(e.target.value)}
       />
-    </CollapsibleFilters>
+      </CollapsibleFilters>
+    </AdminToolbar>
   );
 }
 
@@ -267,33 +273,33 @@ function SalesReportContent({
   if (error) {
     return (
       <div className="flex flex-col gap-6">
-        <ErrorState error={error} onRetry={reload} />
         {filters}
+        <ErrorState error={error} onRetry={reload} />
       </div>
     );
   }
   if (data === null) {
     return (
       <div className="flex flex-col gap-6">
-        <ListSkeleton rows={6} />
         {filters}
+        <ListSkeleton rows={6} />
       </div>
     );
   }
   if (data.total === 0) {
     return (
       <div className="flex flex-col gap-6">
-        <EmptyState message="No hay ventas confirmadas en el período seleccionado." />
         {filters}
+        <EmptyState message="No hay ventas confirmadas en el período seleccionado." />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <SummaryCards data={data.summary} />
-
       {filters}
+
+      <SummaryCards data={data.summary} />
 
       <ul ref={mobileListRef} className="flex flex-col gap-3 md:hidden">
         {data.days.map((day) => (

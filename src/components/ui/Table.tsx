@@ -2,14 +2,15 @@ import { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
 export function Table({
   className = "",
+  density = "default",
   ...props
-}: HTMLAttributes<HTMLTableElement>) {
+}: HTMLAttributes<HTMLTableElement> & { density?: "default" | "compact" }) {
   return (
     <div
-      className={`overflow-x-auto rounded-app border border-border bg-surface shadow-soft ${className}`}
+      className={`overflow-x-auto rounded-app border border-border bg-surface shadow-soft ${density === "compact" ? "text-xs" : ""} ${className}`}
     >
       <table
-        className="w-full text-left text-sm [&_tbody_tr:not(:last-child)_td]:border-b [&_tbody_tr:not(:last-child)_td]:border-border"
+        className={`w-full text-left ${density === "compact" ? "text-xs" : "text-sm"} [&_tbody_tr:not(:last-child)_td]:border-b [&_tbody_tr:not(:last-child)_td]:border-border`}
         {...props}
       />
     </div>

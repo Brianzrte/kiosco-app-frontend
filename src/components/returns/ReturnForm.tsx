@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
@@ -55,6 +56,8 @@ export function ReturnForm({
   const [stage, setStage] = useState<Stage>("select");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
 
   // Clamped against the current availability on every render: a reload after
   // a concurrency rejection can lower `available` below a quantity chosen
@@ -126,6 +129,33 @@ export function ReturnForm({
       : !refundMatchesSelection
         ? "Los reintegros deben sumar el valor de la mercadería devuelta."
         : null;
+  const reasonError =
+    showValidation && !isValidReason(reason)
+      ? "Indicá el motivo de la devolución."
+      : undefined;
+
+  function refundAmountError(payment: SalePayment): string | undefined {
+    if (!showValidation) return undefined;
+    const amount = refundAmounts[payment.method]?.trim() ?? "";
+    if (amount === "") return undefined;
+    if (!/^\d+(\.\d{1,2})?$/.test(amount) || toCents(amount) <= 0) {
+      return "Ingresá un importe positivo con hasta dos decimales.";
+    }
+    if (toCents(amount) > toCents(payment.amount)) {
+      return "Supera el saldo de este medio de pago.";
+    }
+    return undefined;
+  }
+
+  function reviewReturn() {
+    setShowValidation(true);
+    if (!isValidReason(reason)) {
+      reasonRef.current?.focus();
+      return;
+    }
+    if (!canReview || !refundMatchesSelection) return;
+    setStage("confirm");
+  }
 
   async function confirm() {
     setError(null);
@@ -152,7 +182,7 @@ export function ReturnForm({
   if (stage === "confirm") {
     return (
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2 rounded-app bg-surface-2 p-4 text-sm">
+        <Card className="flex flex-col gap-2 border-0 bg-surface-2 p-4 text-sm shadow-none">
           <p>
             Se van a dar de baja{" "}
             <strong className="font-medium">
@@ -176,16 +206,16 @@ export function ReturnForm({
               {formatMoney(refundTotal)}
             </span>
           </div>
-        </div>
+        </Card>
 
-        <div className="flex flex-col gap-2 rounded-app border border-warning/40 bg-warning/10 p-4 text-sm text-text-primary">
+        <Card className="flex flex-col gap-2 border-warning/40 bg-warning/10 p-4 text-sm text-text-primary shadow-none">
           <p>El sistema registra la devolución, reintegra el stock y descuenta el importe de la venta.</p>
           <p>
             Esta devolución <strong>no se puede deshacer</strong> desde la
             aplicación. La única corrección posterior es un ajuste manual de
             stock, que no borra este registro.
           </p>
-        </div>
+        </Card>
 
         {error && <p className="text-sm text-error">{error}</p>}
 
@@ -232,7 +262,7 @@ export function ReturnForm({
           return (
             <li
               key={item.saleItemId}
-              className="rounded-app border border-border p-3"
+              className="rounded-app border border-border bg-surface p-3 shadow-soft"
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="font-medium">{item.productName}</p>
@@ -264,7 +294,7 @@ export function ReturnForm({
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-9 w-9 px-0"
+                    className="h-11 w-11 px-0 md:h-9 md:w-9"
                     disabled={exhausted || value <= 0}
                     onClick={() =>
                       setQuantity(item.saleItemId, value - 1, item.available)
@@ -279,7 +309,7 @@ export function ReturnForm({
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-9 w-9 px-0"
+                    className="h-11 w-11 px-0 md:h-9 md:w-9"
                     disabled={exhausted || value >= item.available}
                     onClick={() =>
                       setQuantity(item.saleItemId, value + 1, item.available)
@@ -302,14 +332,22 @@ export function ReturnForm({
         >
           Motivo (obligatorio)
         </label>
-        <textarea
-          id="return-reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={2}
-          placeholder="Ej. cobré el producto equivocado, me di cuenta al toque"
-          className="w-full rounded-app border border-border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
-        />
+          <textarea
+            id="return-reason"
+            ref={reasonRef}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder="Ej. cobré el producto equivocado, me di cuenta al toque"
+            aria-invalid={Boolean(reasonError)}
+            aria-describedby={reasonError ? "return-reason-error" : undefined}
+            className="w-full rounded-app border border-border bg-surface px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-disabled hover:border-border-hover focus:border-primary"
+          />
+          {reasonError && (
+            <p id="return-reason-error" role="alert" className="mt-1.5 text-sm text-error">
+              {reasonError}
+            </p>
+          )}
         <p className="mt-1.5 text-xs text-text-secondary">
           Queda en la traza permanente de la devolución y del movimiento de
           stock.
@@ -336,9 +374,12 @@ export function ReturnForm({
               type="text"
               inputMode="decimal"
               placeholder="0.00"
+              error={refundAmountError(payment)}
             />
           ))}
-          {refundError && <p className="text-sm text-error">{refundError}</p>}
+          {showValidation && refundError && (
+            <p className="text-sm text-error" role="alert">{refundError}</p>
+          )}
         </fieldset>
       )}
 
@@ -350,8 +391,8 @@ export function ReturnForm({
         </Button>
         <Button
           type="button"
-          disabled={!canReview || !refundMatchesSelection}
-          onClick={() => setStage("confirm")}
+          disabled={!hasAnySelection(lines) || hasInvalidWeight}
+          onClick={reviewReturn}
         >
           Continuar
         </Button>

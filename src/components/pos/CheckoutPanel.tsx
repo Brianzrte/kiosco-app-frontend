@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { fromCents, formatMoney } from "@/lib/money";
@@ -127,6 +127,16 @@ export function CheckoutPanel({
   cashReceivedRef: RefObject<HTMLInputElement | null>;
   cashChangeCents: number | null;
 }) {
+  const shouldReduceMotion = useReducedMotion();
+  const motionPanelTransition = shouldReduceMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: MOTION.fast / 1000 },
+      }
+    : panelTransition;
+
   return (
     <>
       <h2 className="mb-2 text-center text-xs font-semibold uppercase tracking-wide text-text-muted">
@@ -203,10 +213,10 @@ export function CheckoutPanel({
           {splitPayments ? (
             <motion.div
               key="split-panel"
-              initial={panelTransition.initial}
-              animate={panelTransition.animate}
-              exit={panelTransition.exit}
-              transition={panelTransition.transition}
+              initial={motionPanelTransition.initial}
+              animate={motionPanelTransition.animate}
+              exit={motionPanelTransition.exit}
+              transition={motionPanelTransition.transition}
               className="mt-3 flex flex-col gap-3 rounded-app border border-border bg-surface-2 p-3"
             >
               <Input
@@ -240,10 +250,10 @@ export function CheckoutPanel({
           ) : payment !== "TRANSFER" ? (
             <motion.div
               key="split-button"
-              initial={panelTransition.initial}
-              animate={panelTransition.animate}
-              exit={panelTransition.exit}
-              transition={panelTransition.transition}
+              initial={motionPanelTransition.initial}
+              animate={motionPanelTransition.animate}
+              exit={motionPanelTransition.exit}
+              transition={motionPanelTransition.transition}
             >
               <Button
                 type="button"
@@ -265,10 +275,10 @@ export function CheckoutPanel({
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key="cash-change-panel"
-                initial={panelTransition.initial}
-                animate={panelTransition.animate}
-                exit={panelTransition.exit}
-                transition={panelTransition.transition}
+                initial={motionPanelTransition.initial}
+                animate={motionPanelTransition.animate}
+                exit={motionPanelTransition.exit}
+                transition={motionPanelTransition.transition}
                 className="flex flex-col gap-2 rounded-app border border-border bg-surface-2 p-3"
               >
                 <div className="[&_input]:num [&_input]:text-2xl [&_input]:font-bold">

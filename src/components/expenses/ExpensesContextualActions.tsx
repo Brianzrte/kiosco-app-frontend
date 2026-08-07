@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Button } from "@/components/ui/Button";
 
 type ExpenseAction = {
@@ -70,7 +70,7 @@ export function ExpensesContextualActions({
 }: {
   screen: keyof typeof actionsByScreen;
 }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const actions = actionsByScreen[screen];
 

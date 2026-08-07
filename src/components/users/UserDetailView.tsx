@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -32,7 +32,7 @@ export function UserDetailView({
   id: string;
   currentUsername: string;
 }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const toast = useToast();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);

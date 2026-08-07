@@ -1,6 +1,6 @@
 import { Role } from "./types";
 
-export const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
+export const NAV_ITEMS = [
   { href: "/", label: "Ventas", roles: ["cashier", "admin"] },
   { href: "/sales", label: "Historial", roles: ["admin", "cashier"] },
   { href: "/products", label: "Productos", roles: ["inventory", "admin"] },
@@ -18,7 +18,7 @@ export const NAV_ITEMS: { href: string; label: string; roles: Role[] }[] = [
   { href: "/categories", label: "Categorías", roles: ["admin"] },
   { href: "/users", label: "Usuarios", roles: ["admin"] },
   { href: "/reports", label: "Reportes", roles: ["admin"] },
-];
+] as const satisfies readonly { href: string; label: string; roles: readonly Role[] }[];
 
 const HOME_PRIORITY: { role: Role; href: string }[] = [
   { role: "admin", href: "/" },

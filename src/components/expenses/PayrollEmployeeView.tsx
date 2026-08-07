@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -47,7 +47,7 @@ const monthStart = `${today.slice(0, 7)}-01`;
  * si llega, se muestra tal cual y se refresca la lista.
  */
 export function PayrollEmployeeView({ userId }: { userId: string }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);
   const [editingId, setEditingId] = useState<string | null>(null);

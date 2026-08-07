@@ -10,15 +10,16 @@ import {
 } from "react";
 import { pastelFor } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { useToast } from "@/components/ui/Toast";
-import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { AdminToolbar } from "@/components/ui/Workspace";
+import { AdminListSkeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { api, ApiError } from "@/lib/api";
 import { computePageSize, computeTotalPages } from "@/lib/pagination";
 import { useLoad } from "@/lib/useLoad";
-import { Category, CategoryList, ProductList } from "@/lib/types";
+import { Category, CategoryList } from "@/lib/types";
 
 const swatches: Record<string, string> = {
   "pastel-pink": "bg-pastel-pink",
@@ -66,18 +67,6 @@ export function CategoriesView() {
     window.addEventListener("resize", recompute);
     return () => window.removeEventListener("resize", recompute);
   }, [categoryList, pageSize]);
-
-  // Sólo alimenta el contador de productos por categoría; no participa de la
-  // paginación de la lista de categorías.
-  const productsFetcher = useCallback(
-    () => api<ProductList>("/products?limit=100").then((list) => list.products),
-    [],
-  );
-  const { data: products } = useLoad(productsFetcher);
-  const productCount = new Map<string, number>();
-  for (const p of products ?? []) {
-    productCount.set(p.category_id, (productCount.get(p.category_id) ?? 0) + 1);
-  }
 
   useEffect(() => {
     if (!editingId) return;
@@ -152,6 +141,10 @@ export function CategoriesView() {
     }
   }
 
+  if (categories === null && !error) {
+    return <AdminListSkeleton rows={4} />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -159,27 +152,37 @@ export function CategoriesView() {
         description="Agrupan productos para filtrar en Productos, Inventario y el POS."
       />
 
-      <Card className="max-w-xl">
-        <form onSubmit={create} className="flex items-end gap-3">
+      {categoryList && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            label="Categorías"
+            value={categoryList.total}
+            variant="workspace"
+          />
+        </div>
+      )}
+
+      <AdminToolbar label="Crear categoría">
+        <form onSubmit={create} className="flex w-full flex-col gap-3 sm:flex-row sm:items-end">
           <Input
             label="Nueva categoría"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Bebidas, golosinas…"
             required
-            className="flex-1"
+            className="w-full flex-1"
           />
           <Button type="submit" disabled={!name.trim()} pending={pending}>
             {pending ? "Creando…" : "Crear categoría"}
           </Button>
         </form>
         {formError && <p className="mt-3 text-sm text-error">{formError}</p>}
-      </Card>
+      </AdminToolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : categories === null ? (
-        <ListSkeleton rows={4} />
+        <AdminListSkeleton rows={4} />
       ) : categories.length === 0 ? (
         <EmptyState message="Todavía no hay categorías. Creá la primera para organizar los productos." />
       ) : (
@@ -190,7 +193,7 @@ export function CategoriesView() {
                 key={c.id}
                 className="border-b border-border px-4 py-3 last:border-b-0"
               >
-                <div className="flex items-center gap-3">
+                <div className={`flex gap-3 ${editingId === c.id ? "flex-col sm:flex-row sm:items-center" : "items-center"}`}>
                   <span
                     aria-hidden
                     className={`size-3 shrink-0 rounded-full ${swatches[pastelFor(c.id)]}`}
@@ -212,24 +215,20 @@ export function CategoriesView() {
                       {c.name}
                     </span>
                   )}
-                  <span className="num shrink-0 text-sm text-text-secondary">
-                    {productCount.get(c.id) ?? 0}{" "}
-                    {(productCount.get(c.id) ?? 0) === 1
-                      ? "producto"
-                      : "productos"}
-                  </span>
                   {editingId === c.id ? (
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
                       <Button
                         variant="secondary"
                         onClick={cancelEditing}
                         disabled={editPending}
+                        className="flex-1 sm:flex-none"
                       >
                         Cancelar
                       </Button>
                       <Button
                         onClick={() => saveEditing(c.id)}
                         pending={editPending}
+                        className="flex-1 sm:flex-none"
                       >
                         {editPending ? "Guardando…" : "Guardar"}
                       </Button>

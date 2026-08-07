@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { performedByLabel } from "@/components/returns/ReturnHistory";
 import { Badge, Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -59,7 +59,7 @@ function formatDateTime(value: string) {
  * cuanto el backend lo informa, deshabilita la acción y muestra el motivo.
  */
 export function ExpenseDetailView({ id }: { id: string }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [voidOpen, setVoidOpen] = useState(false);
   const [voidReason, setVoidReason] = useState("");
   const [voidPending, setVoidPending] = useState(false);

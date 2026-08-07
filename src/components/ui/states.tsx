@@ -25,11 +25,17 @@ export function Skeleton({ className = "" }: { className?: string }) {
 }
 
 /** Placeholder shaped like a list/table while rows load. */
-export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+export function ListSkeleton({
+  rows = 6,
+  announce = true,
+}: {
+  rows?: number;
+  /** Parent loading regions provide the single live announcement when false. */
+  announce?: boolean;
+}) {
   return (
     <div
-      role="status"
-      aria-label="Cargando…"
+      {...(announce ? { role: "status", "aria-label": "Cargando…" } : { "aria-hidden": true })}
       className="overflow-hidden rounded-app border border-border bg-surface shadow-soft"
     >
       {Array.from({ length: rows }).map((_, i) => (
@@ -42,6 +48,31 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
           <Skeleton className="ml-auto h-4 w-16" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Administrative list placeholder: keeps header, KPI, filter and table space
+ * stable until the screen's data view is ready. */
+export function AdminListSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div role="status" aria-label="Cargando…" className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48 max-w-full" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <Skeleton className="h-11 w-36 max-w-full" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-28" />
+        <Skeleton className="h-28" />
+        <Skeleton className="h-28" />
+      </div>
+      <div className="rounded-app border border-border bg-surface-subtle p-4">
+        <Skeleton className="h-11 w-full md:w-72" />
+      </div>
+      <ListSkeleton rows={rows} announce={false} />
     </div>
   );
 }

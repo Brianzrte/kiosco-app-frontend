@@ -8,8 +8,10 @@ import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
-import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { AdminToolbar } from "@/components/ui/Workspace";
+import { AdminListSkeleton, EmptyState, ErrorState } from "@/components/ui/states";
 import { IconSearch } from "@/components/ui/icons";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
@@ -102,6 +104,10 @@ export function ProductsView() {
     [categories],
   );
 
+  if (products === null && !error) {
+    return <AdminListSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -118,27 +124,39 @@ export function ProductsView() {
         }
       />
 
-      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-2 py-1.5 md:flex md:flex-wrap md:items-end md:gap-3 md:p-3`}>
-        <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
-          <Input icon={<IconSearch />} placeholder="Buscar por nombre, SKU o código de barras" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full sm:min-w-64 sm:flex-1" inputMode="search" />
-        </CollapsibleSearch>
-        <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryFilter)) + Number(Boolean(activeFilter))}>
-          <Select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className="w-full sm:w-48" aria-label="Filtrar por categoría">
-            <option value="">Todas las categorías</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </Select>
-          <Select value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }} className="w-full sm:w-40" aria-label="Filtrar por estado">
-            <option value="">Todos</option>
-            <option value="active">Activos</option>
-            <option value="inactive">Inactivos</option>
-          </Select>
-        </CollapsibleFilters>
-      </div>
+      {productPage && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            label="Productos en catálogo"
+            value={productPage.total}
+            variant="workspace"
+          />
+        </div>
+      )}
+
+      <AdminToolbar>
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-2 md:flex md:flex-wrap md:items-end md:gap-3">
+          <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar producto">
+            <Input icon={<IconSearch />} placeholder="Buscar por nombre, SKU o código de barras" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="w-full sm:min-w-64 sm:flex-1" inputMode="search" />
+          </CollapsibleSearch>
+          <CollapsibleFilters mobileGridLayout open={filtersOpen} onOpenChange={(next) => { setFiltersOpen(next); if (next) setSearchOpen(false); }} className="justify-self-end" activeFilterCount={Number(Boolean(categoryFilter)) + Number(Boolean(activeFilter))}>
+            <Select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} className="w-full sm:w-48" aria-label="Filtrar por categoría">
+              <option value="">Todas las categorías</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Select value={activeFilter} onChange={(e) => { setActiveFilter(e.target.value); setPage(1); }} className="w-full sm:w-40" aria-label="Filtrar por estado">
+              <option value="">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </Select>
+          </CollapsibleFilters>
+        </div>
+      </AdminToolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : products === null ? (
-        <ListSkeleton />
+        <AdminListSkeleton />
       ) : products.length === 0 ? (
         <EmptyState
           message={

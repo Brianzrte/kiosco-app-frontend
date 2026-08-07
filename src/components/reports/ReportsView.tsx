@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { AdminToolbar } from "@/components/ui/Workspace";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { LineChart } from "@/components/reports/charts/LineChart";
 import { ReportNavCard } from "@/components/reports/ReportNavCard";
@@ -61,15 +62,16 @@ export function ReportsView() {
       <PageHeader
         title="Reportes"
         description="Panorama del período seleccionado y acceso a cada reporte detallado."
-        actions={
-          <div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
+      />
+
+      <AdminToolbar label="Período del reporte">
+        <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto">
             <Input
               label="Desde"
               type="date"
               compact
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="w-full sm:w-auto"
             />
             <Input
               label="Hasta"
@@ -77,11 +79,9 @@ export function ReportsView() {
               compact
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="w-full sm:w-auto"
             />
-          </div>
-        }
-      />
+        </div>
+      </AdminToolbar>
 
       <SalesSummarySection key={`s-${from}-${to}`} from={from} to={to} />
 
@@ -295,15 +295,12 @@ function TopProductsCard({ from, to }: { from: string; to: string }) {
       ) : (
         <Card className="flex-1">
           <ul className="divide-y divide-border">
-            {rows.map((p, index) => (
+            {rows.map((p) => (
               <li
                 key={p.product_id}
                 className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
               >
                 <span className="flex min-w-0 items-center gap-3">
-                  <span className="num flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-light text-xs font-semibold text-primary">
-                    {index + 1}
-                  </span>
                   <span className="truncate text-sm font-medium">
                     {p.product_name}
                   </span>

@@ -69,9 +69,9 @@ export function ReturnHistory({
       ) : (
         <div className="flex flex-col gap-4">
           {returns.map((ret) => (
-            <div
+            <Card
               key={ret.id}
-              className="overflow-hidden rounded-app border border-border bg-surface shadow-soft"
+              className="overflow-hidden p-0"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border bg-surface-2 px-4 py-3">
                 <div>
@@ -128,7 +128,7 @@ export function ReturnHistory({
                 </tbody>
               </Table>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

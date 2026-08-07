@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Dialog } from "@/components/ui/Dialog";
@@ -89,7 +89,7 @@ function PayrollLoadingSkeleton() {
  * desaparecían de la lista.
  */
 export function PayrollView() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);
   const [selectedUserId, setSelectedUserId] = useState("");

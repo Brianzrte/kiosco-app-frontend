@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -18,6 +18,7 @@ import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
+import { AdminToolbar } from "@/components/ui/Workspace";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { IconSearch } from "@/components/ui/icons";
 import { SummaryCards } from "@/components/sales/SummaryCards";
@@ -185,7 +186,9 @@ export function SalesView({ roles }: { roles: Role[] }) {
 
       {isCashier ? <CashierTodaySummaryCards /> : <DailySummaryCards />}
 
-      <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-2 py-1.5 md:flex md:flex-wrap md:items-end md:gap-3 md:p-3`}>
+      <AdminToolbar
+        className={`grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} px-2 py-1.5 md:flex md:gap-3 md:p-3`}
+      >
       <CollapsibleSearch mobileGridLayout open={searchOpen} onOpenChange={(next) => { setSearchOpen(next); if (next) setFiltersOpen(false); }} label="Buscar por número de venta">
       <form onSubmit={searchByNumber} className="flex flex-wrap items-end gap-3">
         <Input
@@ -276,7 +279,7 @@ export function SalesView({ roles }: { roles: Role[] }) {
           </>
         )}
       </CollapsibleFilters>
-      </div>
+      </AdminToolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
@@ -294,13 +297,15 @@ export function SalesView({ roles }: { roles: Role[] }) {
         />
       ) : (
         <>
-          <SalesTable
-            rows={data.items}
-            cashierNames={cashierNames}
-            showCashier={!isCashier}
-            mobileListRef={mobileListRef}
-            desktopListRef={desktopListRef}
-          />
+          <section aria-label="Ventas encontradas">
+            <SalesTable
+              rows={data.items}
+              cashierNames={cashierNames}
+              showCashier={!isCashier}
+              mobileListRef={mobileListRef}
+              desktopListRef={desktopListRef}
+            />
+          </section>
           {computeTotalPages(data.total, pageSize) > 1 && (
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm text-text-secondary">
@@ -348,7 +353,7 @@ function SalesTable({
   mobileListRef: RefObject<HTMLUListElement | null>;
   desktopListRef: RefObject<HTMLDivElement | null>;
 }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
 
   function openDetail(id: string) {
     router.push(`/sales/${id}`);

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { IconInfoCircle } from "@/components/ui/icons";
@@ -48,7 +48,7 @@ function emptyDraftItem(): DraftItem {
 type PreloadStatus = "idle" | "loading" | "loaded" | "empty" | "error";
 
 export function PurchaseOrderForm() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const toast = useToast();
   const [supplierId, setSupplierId] = useState("");
   const [orderedAt, setOrderedAt] = useState("");

@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
@@ -28,7 +28,7 @@ function statusTone(status: PurchaseOrderStatus) {
 }
 
 export function PurchaseOrdersHistoryView() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [supplier, setSupplier] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");

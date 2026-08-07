@@ -1,9 +1,10 @@
 ## 1. Design approval and shared foundation
 
-- [ ] 1.1 Review the three mockups in `design.md` with the product owner and record any approved visual adjustment before implementation. Evidence: explicit approval in the change discussion.
+- [x] 1.1 Review the three mockups in `design.md` with the product owner and record any approved visual adjustment before implementation. Evidence: product owner approved mockups A, B and C without changes in the change discussion on 2026-08-07.
 - [ ] 1.2 Extend `globals.css` only with tokenized workspace, surface, typography and layout values required by the approved direction. Evidence: code inspection confirms no literal colours, radii, shadows or motion durations in consuming views.
 - [ ] 1.3 Extend shared UI primitives for the approved rail/workspace, administrative toolbar, KPI and table variants rather than restyling repeated screen markup. Evidence: code inspection of `src/components/ui/` and consumers.
 - [ ] 1.4 Preserve or extend shared loading skeletons so their geometry follows the final administrative layout. Evidence: manual loading-state review at desktop and mobile widths.
+- [ ] 1.5 Add a shared route-transition loading indicator (spinner/progress layer) that preserves shell geometry, announces pending navigation accessibly, and respects reduced motion. Evidence: code inspection plus manual navigation checks at 320px, 390px and desktop widths.
 
 ## 2. Navigation and responsive shell
 
@@ -30,6 +31,7 @@
 - [ ] 5.1 Inspect every refactored interactive control for visible focus, accessible name, semantic labels, non-colour status cues and text contrast. Evidence: manual keyboard and browser accessibility-tree review.
 - [ ] 5.2 Manually test loading, empty, error, pending and success states in POS plus one representative screen from each administrative family. Evidence: state checklist with expected recovery copy.
 - [ ] 5.3 Verify `prefers-reduced-motion` removes displacement/scale, all new motion uses existing tokens and POS feedback does not delay scanning. Evidence: code inspection and manual reduced-motion test.
+- [ ] 5.4 Verify the route-transition indicator appears on navigation, remains visually stable without layout shift, and clears after the destination is ready; confirm it does not interfere with POS scan focus or in-page pending states. Evidence: manual route navigation and accessibility-state review.
 
 ## 6. Verification and handoff
 

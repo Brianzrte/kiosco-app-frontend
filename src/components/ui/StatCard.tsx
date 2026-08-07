@@ -39,6 +39,7 @@ const borderTones: Record<Tone, string> = {
 };
 
 type Size = "default" | "compact";
+type Variant = "default" | "workspace";
 
 // "default" (text-3xl value) is the dashboard's original size — kept as the
 // prop default so no existing caller changes behavior silently.
@@ -98,6 +99,7 @@ export function StatCard({
   tone = "neutral",
   size = "default",
   hint,
+  variant = "default",
   className = "",
 }: {
   label: string;
@@ -108,6 +110,8 @@ export function StatCard({
   size?: Size;
   /** Short trend/comparison line under the value (e.g. "+12% vs. mes anterior"). */
   hint?: ReactNode;
+  /** Workspace KPIs use the shared administrative value scale. */
+  variant?: Variant;
   className?: string;
 }) {
   return (
@@ -129,7 +133,7 @@ export function StatCard({
         </p>
       </div>
       <p
-        className={`num font-semibold tracking-tight text-text-primary ${valueSizes[size]}`}
+        className={`num font-semibold tracking-tight text-text-primary ${variant === "workspace" ? "mt-2 text-[length:var(--text-workspace-kpi)]" : valueSizes[size]}`}
       >
         {value}
       </p>

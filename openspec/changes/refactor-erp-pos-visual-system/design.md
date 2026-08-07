@@ -44,6 +44,13 @@ no como comportamiento de producto ni como copia de interfaz.
 
 - **Loading:** skeletons reproducen la estructura final de shell, encabezado,
   cards y tabla; no se presenta una página que salte cuando llega el dato.
+- **Navigation pending:** al activar una navegación entre rutas se muestra un
+  spinner compacto y accesible dentro de una capa de progreso del workspace.
+  El shell conserva su geometría, el indicador no cambia el ancho ni la altura
+  del contenido y desaparece cuando la ruta termina de cargar. No se agrega
+  una dependencia ni se bloquea el POS durante operaciones internas; respeta
+  `prefers-reduced-motion` y expone el estado como `aria-busy`/texto para
+  tecnologías asistivas.
 - **Empty:** conserva el encabezado y explica la ausencia junto a la acción
   primaria que corresponda.
 - **Error:** conserva navegación y contexto, muestra el mensaje de backend o

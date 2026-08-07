@@ -20,6 +20,9 @@ una operación de caja.
 - Mantener una variante móvil centrada en una tarea por vista y conservar el
   flujo scan-first del POS como la excepción operacional al layout
   administrativo.
+- Mostrar un indicador de carga de navegación durante el cambio entre rutas,
+  preservando el espacio del shell para evitar reajustes perceptibles y dar
+  feedback inmediato sin bloquear la interacción más de lo necesario.
 - Documentar mockups de referencia y criterios de teclado, foco, estados y
   accesibilidad para revisión antes de implementar.
 

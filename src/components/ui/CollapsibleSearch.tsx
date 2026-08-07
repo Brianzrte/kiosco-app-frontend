@@ -40,7 +40,7 @@ export function CollapsibleSearch({
         <IconSearch className="size-4" />
       </Button>
       <div
-        className={`${mobileGridLayout ? "col-span-2 col-start-1 row-start-2 " : ""}grid transition-[grid-template-rows,opacity] duration-[var(--motion-base)] ease-[var(--ease-standard)] md:flex md:min-w-0 md:flex-1 md:opacity-100 ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 md:grid-rows-[1fr]"}`}
+        className={`${mobileGridLayout ? "col-span-2 col-start-1 row-start-2 " : ""}grid transition-[opacity,transform] duration-[var(--motion-base)] ease-[var(--ease-standard)] motion-reduce:transition-none md:flex md:min-w-0 md:flex-1 md:opacity-100 ${open ? "grid-rows-[1fr] translate-y-0 opacity-100" : "grid-rows-[0fr] -translate-y-1 opacity-0 md:grid-rows-[1fr] md:translate-y-0"}`}
       >
         <div className="min-h-0 overflow-hidden md:overflow-visible">{children}</div>
       </div>

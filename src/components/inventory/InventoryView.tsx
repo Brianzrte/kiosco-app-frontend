@@ -9,10 +9,12 @@ import { CollapsibleSearch } from "@/components/ui/CollapsibleSearch";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input, Select } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
-import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
+import { AdminListSkeleton, EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { IconSearch } from "@/components/ui/icons";
+import { AdminToolbar } from "@/components/ui/Workspace";
 import { api, ApiError } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
 import {
@@ -196,6 +198,10 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
     });
   }, [deepLinkedProduct, deepLinkedProductError, deepLinkedProductId]);
 
+  if (rows === null && !error) {
+    return <AdminListSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -220,9 +226,24 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
         </p>
       )}
 
-      <div
-        className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 ${searchOpen || filtersOpen ? "gap-y-2" : "gap-y-0"} rounded-app border border-border bg-surface-subtle px-3 py-1.5 md:flex md:flex-row md:items-end md:gap-3 md:p-3`}
-      >
+      {data && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <StatCard
+            label="Resultados de inventario"
+            value={total}
+            variant="workspace"
+          />
+          <StatCard
+            label="Stock bajo"
+            value={lowStockOnly ? total : (lowStockData?.total ?? "—")}
+            tone="warning"
+            variant="workspace"
+          />
+        </div>
+      )}
+
+      <AdminToolbar>
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 md:flex md:flex-row md:items-end md:gap-3">
         <CollapsibleSearch
           mobileGridLayout
           open={searchOpen}
@@ -273,6 +294,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
           <div className="w-fit self-start overflow-hidden rounded-app border border-border">
             <button
               type="button"
+              aria-pressed={!lowStockOnly}
               onClick={() => selectLowStockOnly(false)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors ${
                 !lowStockOnly
@@ -284,6 +306,7 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
             </button>
             <button
               type="button"
+              aria-pressed={lowStockOnly}
               onClick={() => selectLowStockOnly(true)}
               className={`px-4 py-2.5 text-sm font-medium transition-colors ${
                 lowStockOnly
@@ -295,12 +318,13 @@ export function InventoryView({ canPlanStock }: { canPlanStock: boolean }) {
             </button>
           </div>
         </CollapsibleFilters>
-      </div>
+        </div>
+      </AdminToolbar>
 
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : rows === null ? (
-        <ListSkeleton />
+        <AdminListSkeleton />
       ) : rows.length === 0 ? (
         <EmptyState
           message={

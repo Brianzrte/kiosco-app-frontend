@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -30,7 +30,7 @@ import { useViewportPageSize } from "@/lib/useViewportPageSize";
 type DialogState = "create" | "edit" | "deactivate" | null;
 
 export function SuppliersView() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const toast = useToast();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);

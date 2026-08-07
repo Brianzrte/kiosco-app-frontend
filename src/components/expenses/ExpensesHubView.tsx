@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -66,7 +66,7 @@ function statusTone(status: ExpenseStatus) {
  * sin cruce tipo×medio) — ver `types.ts` → `ExpenseSummary`.
  */
 export function ExpensesHubView() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const defaultRange = currentMonthRange();
   const [filters, setFilters] = useState<ExpenseFilters>({
     from: defaultRange.from,

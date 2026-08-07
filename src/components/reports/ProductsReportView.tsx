@@ -8,6 +8,7 @@ import { CollapsibleFilters } from "@/components/ui/CollapsibleFilters";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, Td, Th } from "@/components/ui/Table";
+import { AdminToolbar } from "@/components/ui/Workspace";
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
 import { useLoad } from "@/lib/useLoad";
@@ -39,6 +40,11 @@ function firstOfMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+function formatDayLabel(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 export function ProductsReportView() {
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(today());
@@ -56,9 +62,13 @@ export function ProductsReportView() {
         </Link>
       </div>
 
-      <PageHeader title="Reporte de productos" />
+      <PageHeader
+        title="Reporte de productos"
+        description={`Período seleccionado: ${formatDayLabel(from)} al ${formatDayLabel(to)}.`}
+      />
 
-      <CollapsibleFilters activeFilterCount={sort === "best_selling" ? 0 : 1}>
+      <AdminToolbar label="Filtros del reporte de productos">
+        <CollapsibleFilters activeFilterCount={sort === "best_selling" ? 0 : 1}>
         <Input
           label="Desde"
           type="date"
@@ -101,7 +111,8 @@ export function ProductsReportView() {
             Menos vendidos
           </Button>
         </div>
-      </CollapsibleFilters>
+        </CollapsibleFilters>
+      </AdminToolbar>
 
       <ProductsReportTable
         from={from}

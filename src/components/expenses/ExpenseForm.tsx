@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select } from "@/components/ui/Input";
@@ -102,7 +102,7 @@ function ExpenseFormSkeleton() {
 }
 
 export function ExpenseForm() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const [type, setType] = useState<ExpenseType>("OPERATING");
   const [businessDate, setBusinessDate] = useState(() => todayISO());
   const [amount, setAmount] = useState("");

@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { ComponentType, SVGProps, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { ComponentType, SVGProps, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Role } from "@/lib/types";
-import { navItemsFor } from "@/lib/nav";
+import { NAV_ITEMS, navItemsFor } from "@/lib/nav";
 import { ROLE_META } from "@/lib/roleMeta";
 import { MobileNavDrawer } from "@/components/shell/MobileNavDrawer";
 import { CashierShiftClosingModal } from "@/components/shell/CashierShiftClosingModal";
 import { CashierReconciliationIndicator } from "@/components/shell/CashierReconciliationIndicator";
-import { OpeningFundBanner } from "@/components/shell/OpeningFundBanner";
 import { CASH_CLOSING_STATUS_CHANGED } from "@/lib/cashClosing";
+import { WorkspaceRail } from "@/components/ui/Workspace";
 import {
   IconBox,
   IconCart,
@@ -19,6 +20,7 @@ import {
   IconLayers,
   IconLogout,
   IconMenu,
+  IconReceipt,
   IconTag,
   IconTruck,
   IconUsers,
@@ -26,12 +28,16 @@ import {
 
 // One icon per NAV_ITEMS href (lib/nav.ts) — purely decorative next to the
 // label, so nothing here needs its own accessible name.
-const NAV_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
+const NAV_ICONS: Record<
+  (typeof NAV_ITEMS)[number]["href"],
+  ComponentType<SVGProps<SVGSVGElement>>
+> = {
   "/": IconCart,
   "/sales": IconHistory,
   "/products": IconBox,
   "/inventory": IconLayers,
   "/purchasing": IconTruck,
+  "/expenses": IconReceipt,
   "/categories": IconTag,
   "/users": IconUsers,
   "/reports": IconChart,
@@ -44,15 +50,16 @@ function useActiveCheck() {
 }
 
 export function Nav({ roles }: { roles: Role[] }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const isActive = useActiveCheck();
   const items = navItemsFor(roles);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cashClosingOpen, setCashClosingOpen] = useState(false);
+  const [desktop, setDesktop] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const cashClosingTriggerRef = useRef<HTMLButtonElement>(null);
 
-  // nav-mobile-admin-drawer: `admin` sees all 8 NAV_ITEMS (product decision
+  // nav-mobile-admin-drawer: `admin` sees all 9 NAV_ITEMS (product decision
   // — POS/"Ventas" is desktop/tablet-fija-only for this role; a bottom tab
   // bar with 8 items was already flagged as "too much" by product). Any
   // role set that includes `admin` gets the drawer instead of the bottom
@@ -78,6 +85,14 @@ export function Nav({ roles }: { roles: Role[] }) {
     Icon: NAV_ICONS[item.href],
   }));
 
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 768px)");
+    const update = () => setDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
   async function logout() {
     await fetch("/api/session", { method: "DELETE" }).catch(() => {});
     router.push("/login");
@@ -91,7 +106,7 @@ export function Nav({ roles }: { roles: Role[] }) {
 
   return (
     <>
-      <header className="border-b border-border bg-surface shadow-soft">
+      <header className="border-b border-border bg-surface shadow-soft md:hidden">
         <div className="mx-auto flex max-w-7xl items-center gap-2 px-3 py-3 md:gap-3 md:px-4">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <span className="flex size-8 items-center justify-center rounded-tight bg-primary text-sm font-bold text-text-inverse">
@@ -101,33 +116,7 @@ export function Nav({ roles }: { roles: Role[] }) {
               Mini Moni
             </span>
           </Link>
-          <nav className="hidden min-w-0 flex-1 items-center gap-1 md:flex xl:gap-0">
-            {items.map((item) => {
-              const ItemIcon = NAV_ICONS[item.href];
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-label={item.label}
-                  aria-current={active ? "page" : undefined}
-                  title={item.label}
-                  className={`flex shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] xl:gap-1 xl:px-2 xl:text-xs ${
-                    active
-                      ? "bg-primary-light text-primary"
-                      : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                  }`}
-                >
-                  {ItemIcon && <ItemIcon className="size-4 shrink-0" />}
-                  <span className="hidden xl:inline">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          <span className="ml-auto hidden shrink-0 rounded-full bg-surface-subtle px-2.5 py-1 text-xs font-medium text-text-secondary md:ml-0 md:inline-block">
-            {roles.map((role) => ROLE_META[role].label).join(" · ")}
-          </span>
-          {isOperator && (
+          {!desktop && isOperator && (
             <div className="ml-auto shrink-0 md:ml-0">
               <CashierReconciliationIndicator
                 onOpenClosing={() => setCashClosingOpen(true)}
@@ -152,7 +141,7 @@ export function Nav({ roles }: { roles: Role[] }) {
             onClick={logout}
             aria-label="Cerrar sesión"
             title="Cerrar sesión"
-            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary md:ml-0 md:flex xl:gap-1 xl:px-2 xl:text-xs ${
+            className={`ml-auto shrink-0 items-center gap-0 whitespace-nowrap rounded-app px-2 py-1.5 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary ${
               useDrawerNav ? "hidden" : "flex"
             }`}
           >
@@ -161,7 +150,68 @@ export function Nav({ roles }: { roles: Role[] }) {
           </button>
         </div>
       </header>
-      {isOperator && <OpeningFundBanner />}
+      <WorkspaceRail className="sticky top-0 hidden h-dvh w-full flex-col overflow-y-auto md:flex">
+        <div className="flex min-h-18 items-center gap-2 border-b border-border px-3 xl:px-5">
+          <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="Mini Moni">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-tight bg-primary text-sm font-bold text-text-inverse">
+              M
+            </span>
+            <span className="hidden truncate text-base font-semibold tracking-tight text-text-primary xl:inline">
+              Mini Moni
+            </span>
+          </Link>
+        </div>
+        <nav aria-label="Secciones" className="flex-1 p-2 xl:p-3">
+          <ul className="flex flex-col gap-1">
+            {items.map((item) => {
+              const ItemIcon = NAV_ICONS[item.href];
+              const active = isActive(item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-label={item.label}
+                    aria-current={active ? "page" : undefined}
+                    title={item.label}
+                    className={`flex min-h-11 items-center justify-center gap-3 rounded-app px-3 text-sm font-medium transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] xl:justify-start ${
+                      active
+                        ? "bg-primary-light text-primary"
+                        : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                    }`}
+                  >
+                    {ItemIcon && <ItemIcon className="size-5 shrink-0" />}
+                    <span className="hidden xl:inline">{item.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <div className="border-t border-border p-2 xl:p-3">
+          <p className="sr-only">{roles.map((role) => ROLE_META[role].label).join(" · ")}</p>
+          <div className="hidden xl:block px-3 pb-2 text-xs font-medium text-text-muted">
+            {roles.map((role) => ROLE_META[role].label).join(" · ")}
+          </div>
+          {desktop && isOperator && (
+            <div className="flex justify-center xl:justify-start">
+              <CashierReconciliationIndicator
+                onOpenClosing={() => setCashClosingOpen(true)}
+                triggerRef={cashClosingTriggerRef}
+              />
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={logout}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+            className="mt-1 flex min-h-11 w-full items-center justify-center gap-3 rounded-app px-3 text-sm font-medium text-text-secondary transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-surface-hover hover:text-text-primary xl:justify-start"
+          >
+            <IconLogout className="size-5 shrink-0" />
+            <span className="hidden xl:inline">Cerrar sesión</span>
+          </button>
+        </div>
+      </WorkspaceRail>
 
       {useDrawerNav ? (
         <MobileNavDrawer

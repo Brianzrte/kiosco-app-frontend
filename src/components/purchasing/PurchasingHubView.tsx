@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { KeyboardEvent, useCallback, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Badge, Tone } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input, Select } from "@/components/ui/Input";
@@ -73,7 +73,7 @@ function EmptyScheduleState({
 }
 
 export function PurchasingHubView({ roles }: { roles: Role[] }) {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const canManage = hasAnyRole(roles, ["admin", "inventory"]);
   const today = todayISO();
   const [supplierId, setSupplierId] = useState("");

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useNavigationRouter } from "@/components/shell/useNavigationRouter";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -11,7 +11,7 @@ import { ROLE_OPTIONS } from "@/lib/roleMeta";
 import { Role } from "@/lib/types";
 
 export function UserForm() {
-  const router = useRouter();
+  const router = useNavigationRouter();
   const toast = useToast();
   const usernameRef = useRef<HTMLInputElement>(null);
 

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 import { Table, Td, Th } from "@/components/ui/Table";
 import { ErrorState, ListSkeleton } from "@/components/ui/states";
 import { api } from "@/lib/api";
@@ -122,12 +123,14 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
       ) : (
         <>
           <PageHeader
+            eyebrow="Historial de ventas"
             title={
               sale.sale_number == null
                 ? "Venta sin número"
                 : `#${sale.sale_number}`
             }
             titleClassName="num"
+            compactMobile
             description={formatDate(
               sale.status === "confirmed"
                 ? sale.confirmed_at!
@@ -244,7 +247,8 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
             <h2 className="mb-3 text-sm font-medium text-text-secondary">
               Detalle
             </h2>
-            <dl className="overflow-hidden rounded-app border border-border bg-surface shadow-soft">
+            <Card className="overflow-hidden p-0">
+              <dl>
               <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3">
                 <dt className="text-sm text-text-secondary">Medio de pago</dt>
                 <dd className="text-right text-sm font-medium">
@@ -276,17 +280,18 @@ export function SaleDetail({ id, roles }: { id: string; roles: Role[] }) {
                   </dd>
                 </div>
               )}
-            </dl>
+              </dl>
+            </Card>
           </section>
 
-          <div className="mt-auto flex flex-col gap-2 rounded-app bg-primary-hover px-4 py-3 text-text-inverse">
+          <Card className="mt-auto flex flex-col gap-2 border-primary bg-primary px-4 py-3 text-text-inverse">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total</span>
               <span className="num text-xl font-semibold">
                 {formatMoney(sale.total)}
               </span>
             </div>
-          </div>
+          </Card>
           </aside>
           </div>
 
